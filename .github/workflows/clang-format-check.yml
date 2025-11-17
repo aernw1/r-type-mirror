@@ -1,18 +1,45 @@
-name: clang-format Check
-on: [ push, pull_request ]
+name: clang-format Auto-Fix
+on:
+  push:
+    branches:
+    - main
+    - dev
+  pull_request:
+
+
 jobs:
-  formatting-check:
-    name: Formatting Check
+  format:
+    name: Auto-format Code
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        path:
-        - 'src'
-        - 'include'
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@v4
-    - name: Run clang-format style check for C/C++/Protobuf programs.
-      uses: jidicula/clang-format-action@v4.16.0
       with:
-        clang-format-version: '13'
-        check-path: ${{ matrix.path }}
+        ref: ${{ github.head_ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install clang-format
+      run: sudo apt-get update && sudo apt-get install -y clang-format
+
+    - name: Format code with clang-format
+      run: |
+        find include -type f \( -name "*.hpp" -o -name "*.cpp" -o -name "*.h" -o -name "*.c" \) -exec clang-format -i {} +
+
+    - name: Check for changes
+      id: check_changes
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+        else
+          echo "changes=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Commit formatted code
+      if: steps.check_changes.outputs.changes == 'true'
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add .
+        git commit -m "style: auto-format code with clang-format [skip ci]"
+        git push

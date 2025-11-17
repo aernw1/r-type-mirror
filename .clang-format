@@ -6,6 +6,7 @@ TabWidth: 4
 UseTab: Never
 ColumnLimit: 100
 NamespaceIndentation: All
+CompactNamespaces: false
 BreakBeforeBraces: Attach
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
@@ -14,12 +15,12 @@ IndentCaseLabels: false
 SpaceBeforeParens: ControlStatements
 PointerAlignment: Left
 AccessModifierOffset: -4
-IncludeBlocks: Regroup
-SortIncludes: CaseSensitive
+SortIncludes: false
 BreakConstructorInitializers: BeforeColon
 ConstructorInitializerIndentWidth: 4
 SpaceBeforeInheritanceColon: true
 SpaceBeforeCtorInitializerColon: true
 EmptyLineBeforeAccessModifier: Never
-KeepEmptyLinesAtTheStartOfBlocks: false
+KeepEmptyLinesAtTheStartOfBlocks: true
 MaxEmptyLinesToKeep: 2
+FixNamespaceComments: false
