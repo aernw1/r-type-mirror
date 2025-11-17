@@ -1,5 +1,5 @@
 name: clang-format Check
-on: [push, pull_request]
+on: [ push, pull_request ]
 jobs:
   formatting-check:
     name: Formatting Check
@@ -7,8 +7,8 @@ jobs:
     strategy:
       matrix:
         path:
-          - 'src'
-          - 'include'
+        - 'src'
+        - 'include'
     steps:
     - uses: actions/checkout@v4
     - name: Run clang-format style check for C/C++/Protobuf programs.
@@ -16,4 +16,3 @@ jobs:
       with:
         clang-format-version: '13'
         check-path: ${{ matrix.path }}
-        fallback-style: 'LLVM'
