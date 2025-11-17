@@ -255,48 +255,64 @@ SortIncludes: false    # Ne réorganise pas les includes
 
 ---
 
-## ✅ Vérification du Format
+## ✅ Formatage Automatique dans la CI/CD
 
-### CI/CD GitHub Actions
+### GitHub Actions - Auto-formatage
 
-Le projet utilise une vérification automatique du formatage dans la pipeline CI/CD. Chaque push et pull request déclenche une vérification.
+Le projet utilise un **formatage automatique** dans la pipeline CI/CD. Chaque push et pull request déclenche un formatage automatique du code.
+
+**Comment ça marche ?**
+1. Vous pushez votre code (même s'il n'est pas formaté)
+2. GitHub Actions lance automatiquement `clang-format -i` sur tous vos fichiers
+3. Si des changements sont nécessaires, ils sont automatiquement committés
+4. Vous devez ensuite pull les changements : `git pull`
 
 Le workflow se trouve dans `.github/workflows/clang-format-check.yml` :
 
 ```yaml
-name: clang-format Check
-on: [push, pull_request]
+name: clang-format Auto-Fix
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+
 jobs:
-  formatting-check:
-    name: Formatting Check
+  format:
+    name: Auto-format Code
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        path:
-          - 'src'
-          - 'include'
+    permissions:
+      contents: write
     steps:
-    - uses: actions/checkout@v4
-    - name: Run clang-format style check for C/C++/Protobuf programs.
-      uses: jidicula/clang-format-action@v4.16.0
-      with:
-        clang-format-version: '13'
-        check-path: ${{ matrix.path }}
+      - uses: actions/checkout@v4
+      
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      
+      - name: Format code with clang-format
+        run: |
+          find include src -type f \( -name "*.hpp" -o -name "*.cpp" \) -exec clang-format -i {} +
+      
+      - name: Commit formatted code (si nécessaire)
+        run: |
+          git config user.name "github-actions[bot]"
+          git add .
+          git commit -m "style: auto-format code" || exit 0
+          git push
 ```
 
-### Avant de commit
+### ⚠️ Important
 
-Il est **fortement recommandé** de formater votre code avant de commit :
+Après un push, si le code a été formaté automatiquement par GitHub Actions, n'oubliez pas de récupérer les changements :
 
 ```bash
-# Formater tous vos fichiers modifiés
-git diff --name-only | grep -E '\.(cpp|hpp)$' | xargs clang-format -i
+git pull
+```
 
-# Ajouter les fichiers formatés
-git add .
 
-# Commit
-git commit -m "Votre message"
+# Ou manuellement
+find include src -type f \( -name "*.hpp" -o -name "*.cpp" \) -exec clang-format -i {} +
 ```
 
 ### Pré-commit hook (optionnel)
