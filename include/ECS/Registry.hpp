@@ -96,7 +96,13 @@ namespace RType {
         }
 
         template <typename T> void ComponentPool<T>::Remove(Entity entity) {
-            m_components.erase(entity);
+            auto it = m_components.find(entity);
+            if (it == m_components.end()) {
+                std::ostringstream oss;
+                oss << "Component '" << typeid(T).name() << "' not found for entity " << entity;
+                throw std::runtime_error(oss.str());
+            }
+            m_components.erase(it);
         }
 
         template <typename T> std::vector<Entity> ComponentPool<T>::GetEntities() const {
