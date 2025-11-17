@@ -24,5 +24,4 @@ SpaceBeforeCtorInitializerColon: true
 EmptyLineBeforeAccessModifier: Never
 KeepEmptyLinesAtTheStartOfBlocks: true
 MaxEmptyLinesToKeep: 2
-SeparateDefinitionBlocks: Always
 FixNamespaceComments: false
