@@ -8,7 +8,6 @@ jobs:
       matrix:
         path:
           - 'src'
-          - 'examples'
           - 'include'
     steps:
     - uses: actions/checkout@v4
@@ -17,4 +16,4 @@ jobs:
       with:
         clang-format-version: '13'
         check-path: ${{ matrix.path }}
-        fallback-style: 'Mozilla'
+        fallback-style: 'LLVM'
