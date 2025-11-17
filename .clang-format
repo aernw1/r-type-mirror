@@ -6,6 +6,7 @@ TabWidth: 4
 UseTab: Never
 ColumnLimit: 100
 NamespaceIndentation: All
+CompactNamespaces: false
 BreakBeforeBraces: Attach
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
@@ -21,5 +22,7 @@ ConstructorInitializerIndentWidth: 4
 SpaceBeforeInheritanceColon: true
 SpaceBeforeCtorInitializerColon: true
 EmptyLineBeforeAccessModifier: Never
-KeepEmptyLinesAtTheStartOfBlocks: false
+KeepEmptyLinesAtTheStartOfBlocks: true
 MaxEmptyLinesToKeep: 2
+SeparateDefinitionBlocks: Always
+FixNamespaceComments: false
