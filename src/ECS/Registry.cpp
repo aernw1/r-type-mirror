@@ -14,6 +14,9 @@ namespace RType {
         }
 
         void Registry::DestroyEntity(Entity entity) {
+            if (entity == NULL_ENTITY) {
+                return;
+            }
             if (!IsEntityAlive(entity)) {
                 return;
             }
