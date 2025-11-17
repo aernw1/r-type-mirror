@@ -21,7 +21,7 @@ namespace RType {
                 virtual void Remove(Entity entity) = 0;
         };
 
-        template<typename T>
+        template <typename T>
         class ComponentPool : public IComponentPool {
             public:
                 T& Add(Entity entity, T&& component = T{});
@@ -43,26 +43,26 @@ namespace RType {
                 void DestroyEntity(Entity entity);
                 bool IsEntityAlive(Entity entity) const;
 
-                template<typename T>
+                template <typename T>
                 T& AddComponent(Entity entity, T&& component = T{});
 
-                template<typename T>
+                template <typename T>
                 T& GetComponent(Entity entity);
 
-                template<typename T>
+                template <typename T>
                 bool HasComponent(Entity entity) const;
 
-                template<typename T>
+                template <typename T>
                 void RemoveComponent(Entity entity);
 
-                template<typename T>
+                template <typename T>
                 std::vector<Entity> GetEntitiesWithComponent() const;
                 size_t GetEntityCount() const { return m_entityCount; }
 
             private:
-                template<typename T>
+                template <typename T>
                 ComponentPool<T>* GetOrCreatePool();
-                template<typename T>
+                template <typename T>
                 ComponentPool<T>* GetPool() const;
 
                 Entity m_nextEntityID;
@@ -71,13 +71,13 @@ namespace RType {
                 std::unordered_map<ComponentID, std::unique_ptr<IComponentPool>> m_componentPools;
         };
 
-        template<typename T>
+        template <typename T>
         T& ComponentPool<T>::Add(Entity entity, T&& component) {
             m_components[entity] = std::move(component);
             return m_components[entity];
         }
 
-        template<typename T>
+        template <typename T>
         T& ComponentPool<T>::Get(Entity entity) {
             auto it = m_components.find(entity);
             if (it == m_components.end()) {
@@ -86,17 +86,17 @@ namespace RType {
             return it->second;
         }
 
-        template<typename T>
+        template <typename T>
         bool ComponentPool<T>::Has(Entity entity) const {
             return m_components.find(entity) != m_components.end();
         }
 
-        template<typename T>
+        template <typename T>
         void ComponentPool<T>::Remove(Entity entity) {
             m_components.erase(entity);
         }
 
-        template<typename T>
+        template <typename T>
         std::vector<Entity> ComponentPool<T>::GetEntities() const {
             std::vector<Entity> entities;
             entities.reserve(m_components.size());
