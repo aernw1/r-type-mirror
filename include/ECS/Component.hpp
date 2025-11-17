@@ -8,7 +8,7 @@
 namespace RType {
 
     namespace ECS {
-        using ComponentID = std::uuid;
+        using ComponentID = std::type_index;
 
         struct IComponent {
             virtual ~IComponent() = default;
@@ -30,4 +30,5 @@ namespace RType {
             Velocity(float dx, float dy) : dx(dx), dy(dy) {}
         };
     }
+
 }
