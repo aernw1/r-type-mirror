@@ -1,3 +1,4 @@
+---
 Language: Cpp
 BasedOnStyle: LLVM
 IndentWidth: 4
@@ -6,7 +7,7 @@ UseTab: Never
 ColumnLimit: 100
 NamespaceIndentation: All
 BreakBeforeBraces: Attach
-AllowShortFunctionsOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 IndentCaseLabels: false
@@ -14,4 +15,11 @@ SpaceBeforeParens: ControlStatements
 PointerAlignment: Left
 AccessModifierOffset: -4
 IncludeBlocks: Regroup
-SortIncludes: true
+SortIncludes: CaseSensitive
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 4
+SpaceBeforeInheritanceColon: true
+SpaceBeforeCtorInitializerColon: true
+EmptyLineBeforeAccessModifier: Never
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
