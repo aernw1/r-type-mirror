@@ -10,7 +10,7 @@ jobs:
     name: Push to mirror
     runs-on: ubuntu-latest
 
-    if: github.repository != 'EpitechPGE3-2025/G-CPP-500-PAR-5-2-rtype-11' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    if: github.repository != 'EpitechPGE3-2025/G-CPP-500-PAR-5-2-rtype-11' && (github.ref == 'refs/heads/main')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
