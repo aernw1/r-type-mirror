@@ -71,7 +71,6 @@ namespace RType {
                 std::unordered_map<ComponentID, std::unique_ptr<IComponentPool>> m_componentPools;
         };
 
-        // ComponentPool Template Implementations
         template<typename T>
         T& ComponentPool<T>::Add(Entity entity, T&& component) {
             m_components[entity] = std::move(component);
