@@ -23,7 +23,7 @@ add_executable(r-type
     engine/src/ECS/main.cpp
 )
 
-target_link_libraries(r-type PRIVATE
+target_link_libraries(r-type PRIVATE)
     rtype_ecs
     rtype_engine_core
     add_compile_options(-Wall -Wextra -Wpedantic --std=c++17)
