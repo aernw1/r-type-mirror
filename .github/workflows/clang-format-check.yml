@@ -24,7 +24,7 @@ jobs:
 
     - name: Format code with clang-format
       run: |
-        find include -type f \( -name "*.hpp" -o -name "*.cpp" -o -name "*.h" -o -name "*.c" \) -exec clang-format -i {} +
+        find engine/include -type f \( -name "*.hpp" -o -name "*.cpp" -o -name "*.h" -o -name "*.c" \) -exec clang-format -i {} +
 
     - name: Check for changes
       id: check_changes
