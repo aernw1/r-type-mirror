@@ -5,6 +5,7 @@ Ce document décrit les conventions de style de code utilisées dans le projet R
 ## 📋 Table des matières
 
 - [Formatage Automatique](#formatage-automatique)
+- [Analyse Statique (Linter)](#analyse-statique-linter)
 - [Indentation et Espacement](#indentation-et-espacement)
 - [Namespaces](#namespaces)
 - [Classes et Structures](#classes-et-structures)
@@ -31,6 +32,144 @@ find include src -name "*.hpp" -o -name "*.cpp" | xargs clang-format -i
 # Vérifier sans modifier
 clang-format --dry-run --Werror fichier.cpp
 ```
+
+---
+
+## 🔍 Analyse Statique (Linter)
+
+Le projet utilise **clang-tidy** pour l'analyse statique du code. C'est un linter qui détecte automatiquement les problèmes de qualité, bugs potentiels et mauvaises pratiques.
+
+### Qu'est-ce que clang-tidy vérifie ?
+
+- 🐛 **Bugs potentiels** : Utilisation de variables non initialisées, fuites mémoire, etc.
+- 🚀 **Performance** : Copies inutiles, allocations inefficaces
+- 📚 **Modernisation** : Suggère des features C++ modernes (C++11/14/17/20)
+- ✨ **Bonnes pratiques** : Conventions de nommage, lisibilité, maintenabilité
+- 🔒 **Sécurité** : Problèmes de sécurité communs (buffer overflow, etc.)
+
+### Configuration
+
+La configuration se trouve dans le fichier `.clang-tidy` à la racine du projet. Elle active plusieurs catégories de vérifications :
+
+```yaml
+Checks: >
+  bugprone-*,          # Détection de bugs
+  cert-*,              # Règles de sécurité CERT
+  clang-analyzer-*,    # Analyseur statique
+  cppcoreguidelines-*, # C++ Core Guidelines
+  modernize-*,         # Modernisation C++
+  performance-*,       # Optimisations
+  readability-*        # Lisibilité
+```
+
+### Utilisation locale
+
+```bash
+# Installer clang-tidy
+sudo apt-get install clang-tidy
+
+# Analyser un fichier
+clang-tidy fichier.cpp -- -std=c++20 -Iinclude
+
+# Analyser tous les fichiers
+find include src -name "*.hpp" -o -name "*.cpp" | xargs -I {} clang-tidy {} -- -std=c++20 -Iinclude
+
+# Analyser et corriger automatiquement certains problèmes
+clang-tidy -fix fichier.cpp -- -std=c++20 -Iinclude
+```
+
+### CI/CD GitHub Actions
+
+Le workflow `.github/workflows/clang-tidy-check.yml` exécute automatiquement clang-tidy sur chaque push et pull request.
+
+```yaml
+name: clang-tidy Check
+on: [push, pull_request]
+
+jobs:
+  clang-tidy:
+    name: Lint with clang-tidy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-tidy
+        run: sudo apt-get install -y clang-tidy
+      - name: Run clang-tidy
+        run: |
+          find include src -type f \( -name "*.hpp" -o -name "*.cpp" \) \
+            -exec clang-tidy {} -- -std=c++20 -Iinclude \;
+```
+
+### Règles de nommage
+
+Le linter vérifie les conventions de nommage suivantes :
+
+| Élément | Convention | Exemple |
+|---------|-----------|---------|
+| Namespace | `CamelCase` | `RType`, `ECS` |
+| Classe/Struct | `CamelCase` | `Position`, `IComponent` |
+| Fonction | `camelBack` | `process()`, `updatePosition()` |
+| Variable | `camelBack` | `velocity`, `entityId` |
+| Membre | `camelBack` | `x`, `y`, `dx`, `dy` |
+| Paramètre | `camelBack` | `entity`, `deltaTime` |
+| Constante | `UPPER_CASE` | `NULL_ENTITY`, `MAX_ENTITIES` |
+
+### Exemples
+
+#### ✅ BON - Code qui passe le linter
+
+```cpp
+namespace RType {
+    namespace ECS {
+        constexpr uint32_t MAX_ENTITIES = 1000;
+        
+        struct Position {
+            float x = 0.0f;
+            float y = 0.0f;
+            
+            void updatePosition(float deltaX, float deltaY) {
+                x += deltaX;
+                y += deltaY;
+            }
+        };
+    }
+}
+```
+
+#### ❌ MAUVAIS - Problèmes détectés par le linter
+
+```cpp
+namespace rtype {  // ❌ Devrait être CamelCase
+    struct position {  // ❌ Devrait être CamelCase
+        float X;  // ❌ Variable devrait être camelBack
+        float Y;
+        
+        void UpdatePosition(float dx, float dy) {  // ❌ Fonction devrait être camelBack
+            X = X + dx;  // ⚠️  Pourrait utiliser +=
+        }
+    };
+}
+```
+
+### Workflow recommandé
+
+1. **Développez** votre fonctionnalité
+2. **Formatez** avec `clang-format` (automatique dans la CI)
+3. **Vérifiez localement** avec `clang-tidy` avant de push
+4. **Corrigez** les warnings détectés
+5. **Push** - la CI vérifiera automatiquement
+
+```bash
+# Avant de push
+clang-tidy include/ECS/MyFile.hpp -- -std=c++20 -Iinclude
+
+# Si tout est OK
+git add .
+git commit -m "feat: nouvelle fonctionnalité"
+git push
+```
+
+> 💡 **Astuce** : Intégrez clang-tidy dans votre IDE (VSCode, CLion, etc.) pour avoir les warnings en temps réel !
 
 ---
 
