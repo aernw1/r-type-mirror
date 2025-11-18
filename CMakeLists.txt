@@ -26,4 +26,32 @@ add_executable(r-type
 target_link_libraries(r-type PRIVATE
     rtype_ecs
     rtype_engine_core
+    add_compile_options(-Wall -Wextra -Wpedantic --std=c++17)
+endif()
+
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
+add_library(rtype_ecs
+    src/ECS/Registry.cpp
+)
+
+target_include_directories(rtype_ecs PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+add_executable(rtype_test
+    src/main.cpp
+)
+target_link_libraries(rtype_test PRIVATE rtype_ecs)
+
+install(TARGETS rtype_ecs
+    EXPORT RTypeTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(DIRECTORY include/
+    DESTINATION include
 )
