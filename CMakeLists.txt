@@ -20,7 +20,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 add_subdirectory(engine)
 
 add_executable(r-type
-    engine/src/ECS/main.cpp
+    engine/src/main.cpp
 )
 
 target_link_libraries(r-type PRIVATE
