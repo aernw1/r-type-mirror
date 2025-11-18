@@ -1,5 +1,5 @@
 #include <iostream>
-#include "ECS/Registry.hpp"
+#include "../include/ECS/Registry.hpp"
 
 using namespace RType::ECS;
 int main() {
