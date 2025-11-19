@@ -1,24 +1,27 @@
 #include <iostream>
-#include "../include/ECS/Registry.hpp"
+#include "../include/Core/Engine.hpp"
 
-using namespace RType::ECS;
+using namespace RType;
+
 int main() {
-    std::cout << "R-Type Engine starting..." << std::endl;
-    Registry registry;
+    Core::Logger::Info("R-Type Engine starting...");
 
-    std::cout << "Registry created successfully!" << std::endl;
-    std::cout << "R-Type Engine running." << std::endl;
+    Core::EngineConfig config;
+    config.pluginPath = "./plugins";
 
-    Entity entity1 = registry.CreateEntity();
-    Entity entity2 = registry.CreateEntity();
+    auto engine = std::make_unique<Core::Engine>(config);
 
-    registry.AddComponent(entity1, Position(100, 100));
-    registry.AddComponent(entity2, Position(200, 200));
+    if (!engine->Initialize()) {
+        Core::Logger::Error("Failed to initialize engine");
+        return 1;
+    }
+    Core::Logger::Info("Engine initialized with {} modules", engine->GetAllModules().size());
 
-    std::cout << "Entity 1 has position: " << registry.GetComponent<Position>(entity1).x << ", "
-              << registry.GetComponent<Position>(entity1).y << std::endl;
-    std::cout << "Entity 2 has position: " << registry.GetComponent<Position>(entity2).x << ", "
-              << registry.GetComponent<Position>(entity2).y << std::endl;
+    auto& registry = engine->GetRegistry();
+    Core::Logger::Info("Registry has {} entities", registry.GetEntityCount());
 
+    engine->Shutdown();
+
+    Core::Logger::Info("Engine stopped");
     return 0;
 }
