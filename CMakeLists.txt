@@ -16,6 +16,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 add_subdirectory(engine)
 
@@ -23,35 +25,14 @@ add_executable(r-type
     engine/src/main.cpp
 )
 
-target_link_libraries(r-type PRIVATE)
-    rtype_ecs
+target_link_libraries(r-type PRIVATE
     rtype_engine_core
-    add_compile_options(-Wall -Wextra -Wpedantic --std=c++17)
-endif()
-
-include_directories(${CMAKE_SOURCE_DIR}/include)
-
-add_library(rtype_ecs
-    src/ECS/Registry.cpp
 )
 
-target_include_directories(rtype_ecs PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-
-add_executable(rtype_test
-    src/main.cpp
-)
-target_link_libraries(rtype_test PRIVATE rtype_ecs)
-
-install(TARGETS rtype_ecs
-    EXPORT RTypeTargets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
+install(TARGETS r-type
     RUNTIME DESTINATION bin
 )
 
-install(DIRECTORY include/
+install(DIRECTORY engine/include/
     DESTINATION include
 )
