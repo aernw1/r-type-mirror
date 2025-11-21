@@ -13,7 +13,7 @@ namespace network {
         START_REQ = 0x17,
         GAME_START = 0x18,
         DISCONNECT = 0x19,
-        ERROR = 0xFF,
+        PACKET_ERROR = 0xFF,
 
         INPUT = 0x01,
         STATE = 0x02,
