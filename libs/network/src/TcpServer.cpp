@@ -9,7 +9,8 @@
 
 namespace network {
 
-    TcpServer::TcpServer(uint16_t port) : _acceptor(_io, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {
+    TcpServer::TcpServer(uint16_t port)
+        : _acceptor(_io, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {
         _acceptor.non_blocking(true);
     }
 

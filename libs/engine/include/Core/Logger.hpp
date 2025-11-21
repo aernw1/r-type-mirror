@@ -10,7 +10,11 @@ namespace RType {
 
     namespace Core {
 
-        enum class LogLevel { Debug = 0, Info = 1, Warning = 2, Error = 3, Critical = 4 };
+        enum class LogLevel { Debug = 0,
+                              Info = 1,
+                              Warning = 2,
+                              Error = 3,
+                              Critical = 4 };
 
         class Logger {
         public:
@@ -82,7 +86,8 @@ namespace RType {
                 return oss.str();
             }
 
-            template <typename T> static std::string FormatArg(const T& arg) {
+            template <typename T>
+            static std::string FormatArg(const T& arg) {
                 std::ostringstream oss;
                 oss << arg;
                 return oss.str();

@@ -19,7 +19,9 @@ namespace Renderer {
         float y = 0.0f;
 
         Vector2() = default;
-        Vector2(float x, float y) : x(x), y(y) {}
+        Vector2(float x, float y)
+            : x(x)
+            , y(y) {}
     };
 
     struct Color {
@@ -29,7 +31,11 @@ namespace Renderer {
         float a = 1.0f;
 
         Color() = default;
-        Color(float r, float g, float b, float a = 1.0f) : r(r), g(g), b(b), a(a) {}
+        Color(float r, float g, float b, float a = 1.0f)
+            : r(r)
+            , g(g)
+            , b(b)
+            , a(a) {}
     };
 
     struct Rectangle {

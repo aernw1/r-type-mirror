@@ -9,7 +9,9 @@
 
 namespace network {
 
-    TcpSocket::TcpSocket(const std::string& address, uint16_t port) : _io(std::make_unique<asio::io_context>()), _socket(std::make_unique<asio::ip::tcp::socket>(*_io)) {
+    TcpSocket::TcpSocket(const std::string& address, uint16_t port)
+        : _io(std::make_unique<asio::io_context>())
+        , _socket(std::make_unique<asio::ip::tcp::socket>(*_io)) {
         asio::ip::tcp::endpoint endpoint(asio::ip::make_address(address), port);
         asio::error_code ec;
         _socket->connect(endpoint, ec);
@@ -18,11 +20,17 @@ namespace network {
             _socket->non_blocking(true);
     }
 
-    TcpSocket::TcpSocket(asio::ip::tcp::socket socket) : _io(nullptr), _socket(std::make_unique<asio::ip::tcp::socket>(std::move(socket))), _connected(true) {
+    TcpSocket::TcpSocket(asio::ip::tcp::socket socket)
+        : _io(nullptr)
+        , _socket(std::make_unique<asio::ip::tcp::socket>(std::move(socket)))
+        , _connected(true) {
         _socket->non_blocking(true);
     }
 
-    TcpSocket::TcpSocket(TcpSocket&& other) noexcept : _io(std::move(other._io)), _socket(std::move(other._socket)), _connected(other._connected) {
+    TcpSocket::TcpSocket(TcpSocket&& other) noexcept
+        : _io(std::move(other._io))
+        , _socket(std::move(other._socket))
+        , _connected(other._connected) {
         other._connected = false;
     }
 

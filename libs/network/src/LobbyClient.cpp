@@ -12,7 +12,8 @@
 
 namespace network {
 
-    LobbyClient::LobbyClient(const std::string& serverAddr, uint16_t port) : _socket(serverAddr, port) {
+    LobbyClient::LobbyClient(const std::string& serverAddr, uint16_t port)
+        : _socket(serverAddr, port) {
         if (_socket.isConnected())
             std::cout << "[Client] Connected to server" << std::endl;
         else
@@ -61,17 +62,28 @@ namespace network {
 
     static const char* lobbyPacketName(LobbyPacket type) {
         switch (type) {
-        case LobbyPacket::CONNECT_REQ: return "CONNECT_REQ";
-        case LobbyPacket::CONNECT_ACK: return "CONNECT_ACK";
-        case LobbyPacket::PLAYER_JOIN: return "PLAYER_JOIN";
-        case LobbyPacket::READY_REQ: return "READY_REQ";
-        case LobbyPacket::PLAYER_READY: return "PLAYER_READY";
-        case LobbyPacket::START_REQ: return "START_REQ";
-        case LobbyPacket::GAME_START: return "GAME_START";
-        case LobbyPacket::DISCONNECT: return "DISCONNECT";
-        case LobbyPacket::PLAYER_LEFT: return "PLAYER_LEFT";
-        case LobbyPacket::ERROR: return "ERROR";
-        default: return "UNKNOWN";
+        case LobbyPacket::CONNECT_REQ:
+            return "CONNECT_REQ";
+        case LobbyPacket::CONNECT_ACK:
+            return "CONNECT_ACK";
+        case LobbyPacket::PLAYER_JOIN:
+            return "PLAYER_JOIN";
+        case LobbyPacket::READY_REQ:
+            return "READY_REQ";
+        case LobbyPacket::PLAYER_READY:
+            return "PLAYER_READY";
+        case LobbyPacket::START_REQ:
+            return "START_REQ";
+        case LobbyPacket::GAME_START:
+            return "GAME_START";
+        case LobbyPacket::DISCONNECT:
+            return "DISCONNECT";
+        case LobbyPacket::PLAYER_LEFT:
+            return "PLAYER_LEFT";
+        case LobbyPacket::ERROR:
+            return "ERROR";
+        default:
+            return "UNKNOWN";
         }
     }
 

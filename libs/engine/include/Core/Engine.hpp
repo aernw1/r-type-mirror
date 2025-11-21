@@ -32,9 +32,11 @@ namespace RType {
             IModule* LoadPlugin(const std::string& pluginPath);
             bool UnloadPlugin(const std::string& pluginName);
 
-            template <typename T> void RegisterModule(std::unique_ptr<T> module);
+            template <typename T>
+            void RegisterModule(std::unique_ptr<T> module);
 
-            template <typename T> T* GetModule();
+            template <typename T>
+            T* GetModule();
 
             IModule* GetModuleByName(const std::string& name);
             std::vector<IModule*> GetAllModules() const;
@@ -54,7 +56,8 @@ namespace RType {
             bool m_initialized{false};
         };
 
-        template <typename T> void Engine::RegisterModule(std::unique_ptr<T> module) {
+        template <typename T>
+        void Engine::RegisterModule(std::unique_ptr<T> module) {
             static_assert(std::is_base_of<IModule, T>::value, "T must derive from IModule");
 
             if (!module) {
@@ -67,7 +70,8 @@ namespace RType {
             m_builtinModules[typeId] = std::move(module);
         }
 
-        template <typename T> T* Engine::GetModule() {
+        template <typename T>
+        T* Engine::GetModule() {
             static_assert(std::is_base_of<IModule, T>::value, "T must derive from IModule");
 
             std::type_index typeId = std::type_index(typeid(T));

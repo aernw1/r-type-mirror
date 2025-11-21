@@ -29,7 +29,6 @@ namespace network {
         bool isGameStarted() const { return _gameStarted; }
         const std::vector<std::optional<PlayerInfo>>& getPlayers() const { return _players; }
         size_t playerCount() const { return activePlayerCount(); }
-
     private:
         void acceptNewClients();
         void processClients();

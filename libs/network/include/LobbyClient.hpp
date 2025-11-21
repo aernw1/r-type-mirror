@@ -34,7 +34,6 @@ namespace network {
         uint32_t getGameSeed() const { return _gameSeed; }
 
         void onPlayerLeft(std::function<void(uint8_t)> callback) { _onPlayerLeft = callback; }
-
     private:
         void handlePacket(const std::vector<uint8_t>& data);
         void handleConnectAck(Deserializer& d);

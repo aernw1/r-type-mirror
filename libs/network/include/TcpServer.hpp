@@ -23,7 +23,6 @@ namespace network {
 
         std::optional<TcpSocket> accept();
         uint16_t port() const { return _acceptor.local_endpoint().port(); }
-
     private:
         asio::io_context _io;
         asio::ip::tcp::acceptor _acceptor;

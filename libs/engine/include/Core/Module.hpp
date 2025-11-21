@@ -8,7 +8,10 @@ namespace RType {
 
         class Engine;
 
-        enum class ModulePriority { Critical = 0, High = 1, Normal = 2, Low = 3 };
+        enum class ModulePriority { Critical = 0,
+                                    High = 1,
+                                    Normal = 2,
+                                    Low = 3 };
 
         class IModule {
         public:

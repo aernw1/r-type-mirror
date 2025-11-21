@@ -19,7 +19,9 @@ namespace RType {
             float y = 0.0f;
 
             Position() = default;
-            Position(float x, float y) : x(x), y(y) {}
+            Position(float x, float y)
+                : x(x)
+                , y(y) {}
         };
 
         struct Velocity : public IComponent {
@@ -27,7 +29,9 @@ namespace RType {
             float dy = 0.0f;
 
             Velocity() = default;
-            Velocity(float dx, float dy) : dx(dx), dy(dy) {}
+            Velocity(float dx, float dy)
+                : dx(dx)
+                , dy(dy) {}
         };
     }
 

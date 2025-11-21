@@ -12,7 +12,11 @@
 
 namespace network {
 
-    LobbyServer::LobbyServer(uint16_t port, size_t maxPlayers, size_t minPlayers) : _server(port), _maxPlayers(maxPlayers), _minPlayers(minPlayers), _rng(std::random_device{}()) {
+    LobbyServer::LobbyServer(uint16_t port, size_t maxPlayers, size_t minPlayers)
+        : _server(port)
+        , _maxPlayers(maxPlayers)
+        , _minPlayers(minPlayers)
+        , _rng(std::random_device{}()) {
         _clients.resize(_maxPlayers);
         _players.resize(_maxPlayers);
         std::cout << "[Lobby] Server started on port " << port << " (min=" << _minPlayers << ", max=" << _maxPlayers << ")" << std::endl;
@@ -57,17 +61,28 @@ namespace network {
 
     static const char* lobbyPacketName(LobbyPacket type) {
         switch (type) {
-        case LobbyPacket::CONNECT_REQ: return "CONNECT_REQ";
-        case LobbyPacket::CONNECT_ACK: return "CONNECT_ACK";
-        case LobbyPacket::PLAYER_JOIN: return "PLAYER_JOIN";
-        case LobbyPacket::READY_REQ: return "READY_REQ";
-        case LobbyPacket::PLAYER_READY: return "PLAYER_READY";
-        case LobbyPacket::START_REQ: return "START_REQ";
-        case LobbyPacket::GAME_START: return "GAME_START";
-        case LobbyPacket::DISCONNECT: return "DISCONNECT";
-        case LobbyPacket::PLAYER_LEFT: return "PLAYER_LEFT";
-        case LobbyPacket::ERROR: return "ERROR";
-        default: return "UNKNOWN";
+        case LobbyPacket::CONNECT_REQ:
+            return "CONNECT_REQ";
+        case LobbyPacket::CONNECT_ACK:
+            return "CONNECT_ACK";
+        case LobbyPacket::PLAYER_JOIN:
+            return "PLAYER_JOIN";
+        case LobbyPacket::READY_REQ:
+            return "READY_REQ";
+        case LobbyPacket::PLAYER_READY:
+            return "PLAYER_READY";
+        case LobbyPacket::START_REQ:
+            return "START_REQ";
+        case LobbyPacket::GAME_START:
+            return "GAME_START";
+        case LobbyPacket::DISCONNECT:
+            return "DISCONNECT";
+        case LobbyPacket::PLAYER_LEFT:
+            return "PLAYER_LEFT";
+        case LobbyPacket::ERROR:
+            return "ERROR";
+        default:
+            return "UNKNOWN";
         }
     }
 

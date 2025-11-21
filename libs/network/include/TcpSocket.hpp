@@ -34,7 +34,6 @@ namespace network {
 
         bool isConnected() const { return _connected; }
         void disconnect();
-
     private:
         std::unique_ptr<asio::io_context> _io;
         std::unique_ptr<asio::ip::tcp::socket> _socket;

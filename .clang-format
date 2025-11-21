@@ -13,7 +13,6 @@ AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
-AllowAllConstructorInitializersOnNextLine: false
 BinPackArguments: true
 BinPackParameters: true
 IndentCaseLabels: false
@@ -21,11 +20,7 @@ SpaceBeforeParens: ControlStatements
 PointerAlignment: Left
 AccessModifierOffset: -4
 SortIncludes: false
-BreakConstructorInitializers: AfterColon
-PackConstructorInitializers: CurrentLine
-ConstructorInitializerIndentWidth: 4
-SpaceBeforeInheritanceColon: true
-SpaceBeforeCtorInitializerColon: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
 EmptyLineBeforeAccessModifier: Never
 KeepEmptyLinesAtTheStartOfBlocks: true
 MaxEmptyLinesToKeep: 2

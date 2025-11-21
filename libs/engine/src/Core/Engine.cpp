@@ -5,7 +5,8 @@ namespace RType {
 
     namespace Core {
 
-        Engine::Engine(const EngineConfig& config) : m_config(config) {
+        Engine::Engine(const EngineConfig& config)
+            : m_config(config) {
             Logger::Info("Creating R-Type Engine");
         }
 
