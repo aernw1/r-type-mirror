@@ -24,6 +24,7 @@ add_subdirectory(engine)
 add_executable(r-type
     engine/src/main.cpp
 )
+FetchContent_MakeAvailable(asio)
 
 target_link_libraries(r-type PRIVATE
     rtype_engine_core
