@@ -13,10 +13,7 @@
 namespace network {
 
     LobbyServer::LobbyServer(uint16_t port, size_t maxPlayers, size_t minPlayers)
-        : _server(port)
-        , _maxPlayers(maxPlayers)
-        , _minPlayers(minPlayers)
-        , _rng(std::random_device{}()) {
+        : _server(port), _maxPlayers(maxPlayers), _minPlayers(minPlayers), _rng(std::random_device{}()) {
         _clients.resize(_maxPlayers);
         _players.resize(_maxPlayers);
         std::cout << "[Lobby] Server started on port " << port << " (min=" << _minPlayers << ", max=" << _maxPlayers << ")" << std::endl;

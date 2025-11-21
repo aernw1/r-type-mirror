@@ -18,8 +18,7 @@ namespace network {
     class Deserializer {
     public:
         Deserializer(const std::vector<uint8_t>& data)
-            : _data(data)
-            , _offset(0) {}
+            : _data(data), _offset(0) {}
 
         uint8_t readU8() {
             check(1);
