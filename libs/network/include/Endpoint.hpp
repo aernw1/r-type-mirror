@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** Endpoint
+*/
+
 #pragma once
 
 #include <asio.hpp>

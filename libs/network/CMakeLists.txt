@@ -1,10 +1,10 @@
 add_library(rtype_network
-    src/UdpSocket.cpp
+    src/TcpSocket.cpp
+    src/TcpServer.cpp
     src/Serializer.cpp
     src/Deserializer.cpp
     src/LobbyServer.cpp
     src/LobbyClient.cpp
-    src/AsioNetwork.cpp
 )
 
 target_include_directories(rtype_network PUBLIC

@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
     network::LobbyServer server(port, 4, minPlayers);
 
     size_t lastPlayerCount = 0;
+
     while (!server.isGameStarted()) {
         server.update();
 
