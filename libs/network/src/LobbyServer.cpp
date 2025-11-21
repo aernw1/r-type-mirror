@@ -1,4 +1,4 @@
-#include "network/LobbyServer.hpp"
+#include "LobbyServer.hpp"
 #include <algorithm>
 #include <cstring>
 #include <iostream>

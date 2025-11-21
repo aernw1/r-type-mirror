@@ -1,4 +1,4 @@
-#include "network/LobbyClient.hpp"
+#include "LobbyClient.hpp"
 #include <cstring>
 #include <iostream>
 

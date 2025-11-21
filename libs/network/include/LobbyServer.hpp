@@ -1,9 +1,9 @@
 #pragma once
 
-#include "network/UdpSocket.hpp"
-#include "network/Protocol.hpp"
-#include "network/Serializer.hpp"
-#include "network/Deserializer.hpp"
+#include "UdpSocket.hpp"
+#include "Protocol.hpp"
+#include "Serializer.hpp"
+#include "Deserializer.hpp"
 #include <vector>
 #include <random>
 #include <optional>

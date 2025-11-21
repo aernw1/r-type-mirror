@@ -3,7 +3,7 @@
 #include <asio.hpp>
 #include <vector>
 #include <cstdint>
-#include "network/Endpoint.hpp"
+#include "Endpoint.hpp"
 
 namespace network {
 

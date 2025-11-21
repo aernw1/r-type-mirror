@@ -1,4 +1,4 @@
-#include "network/UdpSocket.hpp"
+#include "UdpSocket.hpp"
 #include <stdexcept>
 
 namespace network {

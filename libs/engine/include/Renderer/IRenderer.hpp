@@ -98,13 +98,15 @@ namespace Renderer {
         virtual void EndFrame() = 0;
         virtual void Clear(const Color& color) = 0;
 
-        virtual TextureId LoadTexture(const std::string& path, const TextureConfig& config = TextureConfig{}) = 0;
+        virtual TextureId LoadTexture(const std::string& path,
+                                      const TextureConfig& config = TextureConfig{}) = 0;
         virtual void UnloadTexture(TextureId textureId) = 0;
 
         virtual SpriteId CreateSprite(TextureId textureId, const Rectangle& region) = 0;
         virtual void DestroySprite(SpriteId spriteId) = 0;
 
-        virtual void DrawSprite(SpriteId spriteId, const Transform2D& transform, const Color& tint = Color{}) = 0;
+        virtual void DrawSprite(SpriteId spriteId, const Transform2D& transform,
+                                const Color& tint = Color{}) = 0;
         virtual void DrawRectangle(const Rectangle& rectangle, const Color& color) = 0;
 
         virtual FontId LoadFont(const std::string& path, std::uint32_t characterSize) = 0;
@@ -118,5 +120,3 @@ namespace Renderer {
     };
 
 }
-
-

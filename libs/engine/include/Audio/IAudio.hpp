@@ -58,10 +58,12 @@ namespace Audio {
         virtual MusicId LoadMusic(const std::string& path) = 0;
         virtual void UnloadMusic(MusicId musicId) = 0;
 
-        virtual void PlaySound(SoundId soundId, const PlaybackOptions& options = PlaybackOptions{}) = 0;
+        virtual void PlaySound(SoundId soundId,
+                               const PlaybackOptions& options = PlaybackOptions{}) = 0;
         virtual void StopSound(SoundId soundId) = 0;
 
-        virtual void PlayMusic(MusicId musicId, const PlaybackOptions& options = PlaybackOptions{}) = 0;
+        virtual void PlayMusic(MusicId musicId,
+                               const PlaybackOptions& options = PlaybackOptions{}) = 0;
         virtual void StopMusic(MusicId musicId) = 0;
 
         virtual void PauseAll() = 0;
@@ -75,5 +77,3 @@ namespace Audio {
     };
 
 }
-
-
