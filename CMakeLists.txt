@@ -15,43 +15,34 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 endif()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_subdirectory(engine)
-
-add_executable(r-type
-    engine/src/main.cpp
+include(FetchContent)
+FetchContent_Declare(
+    asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG asio-1-28-0
+    GIT_SHALLOW TRUE
 )
+FetchContent_MakeAvailable(asio)
 
-target_link_libraries(r-type PRIVATE)
-    rtype_ecs
-    rtype_engine_core
-    add_compile_options(-Wall -Wextra -Wpedantic --std=c++17)
+add_library(asio INTERFACE)
+target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
+target_compile_definitions(asio INTERFACE ASIO_STANDALONE)
+if(WIN32)
+    target_link_libraries(asio INTERFACE ws2_32 wsock32)
 endif()
 
-include_directories(${CMAKE_SOURCE_DIR}/include)
+find_package(Threads REQUIRED)
 
-add_library(rtype_ecs
-    src/ECS/Registry.cpp
-)
+add_subdirectory(network)
+add_subdirectory(engine)
 
-target_include_directories(rtype_ecs PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
+add_executable(r-type_server server/main.cpp)
+target_link_libraries(r-type_server PRIVATE rtype_network)
 
-add_executable(rtype_test
-    src/main.cpp
-)
-target_link_libraries(rtype_test PRIVATE rtype_ecs)
+add_executable(r-type_client client/main.cpp)
+target_link_libraries(r-type_client PRIVATE rtype_network)
 
-install(TARGETS rtype_ecs
-    EXPORT RTypeTargets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-)
-
-install(DIRECTORY include/
-    DESTINATION include
-)
+add_executable(test_lobby tests/test_lobby.cpp)
+target_link_libraries(test_lobby PRIVATE rtype_network)
