@@ -3,14 +3,11 @@
 
 namespace network {
 
-    UdpSocket::UdpSocket(uint16_t port)
-        : _socket(_io, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)) {
+    UdpSocket::UdpSocket(uint16_t port) : _socket(_io, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)) {
         _socket.non_blocking(true);
     }
 
-    UdpSocket::UdpSocket(const std::string& address, uint16_t port)
-        : _socket(_io, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0)),
-          _remoteEndpoint(address, port), _isClient(true) {
+    UdpSocket::UdpSocket(const std::string& address, uint16_t port) : _socket(_io, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0)), _remoteEndpoint(address, port), _isClient(true) {
         _socket.non_blocking(true);
     }
 
@@ -36,8 +33,7 @@ namespace network {
             if (ec)
                 continue;
 
-            packets.emplace_back(std::vector<uint8_t>(buffer.begin(), buffer.begin() + bytes),
-                                 Endpoint(sender));
+            packets.emplace_back(std::vector<uint8_t>(buffer.begin(), buffer.begin() + bytes), Endpoint(sender));
         }
 
         return packets;

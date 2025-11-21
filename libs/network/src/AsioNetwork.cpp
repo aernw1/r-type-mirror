@@ -69,13 +69,11 @@ namespace network {
         _myClientId = Network::INVALID_CLIENT_ID;
     }
 
-    void AsioNetwork::SendReliable(Network::ClientId clientId,
-                                   const std::vector<std::uint8_t>& data) {
+    void AsioNetwork::SendReliable(Network::ClientId clientId, const std::vector<std::uint8_t>& data) {
         SendUnreliable(clientId, data);
     }
 
-    void AsioNetwork::SendUnreliable(Network::ClientId clientId,
-                                     const std::vector<std::uint8_t>& data) {
+    void AsioNetwork::SendUnreliable(Network::ClientId clientId, const std::vector<std::uint8_t>& data) {
         std::lock_guard<std::mutex> lock(_mutex);
         if (!_socket)
             return;

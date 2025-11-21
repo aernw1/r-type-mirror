@@ -4,8 +4,7 @@
 
 namespace network {
 
-    LobbyClient::LobbyClient(const std::string& serverAddr, uint16_t port)
-        : _socket(serverAddr, port) {}
+    LobbyClient::LobbyClient(const std::string& serverAddr, uint16_t port) : _socket(serverAddr, port) {}
 
     void LobbyClient::connect(const std::string& playerName) {
         Serializer s;
@@ -108,8 +107,7 @@ namespace network {
         uint16_t tickRate = d.readU16();
         _gameStarted = true;
 
-        std::cout << "[Client] Game started! Seed=" << _gameSeed << " TickRate=" << tickRate
-                  << std::endl;
+        std::cout << "[Client] Game started! Seed=" << _gameSeed << " TickRate=" << tickRate << std::endl;
     }
 
     void LobbyClient::send(PacketType type, const std::vector<uint8_t>& payload) {

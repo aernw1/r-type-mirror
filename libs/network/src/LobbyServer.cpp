@@ -5,11 +5,8 @@
 
 namespace network {
 
-    LobbyServer::LobbyServer(uint16_t port, size_t maxPlayers, size_t minPlayers)
-        : _socket(port), _maxPlayers(maxPlayers), _minPlayers(minPlayers),
-          _rng(std::random_device{}()) {
-        std::cout << "[Lobby] Server started (min=" << _minPlayers << ", max=" << _maxPlayers << ")"
-                  << std::endl;
+    LobbyServer::LobbyServer(uint16_t port, size_t maxPlayers, size_t minPlayers) : _socket(port), _maxPlayers(maxPlayers), _minPlayers(minPlayers), _rng(std::random_device{}()) {
+        std::cout << "[Lobby] Server started (min=" << _minPlayers << ", max=" << _maxPlayers << ")" << std::endl;
     }
 
     void LobbyServer::update() {
@@ -111,8 +108,7 @@ namespace network {
         if (!idx)
             return;
 
-        std::cout << "[Lobby] Player #" << (int)_players[*idx].number << " disconnected"
-                  << std::endl;
+        std::cout << "[Lobby] Player #" << (int)_players[*idx].number << " disconnected" << std::endl;
 
         _players.erase(_players.begin() + static_cast<std::ptrdiff_t>(*idx));
         _endpoints.erase(_endpoints.begin() + static_cast<std::ptrdiff_t>(*idx));
@@ -121,8 +117,7 @@ namespace network {
     bool LobbyServer::isGameReady() const {
         if (_players.size() < _minPlayers)
             return false;
-        return std::all_of(_players.begin(), _players.end(),
-                           [](const PlayerInfo& p) { return p.ready; });
+        return std::all_of(_players.begin(), _players.end(), [](const PlayerInfo& p) { return p.ready; });
     }
 
     void LobbyServer::printStatus() const {
@@ -131,13 +126,10 @@ namespace network {
             if (p.ready)
                 readyCount++;
         }
-        std::cout << "[Lobby] Players: " << _players.size() << "/" << _maxPlayers
-                  << " | Ready: " << readyCount << "/" << _players.size()
-                  << " | Min to start: " << _minPlayers << std::endl;
+        std::cout << "[Lobby] Players: " << _players.size() << "/" << _maxPlayers << " | Ready: " << readyCount << "/" << _players.size() << " | Min to start: " << _minPlayers << std::endl;
     }
 
-    void LobbyServer::sendTo(const Endpoint& dest, PacketType type,
-                             const std::vector<uint8_t>& payload) {
+    void LobbyServer::sendTo(const Endpoint& dest, PacketType type, const std::vector<uint8_t>& payload) {
         Serializer s;
         s.writeU8(static_cast<uint8_t>(type));
         auto packet = s.finalize();

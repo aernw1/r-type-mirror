@@ -1,5 +1,5 @@
-#include "network/LobbyServer.hpp"
-#include "network/LobbyClient.hpp"
+#include "LobbyServer.hpp"
+#include "LobbyClient.hpp"
 #include <iostream>
 #include <thread>
 #include <chrono>

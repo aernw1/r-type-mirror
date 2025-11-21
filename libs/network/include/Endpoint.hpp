@@ -10,8 +10,7 @@ namespace network {
     public:
         Endpoint() = default;
         Endpoint(const asio::ip::udp::endpoint& ep) : _endpoint(ep) {}
-        Endpoint(const std::string& address, uint16_t port)
-            : _endpoint(asio::ip::make_address(address), port) {}
+        Endpoint(const std::string& address, uint16_t port) : _endpoint(asio::ip::make_address(address), port) {}
 
         std::string address() const { return _endpoint.address().to_string(); }
         uint16_t port() const { return _endpoint.port(); }
