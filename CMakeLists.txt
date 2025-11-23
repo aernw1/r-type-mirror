@@ -55,7 +55,7 @@ add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network)
 
 if(TARGET rtype_sfml_renderer)
-    add_executable(test_renderer test_renderer.cpp)
+    add_executable(test_renderer tests/test_renderer.cpp)
     target_link_libraries(test_renderer PRIVATE
         rtype_sfml_renderer
         rtype_core
