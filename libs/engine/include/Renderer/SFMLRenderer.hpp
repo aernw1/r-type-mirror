@@ -57,7 +57,7 @@ namespace Renderer {
 
         RenderStats GetRenderStats() const override;
 
-        sf::RenderWindow* GetWindow() { return m_window.get(); }
+        const sf::RenderWindow* GetWindow() const { return m_window.get(); }
         void ProcessEvents();
     private:
         static sf::Color ToSFMLColor(const Color& color);

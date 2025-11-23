@@ -295,7 +295,6 @@ namespace Renderer {
 
         sprite.setOrigin(ToSFMLVector(transform.origin));
 
-        // Apply tint
         if (tint.r > 0 || tint.g > 0 || tint.b > 0 || tint.a > 0) {
             sprite.setColor(ToSFMLColor(tint));
         } else {
@@ -488,8 +487,7 @@ __declspec(dllexport)
 #else
 __attribute__((visibility("default")))
 #endif
-void
-DestroyModule(RType::Core::IModule* module) {
+void DestroyModule(RType::Core::IModule* module) {
     delete module;
 }
 };
