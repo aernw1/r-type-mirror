@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 3.17)
+
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    include(cmake/vcpkg.cmake)
+endif()
+
 project(RType VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -48,3 +53,13 @@ target_link_libraries(r-type_client PRIVATE rtype_network)
 
 add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network)
+
+if(TARGET rtype_sfml_renderer)
+    add_executable(test_renderer tests/test_renderer.cpp)
+    target_link_libraries(test_renderer PRIVATE
+        rtype_sfml_renderer
+        rtype_core
+        rtype_ecs
+    )
+    message(STATUS "test_renderer will be built")
+endif()
