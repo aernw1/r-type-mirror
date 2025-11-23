@@ -487,7 +487,8 @@ __declspec(dllexport)
 #else
 __attribute__((visibility("default")))
 #endif
-void DestroyModule(RType::Core::IModule* module) {
+void
+DestroyModule(RType::Core::IModule* module) {
     delete module;
 }
 };
