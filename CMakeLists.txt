@@ -15,24 +15,36 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 endif()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-add_subdirectory(engine)
-
-add_executable(r-type
-    engine/src/main.cpp
+include(FetchContent)
+FetchContent_Declare(
+    asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG asio-1-28-0
+    GIT_SHALLOW TRUE
 )
+FetchContent_MakeAvailable(asio)
 
-target_link_libraries(r-type PRIVATE
-    rtype_engine_core
-)
+add_library(asio INTERFACE)
+target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
+target_compile_definitions(asio INTERFACE ASIO_STANDALONE)
+if(WIN32)
+    target_link_libraries(asio INTERFACE ws2_32 wsock32)
+endif()
 
-install(TARGETS r-type
-    RUNTIME DESTINATION bin
-)
+find_package(Threads REQUIRED)
 
-install(DIRECTORY engine/include/
-    DESTINATION include
-)
+add_subdirectory(libs/engine)
+add_subdirectory(libs/network)
+
+add_executable(r-type_server server/main.cpp)
+target_link_libraries(r-type_server PRIVATE rtype_network)
+
+add_executable(r-type_client client/main.cpp)
+target_link_libraries(r-type_client PRIVATE rtype_network)
+
+add_executable(test_lobby tests/test_lobby.cpp)
+target_link_libraries(test_lobby PRIVATE rtype_network)

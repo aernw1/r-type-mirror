@@ -1,0 +1,124 @@
+#pragma once
+
+#include <cstdint>
+#include <string>
+#include "Core/Module.hpp"
+
+namespace Renderer {
+
+    using TextureId = std::uint32_t;
+    using SpriteId = std::uint32_t;
+    using FontId = std::uint32_t;
+
+    constexpr TextureId INVALID_TEXTURE_ID = 0;
+    constexpr SpriteId INVALID_SPRITE_ID = 0;
+    constexpr FontId INVALID_FONT_ID = 0;
+
+    struct Vector2 {
+        float x = 0.0f;
+        float y = 0.0f;
+
+        Vector2() = default;
+        Vector2(float x, float y)
+            : x(x), y(y) {}
+    };
+
+    struct Color {
+        float r = 1.0f;
+        float g = 1.0f;
+        float b = 1.0f;
+        float a = 1.0f;
+
+        Color() = default;
+        Color(float r, float g, float b, float a = 1.0f)
+            : r(r), g(g), b(b), a(a) {}
+    };
+
+    struct Rectangle {
+        Vector2 position{0.0f, 0.0f};
+        Vector2 size{0.0f, 0.0f};
+    };
+
+    struct WindowConfig {
+        std::string title{"R-Type"};
+        std::uint32_t width = 1280;
+        std::uint32_t height = 720;
+        bool fullscreen = false;
+        bool resizable = false;
+        std::uint32_t targetFramerate = 60;
+    };
+
+    struct TextureConfig {
+        bool smooth = true;
+        bool repeated = false;
+        bool generateMipmaps = false;
+    };
+
+    struct Transform2D {
+        Vector2 position{0.0f, 0.0f};
+        Vector2 scale{1.0f, 1.0f};
+        float rotation = 0.0f;
+        Vector2 origin{0.0f, 0.0f};
+    };
+
+    struct TextParams {
+        Vector2 position{0.0f, 0.0f};
+        Color color{};
+        float rotation = 0.0f;
+        float scale = 1.0f;
+        float letterSpacing = 0.0f;
+        float lineSpacing = 0.0f;
+    };
+
+    struct Camera2D {
+        Vector2 center{0.0f, 0.0f};
+        Vector2 size{1280.0f, 720.0f};
+    };
+
+    struct RenderStats {
+        std::uint32_t drawCalls = 0;
+        std::uint32_t textureSwitches = 0;
+    };
+
+    class IRenderer : public RType::Core::IModule {
+    public:
+        ~IRenderer() override = default;
+
+        const char* GetName() const override = 0;
+        RType::Core::ModulePriority GetPriority() const override = 0;
+        bool Initialize(RType::Core::Engine* engine) override = 0;
+        void Shutdown() override = 0;
+        void Update(float deltaTime) override = 0;
+
+        virtual bool CreateWindow(const WindowConfig& config) = 0;
+        virtual void DestroyWindow() = 0;
+        virtual bool IsWindowOpen() const = 0;
+        virtual void Resize(std::uint32_t width, std::uint32_t height) = 0;
+        virtual void SetWindowTitle(const std::string& title) = 0;
+
+        virtual void BeginFrame() = 0;
+        virtual void EndFrame() = 0;
+        virtual void Clear(const Color& color) = 0;
+
+        virtual TextureId LoadTexture(const std::string& path,
+                                      const TextureConfig& config = TextureConfig{}) = 0;
+        virtual void UnloadTexture(TextureId textureId) = 0;
+
+        virtual SpriteId CreateSprite(TextureId textureId, const Rectangle& region) = 0;
+        virtual void DestroySprite(SpriteId spriteId) = 0;
+
+        virtual void DrawSprite(SpriteId spriteId, const Transform2D& transform,
+                                const Color& tint = Color{}) = 0;
+        virtual void DrawRectangle(const Rectangle& rectangle, const Color& color) = 0;
+
+        virtual FontId LoadFont(const std::string& path, std::uint32_t characterSize) = 0;
+        virtual void UnloadFont(FontId fontId) = 0;
+        virtual void DrawText(FontId fontId, const std::string& text, const TextParams& params) = 0;
+
+        virtual void SetCamera(const Camera2D& camera) = 0;
+        virtual void ResetCamera() = 0;
+
+        virtual RenderStats GetRenderStats() const = 0;
+    };
+
+}
