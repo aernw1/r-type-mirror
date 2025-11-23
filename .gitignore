@@ -1,1 +1,8 @@
 build/
+
+# vcpkg
+vcpkg/
+.vcpkg/
+
+# CMake vcpkg integration files
+vcpkg_installed/
