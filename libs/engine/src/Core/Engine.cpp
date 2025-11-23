@@ -31,6 +31,8 @@ namespace RType {
                 return false;
             }
 
+            InitializeSystems();
+
             m_initialized = true;
             Logger::Info("R-Type Engine initialized successfully");
             return true;
@@ -43,6 +45,7 @@ namespace RType {
 
             Logger::Info("Shutting down R-Type Engine...");
 
+            ShutdownSystems();
             ShutdownModules();
             m_moduleLoader.UnloadAllPlugins();
 
@@ -133,6 +136,30 @@ namespace RType {
                 IModule* module = *it;
                 Logger::Info("Shutting down module '{}'", module->GetName());
                 module->Shutdown();
+            }
+        }
+
+        void Engine::UpdateSystems(float deltaTime) {
+            for (auto& system : m_systems) {
+                system->Update(m_registry, deltaTime);
+            }
+        }
+
+        void Engine::InitializeSystems() {
+            Logger::Info("Initializing {} systems...", m_systems.size());
+
+            for (auto& system : m_systems) {
+                Logger::Info("Initializing system '{}'", system->GetName());
+                system->Initialize(m_registry);
+            }
+        }
+
+        void Engine::ShutdownSystems() {
+            Logger::Info("Shutting down {} systems...", m_systems.size());
+
+            for (auto it = m_systems.rbegin(); it != m_systems.rend(); ++it) {
+                Logger::Info("Shutting down system '{}'", (*it)->GetName());
+                (*it)->Shutdown();
             }
         }
 
