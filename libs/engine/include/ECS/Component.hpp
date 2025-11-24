@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <typeindex>
 #include <type_traits>
+#include "Renderer/IRenderer.hpp"
+#include "Math/Types.hpp"
 
 namespace RType {
 
@@ -30,6 +32,19 @@ namespace RType {
             Velocity() = default;
             Velocity(float dx, float dy)
                 : dx(dx), dy(dy) {}
+        };
+
+        struct Drawable : public IComponent {
+            Renderer::SpriteId spriteId = Renderer::INVALID_SPRITE_ID;
+            Math::Vector2 scale{1.0f, 1.0f};
+            float rotation = 0.0f;
+            Math::Vector2 origin{0.0f, 0.0f};
+            Math::Color tint{1.0f, 1.0f, 1.0f, 1.0f};
+            int layer = 0;
+
+            Drawable() = default;
+            Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
+                : spriteId(sprite), layer(renderLayer) {}
         };
     }
 
