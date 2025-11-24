@@ -97,7 +97,6 @@ int main(int, char*[]) {
 
         rendererPtr->Update(deltaTime);
 
-        // Handle input
         auto& playerPos = registry.GetComponent<ECS::Position>(player);
         float speed = 300.0f;
 
@@ -112,12 +111,8 @@ int main(int, char*[]) {
         if (rendererPtr->IsKeyPressed(Renderer::Key::Escape))
             break;
 
-        // Begin rendering
         rendererPtr->BeginFrame();
         rendererPtr->Clear(Renderer::Color{0.1f, 0.1f, 0.2f, 1.0f});
-
-        // Update all systems (including MovementSystem and RenderingSystem)
-        // RenderingSystem will draw sprites automatically
         engine->UpdateSystems(deltaTime);
 
         rendererPtr->EndFrame();
