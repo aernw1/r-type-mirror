@@ -17,3 +17,19 @@ template <typename Component>
 typename SparseArray<Component>::const_reference_type SparseArray<Component>::operator[](size_t idx) const {
     return _data[idx];
 }
+
+template <typename Component>
+SparseArray<Component>& SparseArray<Component>::operator=(SparseArray const& other) {
+    if (this != &other) {
+        _data = other._data;
+    }
+    return *this;
+}
+
+template <typename Component>
+SparseArray<Component>& SparseArray<Component>::operator=(SparseArray&& other) noexcept {
+    if (this != &other) {
+        _data = std::move(other._data);
+    }
+    return *this;
+}
