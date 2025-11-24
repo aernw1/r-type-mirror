@@ -19,6 +19,17 @@ typename SparseArray<Component>::const_reference_type SparseArray<Component>::op
 }
 
 template <typename Component>
+SparseArray<Component>::SparseArray(SparseArray const& other) : _data(other._data) {
+}
+
+template <typename Component>
+SparseArray<Component>::SparseArray(SparseArray&& other) noexcept : _data(std::move(other._data)) {
+}
+
+template <typename Component>
+SparseArray<Component>::~SparseArray() = default;
+
+template <typename Component>
 SparseArray<Component>& SparseArray<Component>::operator=(SparseArray const& other) {
     if (this != &other) {
         _data = other._data;
