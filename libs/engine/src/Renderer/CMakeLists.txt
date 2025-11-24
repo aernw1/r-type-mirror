@@ -44,7 +44,7 @@ if(NOT SFML_FOUND)
     # Don't build audio and network modules (we only need graphics/window/system)
     set(SFML_BUILD_AUDIO OFF CACHE BOOL "" FORCE)
     set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
-    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 
     FetchContent_MakeAvailable(SFML)
 
@@ -78,10 +78,12 @@ target_include_directories(rtype_sfml_renderer PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(rtype_sfml_renderer PUBLIC
-    rtype_core
-    rtype_ecs
-    ${SFML_LIBRARIES}
+target_link_libraries(rtype_sfml_renderer
+    PUBLIC
+        rtype_core
+        rtype_ecs
+    PRIVATE
+        ${SFML_LIBRARIES}
 )
 
 target_compile_features(rtype_sfml_renderer PUBLIC cxx_std_17)
