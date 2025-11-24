@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <cassert>
 #include <iostream>
+#include <memory>
+#include <stdexcept>
 
 
 template <typename Component>

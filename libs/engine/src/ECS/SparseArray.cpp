@@ -110,3 +110,13 @@ void SparseArray<Component>::erase(size_type pos) {
     }
     _data[pos].reset();
 }
+
+template <typename Component>
+typename SparseArray<Component>::size_type SparseArray<Component>::get_index(value_type const& component) const {
+    for (size_type i = 0; i < _data.size(); ++i) {
+        if (std::addressof(_data[i]) == std::addressof(component)) {
+            return i;
+        }
+    }
+    throw std::runtime_error("Component not found in sparse array");
+}
