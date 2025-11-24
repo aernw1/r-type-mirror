@@ -1,3 +1,8 @@
+/**
+ * @file SparseArray.hpp
+ * @brief Implémentation d'un sparse array pour le système ECS
+ */
+
 #pragma once
 
 #include <optional>
@@ -10,7 +15,31 @@
 #include <memory>
 #include <stdexcept>
 
-
+/**
+ * @class SparseArray
+ * @brief Container sparse array pour stocker des composants ECS
+ * 
+ * Un sparse array est un tableau creux où l'index correspond directement à l'ID d'une entité.
+ * Les composants sont stockés dans un std::vector<std::optional<Component>>, permettant
+ * d'avoir des "trous" (indices sans composant).
+ * 
+ * @tparam Component Le type de composant à stocker
+ * 
+ * @note Cette implémentation est optimisée pour les accès directs par index (O(1))
+ *       et les itérations séquentielles (cache-friendly).
+ * 
+ * @example
+ * @code
+ * SparseArray<Position> positions;
+ * positions.insert_at(5, Position{10, 20});  // Entity 5
+ * positions.insert_at(7, Position{30, 40});  // Entity 7
+ * 
+ * // Accès direct
+ * if (positions[5].has_value()) {
+ *     Position& pos = positions[5].value();
+ * }
+ * @endcode
+ */
 template <typename Component>
 class SparseArray {
     using value_type = std::optional<Component>;
@@ -24,41 +53,110 @@ class SparseArray {
     using iterator = typename sparse_array_t::iterator;
     using const_iterator = typename sparse_array_t::const_iterator;
 
-    // Constructors
     public:
         SparseArray() = default;
- 
-        SparseArray(SparseArray const& other);
+    
+        SparseArray(SparseArray const& other) : _data(other._data) {
+        }
 
-        SparseArray(SparseArray&& other) noexcept;
+        SparseArray(SparseArray&& other) noexcept : _data(std::move(other._data)) {
+        }
 
-        ~SparseArray();
+        ~SparseArray() = default;
 
-        SparseArray& operator=(SparseArray const& other);
-        SparseArray& operator=(SparseArray&& other) noexcept;
+        SparseArray& operator=(SparseArray const& other) {
+            if (this != &other) {
+                _data = other._data;
+            }
+            return *this;
+        }
 
-        iterator begin();
-        const_iterator begin() const;
-        const_iterator cbegin() const;
+        SparseArray& operator=(SparseArray&& other) noexcept {
+            if (this != &other) {
+                _data = std::move(other._data);
+            }
+            return *this;
+        }
 
-        iterator end();
-        const_iterator end() const;
-        const_iterator cend() const;
+        iterator begin() {
+            return _data.begin();
+        }
 
-        reference_type operator[](size_t idx);
-        const_reference_type operator[](size_t idx) const;
+        const_iterator begin() const {
+            return _data.begin();
+        }
 
-        size_type size() const;
+        const_iterator cbegin() const {
+            return _data.cbegin();
+        }
 
-        reference_type insert_at(size_type pos, Component const & component);
-        reference_type insert_at(size_type pos, Component && component);
-        
-        template <class ... Params >
-        reference_type emplace_at(size_type pos, Params &&... params);
-        
-        void erase(size_type pos) ;
-        size_type get_index(value_type const & component) const;
+        iterator end() {
+            return _data.end();
+        }
 
+        const_iterator end() const {
+            return _data.end();
+        }
+
+        const_iterator cend() const {
+            return _data.cend();
+        }
+
+        reference_type operator[](size_t idx) {
+            if (idx >= _data.size()) {
+                _data.resize(idx + 1);
+            }
+            return _data[idx];
+        }
+
+        const_reference_type operator[](size_t idx) const {
+            return _data[idx];
+        }
+
+        size_type size() const {
+            return _data.size();
+        }
+
+        reference_type insert_at(size_type pos, Component const& component) {
+            if (pos >= _data.size()) {
+                _data.resize(pos + 1);
+            }
+            _data[pos] = component;
+            return _data[pos];
+        }
+
+        reference_type insert_at(size_type pos, Component&& component) {
+            if (pos >= _data.size()) {
+                _data.resize(pos + 1);
+            }
+            _data[pos] = std::move(component);
+            return _data[pos];
+        }
+
+        template <class... Params>
+        reference_type emplace_at(size_type pos, Params&&... params) {
+            if (pos >= _data.size()) {
+                _data.resize(pos + 1);
+            }
+            _data[pos].emplace(std::forward<Params>(params)...);
+            return _data[pos];
+        }
+
+        void erase(size_type pos) {
+            if (pos >= _data.size()) {
+                return;
+            }
+            _data[pos].reset();
+        }
+
+        size_type get_index(value_type const& component) const {
+            for (size_type i = 0; i < _data.size(); ++i) {
+                if (std::addressof(_data[i]) == std::addressof(component)) {
+                    return i;
+                }
+            }
+            throw std::runtime_error("Component not found in sparse array");
+        }
     private :
         sparse_array_t _data ;
 };
