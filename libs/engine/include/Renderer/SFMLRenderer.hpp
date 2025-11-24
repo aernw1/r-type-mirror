@@ -57,12 +57,15 @@ namespace Renderer {
 
         RenderStats GetRenderStats() const override;
 
+        bool IsKeyPressed(Key key) const override;
+
         const sf::RenderWindow* GetWindow() const { return m_window.get(); }
         void ProcessEvents();
     private:
         static sf::Color ToSFMLColor(const Color& color);
         static sf::Vector2f ToSFMLVector(const Vector2& vec);
         static sf::IntRect ToSFMLRect(const Rectangle& rect);
+        static sf::Keyboard::Key ToSFMLKey(Key key);
 
         std::unique_ptr<sf::RenderWindow> m_window;
         WindowConfig m_windowConfig;

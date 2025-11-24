@@ -469,6 +469,228 @@ namespace Renderer {
 #endif
     }
 
+    sf::Keyboard::Key SFMLRenderer::ToSFMLKey(Key key) {
+#ifdef RTYPE_SFML_3
+        switch (key) {
+        case Key::A:
+            return sf::Keyboard::Key::A;
+        case Key::B:
+            return sf::Keyboard::Key::B;
+        case Key::C:
+            return sf::Keyboard::Key::C;
+        case Key::D:
+            return sf::Keyboard::Key::D;
+        case Key::E:
+            return sf::Keyboard::Key::E;
+        case Key::F:
+            return sf::Keyboard::Key::F;
+        case Key::G:
+            return sf::Keyboard::Key::G;
+        case Key::H:
+            return sf::Keyboard::Key::H;
+        case Key::I:
+            return sf::Keyboard::Key::I;
+        case Key::J:
+            return sf::Keyboard::Key::J;
+        case Key::K:
+            return sf::Keyboard::Key::K;
+        case Key::L:
+            return sf::Keyboard::Key::L;
+        case Key::M:
+            return sf::Keyboard::Key::M;
+        case Key::N:
+            return sf::Keyboard::Key::N;
+        case Key::O:
+            return sf::Keyboard::Key::O;
+        case Key::P:
+            return sf::Keyboard::Key::P;
+        case Key::Q:
+            return sf::Keyboard::Key::Q;
+        case Key::R:
+            return sf::Keyboard::Key::R;
+        case Key::S:
+            return sf::Keyboard::Key::S;
+        case Key::T:
+            return sf::Keyboard::Key::T;
+        case Key::U:
+            return sf::Keyboard::Key::U;
+        case Key::V:
+            return sf::Keyboard::Key::V;
+        case Key::W:
+            return sf::Keyboard::Key::W;
+        case Key::X:
+            return sf::Keyboard::Key::X;
+        case Key::Y:
+            return sf::Keyboard::Key::Y;
+        case Key::Z:
+            return sf::Keyboard::Key::Z;
+        case Key::Num0:
+            return sf::Keyboard::Key::Num0;
+        case Key::Num1:
+            return sf::Keyboard::Key::Num1;
+        case Key::Num2:
+            return sf::Keyboard::Key::Num2;
+        case Key::Num3:
+            return sf::Keyboard::Key::Num3;
+        case Key::Num4:
+            return sf::Keyboard::Key::Num4;
+        case Key::Num5:
+            return sf::Keyboard::Key::Num5;
+        case Key::Num6:
+            return sf::Keyboard::Key::Num6;
+        case Key::Num7:
+            return sf::Keyboard::Key::Num7;
+        case Key::Num8:
+            return sf::Keyboard::Key::Num8;
+        case Key::Num9:
+            return sf::Keyboard::Key::Num9;
+        case Key::Escape:
+            return sf::Keyboard::Key::Escape;
+        case Key::Space:
+            return sf::Keyboard::Key::Space;
+        case Key::Enter:
+            return sf::Keyboard::Key::Enter;
+        case Key::Backspace:
+            return sf::Keyboard::Key::Backspace;
+        case Key::Tab:
+            return sf::Keyboard::Key::Tab;
+        case Key::Left:
+            return sf::Keyboard::Key::Left;
+        case Key::Right:
+            return sf::Keyboard::Key::Right;
+        case Key::Up:
+            return sf::Keyboard::Key::Up;
+        case Key::Down:
+            return sf::Keyboard::Key::Down;
+        case Key::LShift:
+            return sf::Keyboard::Key::LShift;
+        case Key::RShift:
+            return sf::Keyboard::Key::RShift;
+        case Key::LControl:
+            return sf::Keyboard::Key::LControl;
+        case Key::RControl:
+            return sf::Keyboard::Key::RControl;
+        case Key::LAlt:
+            return sf::Keyboard::Key::LAlt;
+        case Key::RAlt:
+            return sf::Keyboard::Key::RAlt;
+        default:
+            return sf::Keyboard::Key::Unknown;
+        }
+#else
+        switch (key) {
+        case Key::A:
+            return sf::Keyboard::A;
+        case Key::B:
+            return sf::Keyboard::B;
+        case Key::C:
+            return sf::Keyboard::C;
+        case Key::D:
+            return sf::Keyboard::D;
+        case Key::E:
+            return sf::Keyboard::E;
+        case Key::F:
+            return sf::Keyboard::F;
+        case Key::G:
+            return sf::Keyboard::G;
+        case Key::H:
+            return sf::Keyboard::H;
+        case Key::I:
+            return sf::Keyboard::I;
+        case Key::J:
+            return sf::Keyboard::J;
+        case Key::K:
+            return sf::Keyboard::K;
+        case Key::L:
+            return sf::Keyboard::L;
+        case Key::M:
+            return sf::Keyboard::M;
+        case Key::N:
+            return sf::Keyboard::N;
+        case Key::O:
+            return sf::Keyboard::O;
+        case Key::P:
+            return sf::Keyboard::P;
+        case Key::Q:
+            return sf::Keyboard::Q;
+        case Key::R:
+            return sf::Keyboard::R;
+        case Key::S:
+            return sf::Keyboard::S;
+        case Key::T:
+            return sf::Keyboard::T;
+        case Key::U:
+            return sf::Keyboard::U;
+        case Key::V:
+            return sf::Keyboard::V;
+        case Key::W:
+            return sf::Keyboard::W;
+        case Key::X:
+            return sf::Keyboard::X;
+        case Key::Y:
+            return sf::Keyboard::Y;
+        case Key::Z:
+            return sf::Keyboard::Z;
+        case Key::Num0:
+            return sf::Keyboard::Num0;
+        case Key::Num1:
+            return sf::Keyboard::Num1;
+        case Key::Num2:
+            return sf::Keyboard::Num2;
+        case Key::Num3:
+            return sf::Keyboard::Num3;
+        case Key::Num4:
+            return sf::Keyboard::Num4;
+        case Key::Num5:
+            return sf::Keyboard::Num5;
+        case Key::Num6:
+            return sf::Keyboard::Num6;
+        case Key::Num7:
+            return sf::Keyboard::Num7;
+        case Key::Num8:
+            return sf::Keyboard::Num8;
+        case Key::Num9:
+            return sf::Keyboard::Num9;
+        case Key::Escape:
+            return sf::Keyboard::Escape;
+        case Key::Space:
+            return sf::Keyboard::Space;
+        case Key::Enter:
+            return sf::Keyboard::Return;
+        case Key::Backspace:
+            return sf::Keyboard::BackSpace;
+        case Key::Tab:
+            return sf::Keyboard::Tab;
+        case Key::Left:
+            return sf::Keyboard::Left;
+        case Key::Right:
+            return sf::Keyboard::Right;
+        case Key::Up:
+            return sf::Keyboard::Up;
+        case Key::Down:
+            return sf::Keyboard::Down;
+        case Key::LShift:
+            return sf::Keyboard::LShift;
+        case Key::RShift:
+            return sf::Keyboard::RShift;
+        case Key::LControl:
+            return sf::Keyboard::LControl;
+        case Key::RControl:
+            return sf::Keyboard::RControl;
+        case Key::LAlt:
+            return sf::Keyboard::LAlt;
+        case Key::RAlt:
+            return sf::Keyboard::RAlt;
+        default:
+            return sf::Keyboard::Unknown;
+        }
+#endif
+    }
+
+    bool SFMLRenderer::IsKeyPressed(Key key) const {
+        return sf::Keyboard::isKeyPressed(ToSFMLKey(key));
+    }
+
 }
 
 extern "C" {
@@ -487,8 +709,7 @@ __declspec(dllexport)
 #else
 __attribute__((visibility("default")))
 #endif
-void
-DestroyModule(RType::Core::IModule* module) {
+void DestroyModule(RType::Core::IModule* module) {
     delete module;
 }
 };
