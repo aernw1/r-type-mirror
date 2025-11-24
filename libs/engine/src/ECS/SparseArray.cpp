@@ -44,3 +44,33 @@ SparseArray<Component>& SparseArray<Component>::operator=(SparseArray&& other) n
     }
     return *this;
 }
+
+template <typename Component>
+typename SparseArray<Component>::iterator SparseArray<Component>::begin() {
+    return _data.begin();
+}
+
+template <typename Component>
+typename SparseArray<Component>::const_iterator SparseArray<Component>::begin() const {
+    return _data.begin();
+}
+
+template <typename Component>
+typename SparseArray<Component>::const_iterator SparseArray<Component>::cbegin() const {
+    return _data.cbegin();
+}
+
+template <typename Component>
+typename SparseArray<Component>::iterator SparseArray<Component>::end() {
+    return _data.end();
+}
+
+template <typename Component>
+typename SparseArray<Component>::const_iterator SparseArray<Component>::end() const {
+    return _data.end();
+}
+
+template <typename Component>
+typename SparseArray<Component>::const_iterator SparseArray<Component>::cend() const {
+    return _data.cend();
+}
