@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include "Core/Module.hpp"
+#include "Math/Types.hpp"
 
 namespace Audio {
 
@@ -11,15 +12,6 @@ namespace Audio {
 
     constexpr SoundId INVALID_SOUND_ID = 0;
     constexpr MusicId INVALID_MUSIC_ID = 0;
-
-    struct Vector2 {
-        float x = 0.0f;
-        float y = 0.0f;
-
-        Vector2() = default;
-        Vector2(float x, float y)
-            : x(x), y(y) {}
-    };
 
     struct AudioConfig {
         std::uint32_t sampleRate = 44100;
@@ -36,9 +28,9 @@ namespace Audio {
     };
 
     struct ListenerProperties {
-        Vector2 position{0.0f, 0.0f};
-        Vector2 forward{0.0f, -1.0f};
-        Vector2 velocity{0.0f, 0.0f};
+        Math::Vector2 position{0.0f, 0.0f};
+        Math::Vector2 forward{0.0f, -1.0f};
+        Math::Vector2 velocity{0.0f, 0.0f};
     };
 
     class IAudio : public RType::Core::IModule {
