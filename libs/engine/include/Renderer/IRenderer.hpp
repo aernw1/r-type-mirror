@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include "Core/Module.hpp"
+#include "Math/Types.hpp"
 
 namespace Renderer {
 
@@ -14,30 +15,9 @@ namespace Renderer {
     constexpr SpriteId INVALID_SPRITE_ID = 0;
     constexpr FontId INVALID_FONT_ID = 0;
 
-    struct Vector2 {
-        float x = 0.0f;
-        float y = 0.0f;
-
-        Vector2() = default;
-        Vector2(float x, float y)
-            : x(x), y(y) {}
-    };
-
-    struct Color {
-        float r = 1.0f;
-        float g = 1.0f;
-        float b = 1.0f;
-        float a = 1.0f;
-
-        Color() = default;
-        Color(float r, float g, float b, float a = 1.0f)
-            : r(r), g(g), b(b), a(a) {}
-    };
-
-    struct Rectangle {
-        Vector2 position{0.0f, 0.0f};
-        Vector2 size{0.0f, 0.0f};
-    };
+    using Math::Color;
+    using Math::Rectangle;
+    using Math::Vector2;
 
     struct WindowConfig {
         std::string title{"R-Type"};

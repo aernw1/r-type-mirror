@@ -4,6 +4,7 @@
 #include "ModuleLoader.hpp"
 #include "Logger.hpp"
 #include "../ECS/Registry.hpp"
+#include "../ECS/ISystem.hpp"
 #include <string>
 #include <memory>
 #include <unordered_map>
@@ -43,16 +44,23 @@ namespace RType {
 
             ECS::Registry& GetRegistry() { return m_registry; }
             const ECS::Registry& GetRegistry() const { return m_registry; }
+
+            template <typename T>
+            void RegisterSystem(std::unique_ptr<T> system);
+            void UpdateSystems(float deltaTime);
         private:
             void SortModulesByPriority();
             bool InitializeModules();
             void ShutdownModules();
+            void InitializeSystems();
+            void ShutdownSystems();
 
             EngineConfig m_config;
             ModuleLoader m_moduleLoader;
             std::unordered_map<std::type_index, std::unique_ptr<IModule>> m_builtinModules;
             std::vector<IModule*> m_sortedModules;
             ECS::Registry m_registry;
+            std::vector<std::unique_ptr<ECS::ISystem>> m_systems;
             bool m_initialized{false};
         };
 
@@ -89,6 +97,19 @@ namespace RType {
             }
 
             return nullptr;
+        }
+
+        template <typename T>
+        void Engine::RegisterSystem(std::unique_ptr<T> system) {
+            static_assert(std::is_base_of<ECS::ISystem, T>::value, "T must derive from ISystem");
+
+            if (!system) {
+                Logger::Error("Cannot register null system");
+                return;
+            }
+
+            Logger::Info("Registering system '{}'", system->GetName());
+            m_systems.push_back(std::move(system));
         }
 
     }
