@@ -3,15 +3,10 @@
 #include "Renderer/SFMLRenderer.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/MovementSystem.hpp"
-#include <SFML/Window/Keyboard.hpp>
-#include <SFML/Config.hpp>
 #include <memory>
+#include <chrono>
 
-#if SFML_VERSION_MAJOR >= 3
-#define RTYPE_SFML_3
-#endif
-
-int main(int argc, char* argv[]) {
+int main(int, char*[]) {
     using namespace RType;
 
     Core::Logger::SetLogLevel(Core::LogLevel::Debug);
@@ -67,12 +62,14 @@ int main(int argc, char* argv[]) {
 
     Core::Logger::Info("Created {} entities", registry.GetEntityCount());
 
-    sf::Clock clock;
+    auto lastTime = std::chrono::steady_clock::now();
 
     Core::Logger::Info("Starting render loop...");
 
     while (rendererPtr->IsWindowOpen()) {
-        float deltaTime = clock.restart().asSeconds();
+        auto currentTime = std::chrono::steady_clock::now();
+        float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
+        lastTime = currentTime;
 
         rendererPtr->Update(deltaTime);
         engine->UpdateSystems(deltaTime);
@@ -80,29 +77,16 @@ int main(int argc, char* argv[]) {
         auto& playerPos = registry.GetComponent<ECS::Position>(player);
         float speed = 300.0f;
 
-#ifdef RTYPE_SFML_3
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+        if (rendererPtr->IsKeyPressed(Renderer::Key::Left))
             playerPos.x -= speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+        if (rendererPtr->IsKeyPressed(Renderer::Key::Right))
             playerPos.x += speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
+        if (rendererPtr->IsKeyPressed(Renderer::Key::Up))
             playerPos.y -= speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+        if (rendererPtr->IsKeyPressed(Renderer::Key::Down))
             playerPos.y += speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
+        if (rendererPtr->IsKeyPressed(Renderer::Key::Escape))
             break;
-#else
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-            playerPos.x -= speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-            playerPos.x += speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-            playerPos.y -= speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-            playerPos.y += speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
-            break;
-#endif
 
         rendererPtr->BeginFrame();
         rendererPtr->Clear(Renderer::Color{0.1f, 0.1f, 0.2f, 1.0f});
