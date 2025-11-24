@@ -102,3 +102,11 @@ typename SparseArray<Component>::reference_type SparseArray<Component>::emplace_
     _data[pos].emplace(std::forward<Params>(params)...);
     return _data[pos];
 }
+
+template <typename Component>
+void SparseArray<Component>::erase(size_type pos) {
+    if (pos >= _data.size()) {
+        return;
+    }
+    _data[pos].reset();
+}
