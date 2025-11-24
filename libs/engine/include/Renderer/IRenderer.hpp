@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include "Core/Module.hpp"
+#include "Math/Types.hpp"
 
 namespace Renderer {
 
@@ -14,30 +15,9 @@ namespace Renderer {
     constexpr SpriteId INVALID_SPRITE_ID = 0;
     constexpr FontId INVALID_FONT_ID = 0;
 
-    struct Vector2 {
-        float x = 0.0f;
-        float y = 0.0f;
-
-        Vector2() = default;
-        Vector2(float x, float y)
-            : x(x), y(y) {}
-    };
-
-    struct Color {
-        float r = 1.0f;
-        float g = 1.0f;
-        float b = 1.0f;
-        float a = 1.0f;
-
-        Color() = default;
-        Color(float r, float g, float b, float a = 1.0f)
-            : r(r), g(g), b(b), a(a) {}
-    };
-
-    struct Rectangle {
-        Vector2 position{0.0f, 0.0f};
-        Vector2 size{0.0f, 0.0f};
-    };
+    using Math::Color;
+    using Math::Rectangle;
+    using Math::Vector2;
 
     struct WindowConfig {
         std::string title{"R-Type"};
@@ -80,6 +60,61 @@ namespace Renderer {
         std::uint32_t textureSwitches = 0;
     };
 
+    enum class Key {
+        Unknown = -1,
+        A,
+        B,
+        C,
+        D,
+        E,
+        F,
+        G,
+        H,
+        I,
+        J,
+        K,
+        L,
+        M,
+        N,
+        O,
+        P,
+        Q,
+        R,
+        S,
+        T,
+        U,
+        V,
+        W,
+        X,
+        Y,
+        Z,
+        Num0,
+        Num1,
+        Num2,
+        Num3,
+        Num4,
+        Num5,
+        Num6,
+        Num7,
+        Num8,
+        Num9,
+        Escape,
+        Space,
+        Enter,
+        Backspace,
+        Tab,
+        Left,
+        Right,
+        Up,
+        Down,
+        LShift,
+        RShift,
+        LControl,
+        RControl,
+        LAlt,
+        RAlt
+    };
+
     class IRenderer : public RType::Core::IModule {
     public:
         ~IRenderer() override = default;
@@ -119,6 +154,8 @@ namespace Renderer {
         virtual void ResetCamera() = 0;
 
         virtual RenderStats GetRenderStats() const = 0;
+
+        virtual bool IsKeyPressed(Key key) const = 0;
     };
 
 }

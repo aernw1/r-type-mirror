@@ -24,6 +24,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+add_custom_target(copy_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/assets
+    ${CMAKE_BINARY_DIR}/assets
+)
+
 include(FetchContent)
 FetchContent_Declare(
     asio
@@ -53,6 +59,9 @@ target_link_libraries(r-type_client PRIVATE rtype_network)
 
 add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network)
+
+add_executable(test_sparse_array tests/test_sparse_array.cpp)
+target_link_libraries(test_sparse_array PRIVATE rtype_ecs)
 
 if(TARGET rtype_sfml_renderer)
     add_executable(test_renderer tests/test_renderer.cpp)

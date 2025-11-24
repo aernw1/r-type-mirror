@@ -37,6 +37,7 @@ engine/
 │   └── ECS/
 │       ├── Entity.hpp        # Entity type definition
 │       ├── Component.hpp     # Component definitions
+│       ├── SparseArray.hpp   # Sparse array container for components
 │       └── Registry.hpp      # ECS registry
 └── src/
     ├── Core/
@@ -247,6 +248,76 @@ struct Velocity {
 | `RemoveComponent<T>(entity)` | Remove component from entity |
 | `GetEntitiesWithComponent<T>()` | Get all entities with component |
 | `GetEntityCount()` | Get total entity count |
+
+#### SparseArray
+
+The `SparseArray` is a container used internally by the Registry to store components efficiently. It's a sparse array where the **index directly corresponds to an Entity ID**.
+
+**Key Features:**
+- Direct index access: `O(1)` access by entity ID
+- Cache-friendly: Data stored contiguously in memory
+- Holes allowed: Indices can be empty (`std::nullopt`)
+
+**Structure:**
+```cpp
+template <typename Component>
+class SparseArray {
+    std::vector<std::optional<Component>> _data;
+    // Index = Entity ID
+};
+```
+
+**Visual Example:**
+```
+Entities: 0, 2, 5 have Position components
+
+Index:  0    1    2    3    4    5
+       ┌────┬────┬────┬────┬────┬────┐
+Data:  │{x,y}│null│{x,y}│null│null│{x,y}│
+       └────┴────┴────┴────┴────┴────┘
+```
+
+**Basic Usage:**
+```cpp
+#include <ECS/SparseArray.hpp>
+
+SparseArray<Position> positions;
+
+// Insert component at entity ID 5
+positions.insert_at(5, Position{10.0f, 20.0f});
+
+// Access directly
+auto& pos_opt = positions[5];
+if (pos_opt.has_value()) {
+    Position& pos = pos_opt.value();
+    pos.x = 100.0f;
+}
+
+// Emplace (more efficient, constructs in-place)
+positions.emplace_at(7, 30.0f, 40.0f);
+
+// Erase
+positions.erase(5);
+```
+
+**Main Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `insert_at(pos, component)` | Insert component by copy |
+| `insert_at(pos, std::move(component))` | Insert component by move |
+| `emplace_at(pos, args...)` | Construct component in-place |
+| `operator[](idx)` | Direct access (resizes if needed) |
+| `erase(pos)` | Remove component at index |
+| `size()` | Return vector size |
+| `begin() / end()` | Iterators for range-based loops |
+
+**When to use:**
+- Sequential entity IDs (0, 1, 2, 3...)
+- Components present on most entities
+- Need frequent iterations (cache-friendly)
+
+**Note:** The Registry uses `SparseArray` internally. You typically don't need to use it directly unless implementing custom component storage.
 
 ---
 
