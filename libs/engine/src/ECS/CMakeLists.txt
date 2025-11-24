@@ -1,11 +1,14 @@
 set(ECS_SOURCES
     Registry.cpp
+    MovementSystem.cpp
 )
 
 set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Component.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Entity.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Registry.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ISystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MovementSystem.hpp
 )
 
 add_library(rtype_ecs STATIC

@@ -4,7 +4,8 @@ namespace RType {
 
     namespace ECS {
 
-        Registry::Registry() : m_nextEntityID(1), m_entityCount(0) {}
+        Registry::Registry()
+            : m_nextEntityID(1), m_entityCount(0) {}
 
         Entity Registry::CreateEntity() {
             Entity newEntity = m_nextEntityID++;
