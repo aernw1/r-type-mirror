@@ -74,3 +74,21 @@ template <typename Component>
 typename SparseArray<Component>::const_iterator SparseArray<Component>::cend() const {
     return _data.cend();
 }
+
+template <typename Component>
+typename SparseArray<Component>::reference_type SparseArray<Component>::insert_at(size_type pos, Component const& component) {
+    if (pos >= _data.size()) {
+        _data.resize(pos + 1);
+    }
+    _data[pos] = component;
+    return _data[pos];
+}
+
+template <typename Component>
+typename SparseArray<Component>::reference_type SparseArray<Component>::insert_at(size_type pos, Component&& component) {
+    if (pos >= _data.size()) {
+        _data.resize(pos + 1);
+    }
+    _data[pos] = std::move(component);
+    return _data[pos];
+}
