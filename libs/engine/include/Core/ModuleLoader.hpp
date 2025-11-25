@@ -1,5 +1,7 @@
 #pragma once
 
+#define RTYPE_INCLUDE_WINDOWS_H
+#include "Platform.hpp"
 #include "Module.hpp"
 #include "Logger.hpp"
 #include <string>
@@ -9,22 +11,6 @@
 #include <functional>
 
 #ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#ifdef CreateWindow
-#undef CreateWindow
-#endif
-#ifdef max
-#undef max
-#endif
-#ifdef min
-#undef min
-#endif
 using LibraryHandle = HMODULE;
 #else
 #include <dlfcn.h>
@@ -62,8 +48,8 @@ namespace RType {
             bool IsPluginLoaded(const std::string& pluginName) const;
             size_t GetPluginCount() const { return m_loadedPlugins.size(); }
         private:
-            LibraryHandle LoadLibrary(const std::string& path);
-            void FreeLibrary(LibraryHandle handle);
+            LibraryHandle LoadLibraryFromPath(const std::string& path);
+            void FreeLibraryHandle(LibraryHandle handle);
             void* GetFunction(LibraryHandle handle, const std::string& name);
             std::string GetLastErrorMessage();
             std::string ExtractPluginName(const std::string& path);
