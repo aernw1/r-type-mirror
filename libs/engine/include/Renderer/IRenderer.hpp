@@ -1,5 +1,6 @@
 #pragma once
 
+#define RTYPE_INCLUDE_WINDOWS_H
 #include "Core/Platform.hpp"
 #include <cstdint>
 #include <string>

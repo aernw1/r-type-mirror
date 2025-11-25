@@ -22,6 +22,14 @@ target_link_libraries(rtype_sfml_renderer
 
 target_compile_features(rtype_sfml_renderer PUBLIC cxx_std_17)
 
+if(WIN32)
+    target_compile_definitions(rtype_sfml_renderer PRIVATE
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
+        _CRT_SECURE_NO_WARNINGS
+    )
+endif()
+
 set_target_properties(rtype_sfml_renderer PROPERTIES
     PREFIX ""
     OUTPUT_NAME "SFMLRenderer"
