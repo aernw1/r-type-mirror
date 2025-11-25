@@ -14,7 +14,6 @@
 #include "Core/Module.hpp"
 #include "Math/Types.hpp"
 
-// Undefine Windows macros that conflict with our API
 #ifdef _WIN32
 #ifdef CreateWindow
 #undef CreateWindow

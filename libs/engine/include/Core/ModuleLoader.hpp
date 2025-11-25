@@ -16,7 +16,6 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-// Undefine problematic Windows macros
 #ifdef CreateWindow
 #undef CreateWindow
 #endif
