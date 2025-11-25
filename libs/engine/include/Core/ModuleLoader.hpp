@@ -9,7 +9,23 @@
 #include <functional>
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
+// Undefine problematic Windows macros
+#ifdef CreateWindow
+#undef CreateWindow
+#endif
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
 using LibraryHandle = HMODULE;
 #else
 #include <dlfcn.h>
