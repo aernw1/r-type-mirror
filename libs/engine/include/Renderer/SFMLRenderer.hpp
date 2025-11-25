@@ -2,15 +2,8 @@
 
 #include "IRenderer.hpp"
 #include <SFML/Graphics.hpp>
-#include <SFML/Config.hpp>
 #include <memory>
 #include <unordered_map>
-
-#if SFML_VERSION_MAJOR >= 3
-#define RTYPE_SFML_3
-#else
-#define RTYPE_SFML_2
-#endif
 
 namespace Renderer {
 

@@ -61,19 +61,6 @@ namespace Renderer {
 
         m_windowConfig = config;
 
-#ifdef RTYPE_SFML_3
-        sf::State state = config.fullscreen ? sf::State::Fullscreen : sf::State::Windowed;
-        std::uint32_t style = sf::Style::Default;
-        if (!config.resizable && !config.fullscreen) {
-            style = sf::Style::Titlebar | sf::Style::Close;
-        }
-
-        m_window = std::make_unique<sf::RenderWindow>(
-            sf::VideoMode(sf::Vector2u(config.width, config.height)),
-            config.title,
-            style,
-            state);
-#else
         sf::Uint32 style = sf::Style::Default;
         if (config.fullscreen) {
             style = sf::Style::Fullscreen;
@@ -85,7 +72,6 @@ namespace Renderer {
             sf::VideoMode(config.width, config.height),
             config.title,
             style);
-#endif
 
         if (!m_window) {
             RType::Core::Logger::Error("Failed to create SFML window");
@@ -125,13 +111,8 @@ namespace Renderer {
         m_windowConfig.height = height;
         m_window->setSize(sf::Vector2u(width, height));
 
-#ifdef RTYPE_SFML_3
-        m_defaultView.setSize(sf::Vector2f(static_cast<float>(width), static_cast<float>(height)));
-        m_defaultView.setCenter(sf::Vector2f(static_cast<float>(width) / 2.0f, static_cast<float>(height) / 2.0f));
-#else
         m_defaultView.setSize(static_cast<float>(width), static_cast<float>(height));
         m_defaultView.setCenter(static_cast<float>(width) / 2.0f, static_cast<float>(height) / 2.0f);
-#endif
 
         if (!m_usingCustomCamera) {
             m_currentView = m_defaultView;
@@ -179,19 +160,11 @@ namespace Renderer {
     TextureId SFMLRenderer::LoadTexture(const std::string& path, const TextureConfig& config) {
         auto texture = std::make_shared<sf::Texture>();
 
-#ifdef RTYPE_SFML_3
-        if (!texture->loadFromFile(path, config.smooth)) {
-            RType::Core::Logger::Error("Failed to load texture: {}", path);
-            return 0;
-        }
-#else
         if (!texture->loadFromFile(path)) {
             RType::Core::Logger::Error("Failed to load texture: {}", path);
             return 0;
         }
         texture->setSmooth(config.smooth);
-#endif
-
         texture->setRepeated(config.repeated);
 
         TextureId id = m_nextTextureId++;
@@ -229,18 +202,6 @@ namespace Renderer {
 
         SpriteId id = m_nextSpriteId++;
 
-#ifdef RTYPE_SFML_3
-        sf::Sprite sprite(*it->second.texture);
-
-        if (region.size.x > 0 && region.size.y > 0) {
-            sprite.setTextureRect(sf::IntRect(
-                sf::Vector2i(static_cast<int>(region.position.x), static_cast<int>(region.position.y)),
-                sf::Vector2i(static_cast<int>(region.size.x), static_cast<int>(region.size.y))));
-        }
-
-        SpriteData spriteData{std::move(sprite), textureId};
-        m_sprites.emplace(id, std::move(spriteData));
-#else
         SpriteData spriteData;
         spriteData.sprite.setTexture(*it->second.texture);
         spriteData.textureId = textureId;
@@ -254,7 +215,6 @@ namespace Renderer {
         }
 
         m_sprites[id] = spriteData;
-#endif
 
         RType::Core::Logger::Debug("Created sprite ID: {} from texture ID: {}", id, textureId);
         return id;
@@ -286,13 +246,7 @@ namespace Renderer {
 
         sprite.setPosition(ToSFMLVector(transform.position));
         sprite.setScale(ToSFMLVector(transform.scale));
-
-#ifdef RTYPE_SFML_3
-        sprite.setRotation(sf::degrees(transform.rotation));
-#else
         sprite.setRotation(transform.rotation);
-#endif
-
         sprite.setOrigin(ToSFMLVector(transform.origin));
 
         if (tint.r > 0 || tint.g > 0 || tint.b > 0 || tint.a > 0) {
@@ -321,17 +275,10 @@ namespace Renderer {
     FontId SFMLRenderer::LoadFont(const std::string& path, std::uint32_t characterSize) {
         auto font = std::make_shared<sf::Font>();
 
-#ifdef RTYPE_SFML_3
-        if (!font->openFromFile(path)) {
-            RType::Core::Logger::Error("Failed to load font: {}", path);
-            return 0;
-        }
-#else
         if (!font->loadFromFile(path)) {
             RType::Core::Logger::Error("Failed to load font: {}", path);
             return 0;
         }
-#endif
 
         FontId id = m_nextFontId++;
         m_fonts[id] = {font, characterSize};
@@ -362,17 +309,11 @@ namespace Renderer {
             return;
         }
 
-#ifdef RTYPE_SFML_3
-        sf::Text sfText(*it->second.font, text, it->second.characterSize);
-        sfText.setRotation(sf::degrees(params.rotation));
-#else
         sf::Text sfText;
         sfText.setFont(*it->second.font);
         sfText.setString(text);
         sfText.setCharacterSize(it->second.characterSize);
         sfText.setRotation(params.rotation);
-#endif
-
         sfText.setFillColor(ToSFMLColor(params.color));
         sfText.setPosition(ToSFMLVector(params.position));
         sfText.setScale(sf::Vector2f(params.scale, params.scale));
@@ -387,13 +328,7 @@ namespace Renderer {
         }
 
         m_currentView.setCenter(ToSFMLVector(camera.center));
-
-#ifdef RTYPE_SFML_3
-        m_currentView.setSize(ToSFMLVector(camera.size));
-#else
         m_currentView.setSize(camera.size.x, camera.size.y);
-#endif
-
         m_window->setView(m_currentView);
         m_usingCustomCamera = true;
 
@@ -423,15 +358,6 @@ namespace Renderer {
             return;
         }
 
-#ifdef RTYPE_SFML_3
-        while (auto event = m_window->pollEvent()) {
-            if (event->is<sf::Event::Closed>()) {
-                m_window->close();
-            } else if (const auto* resized = event->getIf<sf::Event::Resized>()) {
-                Resize(resized->size.x, resized->size.y);
-            }
-        }
-#else
         sf::Event event;
         while (m_window->pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
@@ -440,7 +366,6 @@ namespace Renderer {
                 Resize(event.size.width, event.size.height);
             }
         }
-#endif
     }
 
     sf::Color SFMLRenderer::ToSFMLColor(const Color& color) {
@@ -456,235 +381,69 @@ namespace Renderer {
     }
 
     sf::IntRect SFMLRenderer::ToSFMLRect(const Rectangle& rect) {
-#ifdef RTYPE_SFML_3
-        return sf::IntRect(
-            sf::Vector2i(static_cast<int>(rect.position.x), static_cast<int>(rect.position.y)),
-            sf::Vector2i(static_cast<int>(rect.size.x), static_cast<int>(rect.size.y)));
-#else
         return sf::IntRect(
             static_cast<int>(rect.position.x),
             static_cast<int>(rect.position.y),
             static_cast<int>(rect.size.x),
             static_cast<int>(rect.size.y));
-#endif
     }
 
     sf::Keyboard::Key SFMLRenderer::ToSFMLKey(Key key) {
-#ifdef RTYPE_SFML_3
-        switch (key) {
-        case Key::A:
-            return sf::Keyboard::Key::A;
-        case Key::B:
-            return sf::Keyboard::Key::B;
-        case Key::C:
-            return sf::Keyboard::Key::C;
-        case Key::D:
-            return sf::Keyboard::Key::D;
-        case Key::E:
-            return sf::Keyboard::Key::E;
-        case Key::F:
-            return sf::Keyboard::Key::F;
-        case Key::G:
-            return sf::Keyboard::Key::G;
-        case Key::H:
-            return sf::Keyboard::Key::H;
-        case Key::I:
-            return sf::Keyboard::Key::I;
-        case Key::J:
-            return sf::Keyboard::Key::J;
-        case Key::K:
-            return sf::Keyboard::Key::K;
-        case Key::L:
-            return sf::Keyboard::Key::L;
-        case Key::M:
-            return sf::Keyboard::Key::M;
-        case Key::N:
-            return sf::Keyboard::Key::N;
-        case Key::O:
-            return sf::Keyboard::Key::O;
-        case Key::P:
-            return sf::Keyboard::Key::P;
-        case Key::Q:
-            return sf::Keyboard::Key::Q;
-        case Key::R:
-            return sf::Keyboard::Key::R;
-        case Key::S:
-            return sf::Keyboard::Key::S;
-        case Key::T:
-            return sf::Keyboard::Key::T;
-        case Key::U:
-            return sf::Keyboard::Key::U;
-        case Key::V:
-            return sf::Keyboard::Key::V;
-        case Key::W:
-            return sf::Keyboard::Key::W;
-        case Key::X:
-            return sf::Keyboard::Key::X;
-        case Key::Y:
-            return sf::Keyboard::Key::Y;
-        case Key::Z:
-            return sf::Keyboard::Key::Z;
-        case Key::Num0:
-            return sf::Keyboard::Key::Num0;
-        case Key::Num1:
-            return sf::Keyboard::Key::Num1;
-        case Key::Num2:
-            return sf::Keyboard::Key::Num2;
-        case Key::Num3:
-            return sf::Keyboard::Key::Num3;
-        case Key::Num4:
-            return sf::Keyboard::Key::Num4;
-        case Key::Num5:
-            return sf::Keyboard::Key::Num5;
-        case Key::Num6:
-            return sf::Keyboard::Key::Num6;
-        case Key::Num7:
-            return sf::Keyboard::Key::Num7;
-        case Key::Num8:
-            return sf::Keyboard::Key::Num8;
-        case Key::Num9:
-            return sf::Keyboard::Key::Num9;
-        case Key::Escape:
-            return sf::Keyboard::Key::Escape;
-        case Key::Space:
-            return sf::Keyboard::Key::Space;
-        case Key::Enter:
-            return sf::Keyboard::Key::Enter;
-        case Key::Backspace:
-            return sf::Keyboard::Key::Backspace;
-        case Key::Tab:
-            return sf::Keyboard::Key::Tab;
-        case Key::Left:
-            return sf::Keyboard::Key::Left;
-        case Key::Right:
-            return sf::Keyboard::Key::Right;
-        case Key::Up:
-            return sf::Keyboard::Key::Up;
-        case Key::Down:
-            return sf::Keyboard::Key::Down;
-        case Key::LShift:
-            return sf::Keyboard::Key::LShift;
-        case Key::RShift:
-            return sf::Keyboard::Key::RShift;
-        case Key::LControl:
-            return sf::Keyboard::Key::LControl;
-        case Key::RControl:
-            return sf::Keyboard::Key::RControl;
-        case Key::LAlt:
-            return sf::Keyboard::Key::LAlt;
-        case Key::RAlt:
-            return sf::Keyboard::Key::RAlt;
-        default:
-            return sf::Keyboard::Key::Unknown;
-        }
-#else
-        switch (key) {
-        case Key::A:
-            return sf::Keyboard::A;
-        case Key::B:
-            return sf::Keyboard::B;
-        case Key::C:
-            return sf::Keyboard::C;
-        case Key::D:
-            return sf::Keyboard::D;
-        case Key::E:
-            return sf::Keyboard::E;
-        case Key::F:
-            return sf::Keyboard::F;
-        case Key::G:
-            return sf::Keyboard::G;
-        case Key::H:
-            return sf::Keyboard::H;
-        case Key::I:
-            return sf::Keyboard::I;
-        case Key::J:
-            return sf::Keyboard::J;
-        case Key::K:
-            return sf::Keyboard::K;
-        case Key::L:
-            return sf::Keyboard::L;
-        case Key::M:
-            return sf::Keyboard::M;
-        case Key::N:
-            return sf::Keyboard::N;
-        case Key::O:
-            return sf::Keyboard::O;
-        case Key::P:
-            return sf::Keyboard::P;
-        case Key::Q:
-            return sf::Keyboard::Q;
-        case Key::R:
-            return sf::Keyboard::R;
-        case Key::S:
-            return sf::Keyboard::S;
-        case Key::T:
-            return sf::Keyboard::T;
-        case Key::U:
-            return sf::Keyboard::U;
-        case Key::V:
-            return sf::Keyboard::V;
-        case Key::W:
-            return sf::Keyboard::W;
-        case Key::X:
-            return sf::Keyboard::X;
-        case Key::Y:
-            return sf::Keyboard::Y;
-        case Key::Z:
-            return sf::Keyboard::Z;
-        case Key::Num0:
-            return sf::Keyboard::Num0;
-        case Key::Num1:
-            return sf::Keyboard::Num1;
-        case Key::Num2:
-            return sf::Keyboard::Num2;
-        case Key::Num3:
-            return sf::Keyboard::Num3;
-        case Key::Num4:
-            return sf::Keyboard::Num4;
-        case Key::Num5:
-            return sf::Keyboard::Num5;
-        case Key::Num6:
-            return sf::Keyboard::Num6;
-        case Key::Num7:
-            return sf::Keyboard::Num7;
-        case Key::Num8:
-            return sf::Keyboard::Num8;
-        case Key::Num9:
-            return sf::Keyboard::Num9;
-        case Key::Escape:
-            return sf::Keyboard::Escape;
-        case Key::Space:
-            return sf::Keyboard::Space;
-        case Key::Enter:
-            return sf::Keyboard::Return;
-        case Key::Backspace:
-            return sf::Keyboard::BackSpace;
-        case Key::Tab:
-            return sf::Keyboard::Tab;
-        case Key::Left:
-            return sf::Keyboard::Left;
-        case Key::Right:
-            return sf::Keyboard::Right;
-        case Key::Up:
-            return sf::Keyboard::Up;
-        case Key::Down:
-            return sf::Keyboard::Down;
-        case Key::LShift:
-            return sf::Keyboard::LShift;
-        case Key::RShift:
-            return sf::Keyboard::RShift;
-        case Key::LControl:
-            return sf::Keyboard::LControl;
-        case Key::RControl:
-            return sf::Keyboard::RControl;
-        case Key::LAlt:
-            return sf::Keyboard::LAlt;
-        case Key::RAlt:
-            return sf::Keyboard::RAlt;
-        default:
-            return sf::Keyboard::Unknown;
-        }
-#endif
+        static const std::unordered_map<Key, sf::Keyboard::Key> keyMapping = {
+            {Key::A, sf::Keyboard::A},
+            {Key::B, sf::Keyboard::B},
+            {Key::C, sf::Keyboard::C},
+            {Key::D, sf::Keyboard::D},
+            {Key::E, sf::Keyboard::E},
+            {Key::F, sf::Keyboard::F},
+            {Key::G, sf::Keyboard::G},
+            {Key::H, sf::Keyboard::H},
+            {Key::I, sf::Keyboard::I},
+            {Key::J, sf::Keyboard::J},
+            {Key::K, sf::Keyboard::K},
+            {Key::L, sf::Keyboard::L},
+            {Key::M, sf::Keyboard::M},
+            {Key::N, sf::Keyboard::N},
+            {Key::O, sf::Keyboard::O},
+            {Key::P, sf::Keyboard::P},
+            {Key::Q, sf::Keyboard::Q},
+            {Key::R, sf::Keyboard::R},
+            {Key::S, sf::Keyboard::S},
+            {Key::T, sf::Keyboard::T},
+            {Key::U, sf::Keyboard::U},
+            {Key::V, sf::Keyboard::V},
+            {Key::W, sf::Keyboard::W},
+            {Key::X, sf::Keyboard::X},
+            {Key::Y, sf::Keyboard::Y},
+            {Key::Z, sf::Keyboard::Z},
+            {Key::Num0, sf::Keyboard::Num0},
+            {Key::Num1, sf::Keyboard::Num1},
+            {Key::Num2, sf::Keyboard::Num2},
+            {Key::Num3, sf::Keyboard::Num3},
+            {Key::Num4, sf::Keyboard::Num4},
+            {Key::Num5, sf::Keyboard::Num5},
+            {Key::Num6, sf::Keyboard::Num6},
+            {Key::Num7, sf::Keyboard::Num7},
+            {Key::Num8, sf::Keyboard::Num8},
+            {Key::Num9, sf::Keyboard::Num9},
+            {Key::Escape, sf::Keyboard::Escape},
+            {Key::Space, sf::Keyboard::Space},
+            {Key::Enter, sf::Keyboard::Return},
+            {Key::Backspace, sf::Keyboard::BackSpace},
+            {Key::Tab, sf::Keyboard::Tab},
+            {Key::Left, sf::Keyboard::Left},
+            {Key::Right, sf::Keyboard::Right},
+            {Key::Up, sf::Keyboard::Up},
+            {Key::Down, sf::Keyboard::Down},
+            {Key::LShift, sf::Keyboard::LShift},
+            {Key::RShift, sf::Keyboard::RShift},
+            {Key::LControl, sf::Keyboard::LControl},
+            {Key::RControl, sf::Keyboard::RControl},
+            {Key::LAlt, sf::Keyboard::LAlt},
+            {Key::RAlt, sf::Keyboard::RAlt}};
+
+        auto it = keyMapping.find(key);
+        return (it != keyMapping.end()) ? it->second : sf::Keyboard::Unknown;
     }
 
     bool SFMLRenderer::IsKeyPressed(Key key) const {
