@@ -2,15 +2,8 @@
 
 #include "IRenderer.hpp"
 #include <SFML/Graphics.hpp>
-#include <SFML/Config.hpp>
 #include <memory>
 #include <unordered_map>
-
-#if SFML_VERSION_MAJOR >= 3
-#define RTYPE_SFML_3
-#else
-#define RTYPE_SFML_2
-#endif
 
 namespace Renderer {
 
@@ -27,7 +20,7 @@ namespace Renderer {
         bool ShouldUpdateInRenderThread() const override;
 
         bool CreateWindow(const WindowConfig& config) override;
-        void DestroyWindow() override;
+        void Destroy() override;
         bool IsWindowOpen() const override;
         void Resize(std::uint32_t width, std::uint32_t height) override;
         void SetWindowTitle(const std::string& title) override;
@@ -102,4 +95,4 @@ namespace Renderer {
         sf::Clock m_clock;
     };
 
-} // namespace Renderer
+}
