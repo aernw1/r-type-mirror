@@ -14,12 +14,20 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
 
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y clang-tidy cmake build-essential libsfml-dev
+      run: sudo apt-get update && sudo apt-get install -y clang-tidy cmake build-essential ninja-build libx11-dev libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev libfreetype6-dev
+
+    - uses: actions/cache@v4
+      with:
+        path: vcpkg/installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+        restore-keys: ${{ runner.os }}-vcpkg-
 
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug
+      run: cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug
 
     - name: Run clang-tidy
       run: |
