@@ -9,7 +9,7 @@
 
 namespace Physics {
 
-    using Vector2 = Math::Vector2;
+    using Vector2 = RType::Math::Vector2;
 
     struct BodyDef {
         Vector2 position{0.0f, 0.0f};
