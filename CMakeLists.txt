@@ -49,15 +49,10 @@ add_executable(test_sparse_array tests/test_sparse_array.cpp)
 target_link_libraries(test_sparse_array PRIVATE rtype_ecs)
 
 if(TARGET rtype_sfml_renderer)
-    find_package(SFML 2.6 COMPONENTS graphics window system REQUIRED CONFIG)
     add_executable(test_renderer tests/test_renderer.cpp)
     target_link_libraries(test_renderer PRIVATE
-        rtype_sfml_renderer
         rtype_core
         rtype_ecs
-        sfml-graphics
-        sfml-window
-        sfml-system
     )
-    message(STATUS "test_renderer will be built")
+    message(STATUS "test_renderer will be built (loads renderer plugin dynamically)")
 endif()

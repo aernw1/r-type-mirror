@@ -71,3 +71,25 @@
 #endif // RTYPE_INCLUDE_WINDOWS_H
 
 #endif // _WIN32
+
+#include <string>
+
+namespace RType {
+    namespace Core {
+        namespace Platform {
+#ifdef _WIN32
+            constexpr const char* PLUGIN_EXTENSION = ".dll";
+#elif defined(__APPLE__)
+            constexpr const char* PLUGIN_EXTENSION = ".dylib";
+#else
+            constexpr const char* PLUGIN_EXTENSION = ".so";
+#endif
+            inline std::string GetPluginPath(const std::string& pluginName) {
+                return pluginName + PLUGIN_EXTENSION;
+            }
+            inline std::string GetPluginPathFromBin(const std::string& pluginName) {
+                return "../lib/" + pluginName + PLUGIN_EXTENSION;
+            }
+        }
+    }
+}
