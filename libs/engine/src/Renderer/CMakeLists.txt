@@ -1,37 +1,33 @@
 cmake_minimum_required(VERSION 3.17)
 
-# Three-tier SFML dependency resolution:
+# Three-tier SFML 2.x dependency resolution:
 # 1. vcpkg (if CMAKE_TOOLCHAIN_FILE is set)
-# 2. System-installed SFML (via find_package)
-# 3. FetchContent (download and build from source)
+# 2. System-installed SFML 2.x (via find_package)
+# 3. FetchContent (download and build SFML 2.6.2 from source)
 
 set(SFML_FOUND FALSE)
 
 # Tier 1: Try vcpkg first (already configured by root CMakeLists.txt)
 if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
-    message(STATUS "Searching for SFML via vcpkg...")
+    message(STATUS "Searching for SFML 2.x via vcpkg...")
     find_package(SFML 2.5 COMPONENTS graphics window system QUIET)
     if(SFML_FOUND)
-        message(STATUS "Found SFML via vcpkg")
+        message(STATUS "Found SFML 2.x via vcpkg")
     endif()
 endif()
 
-# Tier 2: Try system-installed SFML (2.5+ or 3.x)
+# Tier 2: Try system-installed SFML 2.x (2.5 or 2.6 only)
 if(NOT SFML_FOUND)
-    message(STATUS "Searching for system-installed SFML...")
+    message(STATUS "Searching for system-installed SFML 2.x...")
     find_package(SFML 2.5 COMPONENTS graphics window system QUIET)
-    if(NOT SFML_FOUND)
-        find_package(SFML 3 COMPONENTS Graphics Window System QUIET)
-    endif()
-
     if(SFML_FOUND)
-        message(STATUS "Found system-installed SFML")
+        message(STATUS "Found system-installed SFML 2.x")
     endif()
 endif()
 
-# Tier 3: Fetch from source if not found
+# Tier 3: Fetch SFML 2.6.2 from source if not found
 if(NOT SFML_FOUND)
-    message(STATUS "SFML not found, fetching SFML 2.6.2 from source...")
+    message(STATUS "SFML 2.x not found, fetching SFML 2.6.2 from source...")
 
     include(FetchContent)
     FetchContent_Declare(
@@ -53,16 +49,16 @@ if(NOT SFML_FOUND)
     message(STATUS "SFML 2.6.2 fetched and configured")
 endif()
 
-# Determine library names based on version
+# Determine library names based on target availability
 if(SFML_FOUND)
     if(TARGET SFML::Graphics)
-        # SFML 3.x or vcpkg uses SFML:: namespace
+        # vcpkg uses SFML:: namespace
         set(SFML_LIBRARIES SFML::Graphics SFML::Window SFML::System)
-        message(STATUS "Using SFML with SFML:: namespace")
+        message(STATUS "Using SFML 2.x with SFML:: namespace")
     elseif(TARGET sfml-graphics)
-        # SFML 2.x or FetchContent uses sfml- prefix
+        # FetchContent or manual install uses sfml- prefix
         set(SFML_LIBRARIES sfml-graphics sfml-window sfml-system)
-        message(STATUS "Using SFML with sfml- prefix")
+        message(STATUS "Using SFML 2.x with sfml- prefix")
     else()
         message(WARNING "SFML found but targets are unclear")
     endif()
