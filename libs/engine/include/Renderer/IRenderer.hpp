@@ -1,24 +1,10 @@
 #pragma once
 
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#endif
-
+#include "Core/Platform.hpp"
 #include <cstdint>
 #include <string>
 #include "Core/Module.hpp"
 #include "Math/Types.hpp"
-
-#ifdef _WIN32
-#ifdef CreateWindow
-#undef CreateWindow
-#endif
-#endif
 
 namespace Renderer {
 
