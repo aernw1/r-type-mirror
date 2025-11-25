@@ -98,16 +98,17 @@ int main(int, char*[]) {
         rendererPtr->Update(deltaTime);
 
         auto& playerPos = registry.GetComponent<ECS::Position>(player);
-        float speed = 300.0f;
+        constexpr float speed = 300.0f;
 
+        const float movement = speed * deltaTime;
         if (rendererPtr->IsKeyPressed(Renderer::Key::Left))
-            playerPos.x -= speed * deltaTime;
+            playerPos.x -= movement;
         if (rendererPtr->IsKeyPressed(Renderer::Key::Right))
-            playerPos.x += speed * deltaTime;
+            playerPos.x += movement;
         if (rendererPtr->IsKeyPressed(Renderer::Key::Up))
-            playerPos.y -= speed * deltaTime;
+            playerPos.y -= movement;
         if (rendererPtr->IsKeyPressed(Renderer::Key::Down))
-            playerPos.y += speed * deltaTime;
+            playerPos.y += movement;
         if (rendererPtr->IsKeyPressed(Renderer::Key::Escape))
             break;
 
