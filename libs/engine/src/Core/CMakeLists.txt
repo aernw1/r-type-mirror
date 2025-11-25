@@ -26,3 +26,7 @@ target_link_libraries(rtype_core PUBLIC
 )
 
 target_compile_features(rtype_core PUBLIC cxx_std_17)
+
+set_target_properties(rtype_core PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
