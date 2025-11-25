@@ -16,21 +16,21 @@ namespace RType {
 
             auto entities = registry.GetEntitiesWithComponent<Drawable>();
 
-            std::vector<Entity> renderableEntities;
+            std::vector<std::pair<Entity, int>> renderableEntities;
             for (Entity entity : entities) {
                 if (registry.HasComponent<Position>(entity)) {
-                    renderableEntities.push_back(entity);
+                    const auto& drawable = registry.GetComponent<Drawable>(entity);
+                    renderableEntities.emplace_back(entity, drawable.layer);
                 }
             }
 
             std::sort(renderableEntities.begin(), renderableEntities.end(),
-                      [&registry](Entity a, Entity b) {
-                          const auto& drawableA = registry.GetComponent<Drawable>(a);
-                          const auto& drawableB = registry.GetComponent<Drawable>(b);
-                          return drawableA.layer < drawableB.layer;
+                      [](const std::pair<Entity, int>& a, const std::pair<Entity, int>& b) {
+                          return a.second < b.second;
                       });
 
-            for (Entity entity : renderableEntities) {
+            for (const auto& pair : renderableEntities) {
+                Entity entity = pair.first;
                 const auto& position = registry.GetComponent<Position>(entity);
                 const auto& drawable = registry.GetComponent<Drawable>(entity);
 
