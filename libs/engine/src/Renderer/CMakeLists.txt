@@ -1,5 +1,4 @@
-# Find SFML via vcpkg (managed by root CMakeLists.txt)
-# SFML 3.x uses capitalized component names
+# Find SFML 2.6 via vcpkg (managed by root CMakeLists.txt)
 find_package(SFML 2.6 COMPONENTS graphics window system REQUIRED CONFIG)
 
 # Create SFML Renderer library
