@@ -1,6 +1,7 @@
 #include "Core/Engine.hpp"
 #include "Core/Logger.hpp"
-#include "Renderer/SFMLRenderer.hpp"
+#include "Core/Platform.hpp"
+#include "Renderer/IRenderer.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/MovementSystem.hpp"
 #include <memory>
@@ -12,17 +13,27 @@ int main(int, char*[]) {
     Core::Logger::SetLogLevel(Core::LogLevel::Debug);
 
     auto engine = std::make_unique<Core::Engine>();
-    if (!engine->Initialize()) {
-        Core::Logger::Critical("Failed to initialize engine");
+    Core::IModule* module = nullptr;
+
+    module = engine->LoadPlugin("lib/" + Core::Platform::GetPluginPath("SFMLRenderer"));
+    if (!module) {
+        module = engine->LoadPlugin(Core::Platform::GetPluginPathFromBin("SFMLRenderer"));
+    }
+
+    if (!module) {
+        Core::Logger::Critical("Failed to load SFMLRenderer plugin");
+        Core::Logger::Critical("Make sure to run from build/ directory: ./bin/test_renderer");
         return 1;
     }
 
-    auto renderer = std::make_unique<Renderer::SFMLRenderer>();
-    auto* rendererPtr = renderer.get();
-    engine->RegisterModule(std::move(renderer));
+    auto* rendererPtr = dynamic_cast<Renderer::IRenderer*>(module);
+    if (!rendererPtr) {
+        Core::Logger::Critical("Failed to cast module to IRenderer");
+        return 1;
+    }
 
-    if (!rendererPtr->Initialize(engine.get())) {
-        Core::Logger::Critical("Failed to initialize SFMLRenderer");
+    if (!engine->Initialize()) {
+        Core::Logger::Critical("Failed to initialize engine");
         return 1;
     }
 
@@ -109,7 +120,6 @@ int main(int, char*[]) {
     }
 
     Core::Logger::Info("Shutting down...");
-    rendererPtr->Shutdown();
     engine->Shutdown();
 
     return 0;
