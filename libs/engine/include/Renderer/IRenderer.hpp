@@ -14,6 +14,12 @@
 #include "Core/Module.hpp"
 #include "Math/Types.hpp"
 
+#ifdef _WIN32
+#ifdef CreateWindow
+#undef CreateWindow
+#endif
+#endif
+
 namespace Renderer {
 
     using TextureId = std::uint32_t;
