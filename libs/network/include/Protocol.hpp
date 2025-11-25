@@ -7,6 +7,15 @@
 
 #pragma once
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#endif
+
 #include <cstdint>
 
 namespace network {
@@ -22,7 +31,7 @@ namespace network {
         GAME_START = 0x16,
         DISCONNECT = 0x17,
         PLAYER_LEFT = 0x18,
-        ERROR = 0x1F,
+        ERROR_MSG = 0x1F, // @haloys i renamed to avoid Windows macro conflict
     };
 
     // ==================== GAME PROTOCOL (UDP) ====================
