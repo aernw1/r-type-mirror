@@ -1,5 +1,14 @@
 #pragma once
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#endif
+
 #include <cstdint>
 #include <string>
 #include "Core/Module.hpp"
@@ -126,7 +135,7 @@ namespace Renderer {
         void Update(float deltaTime) override = 0;
 
         virtual bool CreateWindow(const WindowConfig& config) = 0;
-        virtual void DestroyWindow() = 0;
+        virtual void Destroy() = 0;
         virtual bool IsWindowOpen() const = 0;
         virtual void Resize(std::uint32_t width, std::uint32_t height) = 0;
         virtual void SetWindowTitle(const std::string& title) = 0;

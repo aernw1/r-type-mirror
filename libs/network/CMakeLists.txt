@@ -13,3 +13,12 @@ target_include_directories(rtype_network PUBLIC
 )
 
 target_link_libraries(rtype_network PUBLIC asio Threads::Threads)
+
+if(WIN32)
+    target_compile_definitions(rtype_network PUBLIC
+        _WIN32_WINNT=0x0601      # Windows 7
+        NOMINMAX                  # Prevent min/max macro conflicts
+        WIN32_LEAN_AND_MEAN       # Exclude rarely-used Windows headers
+        _CRT_SECURE_NO_WARNINGS   # Suppress deprecation warnings for standard functions
+    )
+endif()
