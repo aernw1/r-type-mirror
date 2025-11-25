@@ -76,7 +76,7 @@ namespace network {
             return "DISCONNECT";
         case LobbyPacket::PLAYER_LEFT:
             return "PLAYER_LEFT";
-        case LobbyPacket::ERROR:
+        case LobbyPacket::ERROR_MSG:
             return "ERROR";
         default:
             return "UNKNOWN";
