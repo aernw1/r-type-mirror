@@ -5,17 +5,11 @@
 #include "Core/Module.hpp"
 #include "Core/Logger.hpp"
 #include "Core/Engine.hpp"
+#include "Math/Types.hpp"
 
 namespace Physics {
 
-    struct Vector2 {
-        float x = 0.0f;
-        float y = 0.0f;
-
-        Vector2() = default;
-        Vector2(float x, float y)
-            : x(x), y(y) {}
-    };
+    using Vector2 = Math::Vector2;
 
     struct BodyDef {
         Vector2 position{0.0f, 0.0f};
