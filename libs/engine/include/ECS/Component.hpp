@@ -47,6 +47,14 @@ namespace RType {
                 : spriteId(sprite), layer(renderLayer) {}
         };
 
+        struct Controllable : public IComponent {
+            float speed = 200.0f;  // Pixels per second
+
+            Controllable() = default;
+            Controllable(float moveSpeed)
+                : speed(moveSpeed) {}
+        };
+
         struct Player : public IComponent {
             uint8_t playerNumber = 0;
             uint64_t playerHash = 0;
@@ -100,7 +108,6 @@ namespace RType {
             Damage(int damageAmount)
                 : amount(damageAmount) {}
         };
-
     }
 
 }
