@@ -46,6 +46,60 @@ namespace RType {
             Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
                 : spriteId(sprite), layer(renderLayer) {}
         };
+
+         enum class EnemyType : uint8_t {
+            BASIC = 0,
+            FAST = 1,
+            TANK = 2,
+            BOSS = 3,
+            FORMATION = 4
+        };
+
+        struct Enemy : public IComponent {
+            EnemyType type = EnemyType::BASIC;
+            uint32_t id = 0;
+
+            Enemy() = default;
+            Enemy(EnemyType enemyType, uint32_t enemyId = 0)
+                : type(enemyType), id(enemyId) {}
+        };
+
+        struct Health : public IComponent {
+            int current = 100;
+            int max = 100;
+
+            Health() = default;
+            Health(int maxHealth)
+                : current(maxHealth), max(maxHealth) {}
+            Health(int currentHealth, int maxHealth)
+                : current(currentHealth), max(maxHealth) {}
+        };
+
+        struct ScoreValue : public IComponent {
+            uint32_t points = 100;
+
+            ScoreValue() = default;
+            ScoreValue(uint32_t scorePoints)
+                : points(scorePoints) {}
+        };
+
+        struct Damage : public IComponent {
+            int amount = 10;
+
+            Damage() = default;
+            Damage(int damageAmount)
+                : amount(damageAmount) {}
+        };
+
+        struct Collider : public IComponent {
+            float width = 0.0f;
+            float height = 0.0f;
+            bool isActive = true;
+
+            Collider() = default;
+            Collider(float w, float h, bool active = true)
+                : width(w), height(h), isActive(active) {}
+        };
     }
 
 }
