@@ -46,6 +46,15 @@ namespace RType {
             Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
                 : spriteId(sprite), layer(renderLayer) {}
         };
+
+        struct BoxCollider : public IComponent {
+            float width = 0.0f;
+            float height = 0.0f;
+
+            BoxCollider() = default;
+            BoxCollider(float width, float height)
+                : width(width), height(height) {}
+        };
     }
 
 }
