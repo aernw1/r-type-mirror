@@ -40,7 +40,12 @@ add_executable(r-type_server server/main.cpp)
 target_link_libraries(r-type_server PRIVATE rtype_network)
 
 add_executable(r-type_client client/main.cpp)
-target_link_libraries(r-type_client PRIVATE rtype_network)
+target_link_libraries(r-type_client PRIVATE
+    rtype_network
+    rtype_sfml_renderer
+    rtype_core
+    rtype_ecs
+)
 
 add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network)
