@@ -36,15 +36,15 @@ namespace RType {
 
         struct Drawable : public IComponent {
             Renderer::SpriteId spriteId = Renderer::INVALID_SPRITE_ID;
-            int layer = 0;
             Math::Vector2 scale{1.0f, 1.0f};
             float rotation = 0.0f;
             Math::Vector2 origin{0.0f, 0.0f};
-            Math::Color tint{255, 255, 255, 255};
+            Math::Color tint{1.0f, 1.0f, 1.0f, 1.0f};
+            int layer = 0;
 
             Drawable() = default;
-            explicit Drawable(Renderer::SpriteId id, int layer = 0)
-                : spriteId(id), layer(layer) {}
+            Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
+                : spriteId(sprite), layer(renderLayer) {}
         };
     }
 

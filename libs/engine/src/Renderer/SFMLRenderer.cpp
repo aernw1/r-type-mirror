@@ -165,7 +165,6 @@ namespace Renderer {
             return 0;
         }
         texture->setSmooth(config.smooth);
-
         texture->setRepeated(config.repeated);
 
         TextureId id = m_nextTextureId++;
@@ -248,7 +247,6 @@ namespace Renderer {
         sprite.setPosition(ToSFMLVector(transform.position));
         sprite.setScale(ToSFMLVector(transform.scale));
         sprite.setRotation(transform.rotation);
-
         sprite.setOrigin(ToSFMLVector(transform.origin));
 
         if (tint.r > 0 || tint.g > 0 || tint.b > 0 || tint.a > 0) {
@@ -316,7 +314,6 @@ namespace Renderer {
         sfText.setString(text);
         sfText.setCharacterSize(it->second.characterSize);
         sfText.setRotation(params.rotation);
-
         sfText.setFillColor(ToSFMLColor(params.color));
         sfText.setPosition(ToSFMLVector(params.position));
         sfText.setScale(sf::Vector2f(params.scale, params.scale));
@@ -332,7 +329,6 @@ namespace Renderer {
 
         m_currentView.setCenter(ToSFMLVector(camera.center));
         m_currentView.setSize(camera.size.x, camera.size.y);
-
         m_window->setView(m_currentView);
         m_usingCustomCamera = true;
 
@@ -393,7 +389,7 @@ namespace Renderer {
     }
 
     sf::Keyboard::Key SFMLRenderer::ToSFMLKey(Key key) {
-        static const std::unordered_map<Key, sf::Keyboard::Key> keyMap = {
+        static const std::unordered_map<Key, sf::Keyboard::Key> keyMapping = {
             {Key::A, sf::Keyboard::A},
             {Key::B, sf::Keyboard::B},
             {Key::C, sf::Keyboard::C},
@@ -445,8 +441,9 @@ namespace Renderer {
             {Key::RControl, sf::Keyboard::RControl},
             {Key::LAlt, sf::Keyboard::LAlt},
             {Key::RAlt, sf::Keyboard::RAlt}};
-        auto it = keyMap.find(key);
-        return (it != keyMap.end()) ? it->second : sf::Keyboard::Unknown;
+
+        auto it = keyMapping.find(key);
+        return (it != keyMapping.end()) ? it->second : sf::Keyboard::Unknown;
     }
 
     bool SFMLRenderer::IsKeyPressed(Key key) const {
