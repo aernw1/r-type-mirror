@@ -124,6 +124,21 @@ namespace network {
         s.writeU8(player.number);
         sendTo(clientIdx, LobbyPacket::CONNECT_ACK, s.finalize());
 
+        for (size_t i = 0; i < _maxPlayers; ++i) {
+            if (_players[i] && i != clientIdx) {
+                Serializer existingPlayerPayload;
+                existingPlayerPayload.writeU8(_players[i]->number);
+                existingPlayerPayload.writeString(_players[i]->name, PLAYER_NAME_SIZE);
+                sendTo(clientIdx, LobbyPacket::PLAYER_JOIN, existingPlayerPayload.finalize());
+
+                if (_players[i]->ready) {
+                    Serializer readyPayload;
+                    readyPayload.writeU8(_players[i]->number);
+                    sendTo(clientIdx, LobbyPacket::PLAYER_READY, readyPayload.finalize());
+                }
+            }
+        }
+
         Serializer joinPayload;
         joinPayload.writeU8(player.number);
         joinPayload.writeString(player.name, PLAYER_NAME_SIZE);
