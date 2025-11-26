@@ -7,13 +7,8 @@
 
 #include <optional>
 #include <vector>
-#include <unordered_map>
-#include <type_traits>
-#include <cstdint>
-#include <cassert>
-#include <iostream>
-#include <memory>
 #include <stdexcept>
+#include <algorithm>
 
 /**
  * @class SparseArray
@@ -103,12 +98,15 @@ public:
 
     reference_type operator[](size_t idx) {
         if (idx >= _data.size()) {
-            _data.resize(idx + 1);
+            ensure_capacity(idx + 1);
         }
         return _data[idx];
     }
 
     const_reference_type operator[](size_t idx) const {
+        if (idx >= _data.size()) {
+            throw std::out_of_range("SparseArray::operator[] const: index out of range");
+        }
         return _data[idx];
     }
 
@@ -118,7 +116,7 @@ public:
 
     reference_type insert_at(size_type pos, Component const& component) {
         if (pos >= _data.size()) {
-            _data.resize(pos + 1);
+            ensure_capacity(pos + 1);
         }
         _data[pos] = component;
         return _data[pos];
@@ -126,7 +124,7 @@ public:
 
     reference_type insert_at(size_type pos, Component&& component) {
         if (pos >= _data.size()) {
-            _data.resize(pos + 1);
+            ensure_capacity(pos + 1);
         }
         _data[pos] = std::move(component);
         return _data[pos];
@@ -135,7 +133,7 @@ public:
     template <class... Params>
     reference_type emplace_at(size_type pos, Params&&... params) {
         if (pos >= _data.size()) {
-            _data.resize(pos + 1);
+            ensure_capacity(pos + 1);
         }
         _data[pos].emplace(std::forward<Params>(params)...);
         return _data[pos];
@@ -148,14 +146,40 @@ public:
         _data[pos].reset();
     }
 
-    size_type get_index(value_type const& component) const {
-        for (size_type i = 0; i < _data.size(); ++i) {
-            if (std::addressof(_data[i]) == std::addressof(component)) {
-                return i;
+    size_type capacity() const {
+        return _data.capacity();
+    }
+
+    bool empty() const {
+        for (const auto& opt : _data) {
+            if (opt.has_value()) {
+                return false;
             }
         }
-        throw std::runtime_error("Component not found in sparse array");
+        return true;
     }
+
+    void clear() {
+        _data.clear();
+    }
+
+    void reserve(size_type new_capacity) {
+        _data.reserve(new_capacity);
+    }
+
 private:
+    void ensure_capacity(size_type required_size) {
+        if (required_size <= _data.size()) {
+            return;
+        }
+
+        size_type new_capacity = std::max(required_size, _data.capacity() * 2);
+        if (new_capacity < 8) {
+            new_capacity = 8;
+        }
+        _data.reserve(new_capacity);
+        _data.resize(required_size);
+    }
+
     sparse_array_t _data;
 };
