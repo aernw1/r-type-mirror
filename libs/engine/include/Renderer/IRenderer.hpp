@@ -1,5 +1,7 @@
 #pragma once
 
+#define RTYPE_INCLUDE_WINDOWS_H
+#include "Core/Platform.hpp"
 #include <cstdint>
 #include <string>
 #include "Core/Module.hpp"
@@ -126,7 +128,7 @@ namespace Renderer {
         void Update(float deltaTime) override = 0;
 
         virtual bool CreateWindow(const WindowConfig& config) = 0;
-        virtual void DestroyWindow() = 0;
+        virtual void Destroy() = 0;
         virtual bool IsWindowOpen() const = 0;
         virtual void Resize(std::uint32_t width, std::uint32_t height) = 0;
         virtual void SetWindowTitle(const std::string& title) = 0;

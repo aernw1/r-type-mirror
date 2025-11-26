@@ -4,8 +4,15 @@
   "version": "1.0.0",
   "description": "Game engine for the R-Type game.",
   "homepage": "https://github.com/aernw1/r-type-mirror",
+  "builtin-baseline": "bd52fac7114fdaa2208de8dd1227212a6683e562",
   "dependencies": [
     "sfml",
     "asio"
+  ],
+  "overrides": [
+    {
+      "name": "sfml",
+      "version": "2.6.2"
+    }
   ]
 }

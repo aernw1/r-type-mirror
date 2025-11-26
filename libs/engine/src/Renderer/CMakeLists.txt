@@ -1,6 +1,5 @@
-# Find SFML via vcpkg (managed by root CMakeLists.txt)
-# SFML 3.x uses capitalized component names
-find_package(SFML COMPONENTS Graphics Window System REQUIRED CONFIG)
+# Find SFML 2.6 via vcpkg (managed by root CMakeLists.txt)
+find_package(SFML 2.6 COMPONENTS graphics window system REQUIRED CONFIG)
 
 # Create SFML Renderer library
 add_library(rtype_sfml_renderer SHARED
@@ -16,22 +15,27 @@ target_link_libraries(rtype_sfml_renderer
     PUBLIC
         rtype_core
         rtype_ecs
-    PRIVATE
-        SFML::Graphics
-        SFML::Window
-        SFML::System
+        sfml-graphics
+        sfml-window
+        sfml-system
 )
 
 target_compile_features(rtype_sfml_renderer PUBLIC cxx_std_17)
 
-# Set module properties
+if(WIN32)
+    target_compile_definitions(rtype_sfml_renderer PRIVATE
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
+        _CRT_SECURE_NO_WARNINGS
+    )
+endif()
+
 set_target_properties(rtype_sfml_renderer PROPERTIES
     PREFIX ""
     OUTPUT_NAME "SFMLRenderer"
     POSITION_INDEPENDENT_CODE ON
 )
 
-# Install rules (optional)
 install(TARGETS rtype_sfml_renderer
     LIBRARY DESTINATION lib/rtype/modules
     RUNTIME DESTINATION bin/rtype/modules
