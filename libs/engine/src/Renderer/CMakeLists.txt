@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.17)
-
 # Three-tier SFML 2.x dependency resolution:
 # 1. vcpkg (if CMAKE_TOOLCHAIN_FILE is set)
 # 2. System-installed SFML 2.x (via find_package)
@@ -9,19 +7,19 @@ set(SFML_FOUND FALSE)
 
 # Tier 1: Try vcpkg first (already configured by root CMakeLists.txt)
 if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
-    message(STATUS "Searching for SFML 2.x via vcpkg...")
-    find_package(SFML 2.5 COMPONENTS graphics window system QUIET)
+    message(STATUS "Searching for SFML 2.6+ via vcpkg...")
+    find_package(SFML 2.6 COMPONENTS graphics window system QUIET)
     if(SFML_FOUND)
-        message(STATUS "Found SFML 2.x via vcpkg")
+        message(STATUS "Found SFML ${SFML_VERSION} via vcpkg")
     endif()
 endif()
 
-# Tier 2: Try system-installed SFML 2.x (2.5 or 2.6 only)
+# Tier 2: Try system-installed SFML 2.6+
 if(NOT SFML_FOUND)
-    message(STATUS "Searching for system-installed SFML 2.x...")
-    find_package(SFML 2.5 COMPONENTS graphics window system QUIET)
+    message(STATUS "Searching for system-installed SFML 2.6+...")
+    find_package(SFML 2.6 COMPONENTS graphics window system QUIET)
     if(SFML_FOUND)
-        message(STATUS "Found system-installed SFML 2.x")
+        message(STATUS "Found system-installed SFML ${SFML_VERSION}")
     endif()
 endif()
 
@@ -30,6 +28,10 @@ if(NOT SFML_FOUND)
     message(STATUS "SFML 2.x not found, fetching SFML 2.6.2 from source...")
 
     include(FetchContent)
+
+    # Save current BUILD_SHARED_LIBS to avoid polluting other dependencies
+    set(OLD_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+
     FetchContent_Declare(
         SFML
         GIT_REPOSITORY https://github.com/SFML/SFML.git
@@ -43,6 +45,9 @@ if(NOT SFML_FOUND)
     set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 
     FetchContent_MakeAvailable(SFML)
+
+    # Restore original BUILD_SHARED_LIBS setting
+    set(BUILD_SHARED_LIBS ${OLD_BUILD_SHARED_LIBS} CACHE BOOL "" FORCE)
 
     set(SFML_LIBRARIES sfml-graphics sfml-window sfml-system)
     set(SFML_FOUND TRUE)
@@ -60,8 +65,13 @@ if(SFML_FOUND)
         set(SFML_LIBRARIES sfml-graphics sfml-window sfml-system)
         message(STATUS "Using SFML 2.x with sfml- prefix")
     else()
-        message(WARNING "SFML found but targets are unclear")
+        message(FATAL_ERROR "SFML found but could not determine target names. "
+                            "Expected SFML::Graphics or sfml-graphics targets. "
+                            "Please ensure SFML 2.6+ is properly installed.")
     endif()
+else()
+    message(FATAL_ERROR "SFML 2.6+ could not be found via vcpkg, system packages, or FetchContent. "
+                        "Please check your CMake configuration.")
 endif()
 
 # Create SFML Renderer library
@@ -78,9 +88,7 @@ target_link_libraries(rtype_sfml_renderer
     PUBLIC
         rtype_core
         rtype_ecs
-        sfml-graphics
-        sfml-window
-        sfml-system
+        ${SFML_LIBRARIES}
 )
 
 target_compile_features(rtype_sfml_renderer PUBLIC cxx_std_17)
