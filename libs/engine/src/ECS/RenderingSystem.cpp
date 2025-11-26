@@ -34,17 +34,31 @@ namespace RType {
                 const auto& position = registry.GetComponent<Position>(entity);
                 const auto& drawable = registry.GetComponent<Drawable>(entity);
 
-                if (drawable.spriteId == Renderer::INVALID_SPRITE_ID) {
-                    continue;
+                if (drawable.type == Drawable::Type::Sprite) {
+                    if (drawable.spriteId == Renderer::INVALID_SPRITE_ID) {
+                        continue;
+                    }
+
+                    Renderer::Transform2D transform;
+                    transform.position = Renderer::Vector2(position.x, position.y);
+                    transform.scale = drawable.scale;
+                    transform.rotation = drawable.rotation;
+                    transform.origin = drawable.origin;
+
+                    m_renderer->DrawSprite(drawable.spriteId, transform, drawable.tint);
+                } else if (drawable.type == Drawable::Type::Rectangle) {
+                    Renderer::Rectangle rectangle;
+                    rectangle.position = Renderer::Vector2(position.x, position.y);
+                    rectangle.size = Renderer::Vector2(
+                        drawable.size.x * drawable.scale.x,
+                        drawable.size.y * drawable.scale.y);
+
+                    if (rectangle.size.x <= 0.0f || rectangle.size.y <= 0.0f) {
+                        continue;
+                    }
+
+                    m_renderer->DrawRectangle(rectangle, drawable.tint);
                 }
-
-                Renderer::Transform2D transform;
-                transform.position = Renderer::Vector2(position.x, position.y);
-                transform.scale = drawable.scale;
-                transform.rotation = drawable.rotation;
-                transform.origin = drawable.origin;
-
-                m_renderer->DrawSprite(drawable.spriteId, transform, drawable.tint);
             }
         }
     }
