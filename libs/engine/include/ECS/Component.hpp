@@ -46,6 +46,16 @@ namespace RType {
             Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
                 : spriteId(sprite), layer(renderLayer) {}
         };
+
+        struct Player : public IComponent {
+            uint8_t playerNumber = 0;
+            uint64_t playerHash = 0;
+            bool isLocalPlayer = false;
+
+            Player() = default;
+            Player(uint8_t number, uint64_t hash, bool local = false)
+                : playerNumber(number), playerHash(hash), isLocalPlayer(local) {}
+        };
     }
 
 }
