@@ -2,6 +2,7 @@
 
 #include "Entity.hpp"
 #include "Component.hpp"
+#include "SparseArray.hpp"
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
@@ -32,7 +33,7 @@ namespace RType {
             void Remove(Entity entity) override;
             std::vector<Entity> GetEntities() const;
         private:
-            std::unordered_map<Entity, T> m_components;
+            SparseArray<T> m_components;
         };
 
         class Registry {
@@ -78,54 +79,51 @@ namespace RType {
 
         template <typename T>
         T& ComponentPool<T>::Add(Entity entity, T&& component) {
-            m_components[entity] = std::move(component);
-            return m_components[entity];
+            return m_components.insert_at(entity, std::move(component)).value();
         }
 
         template <typename T>
         T& ComponentPool<T>::Get(Entity entity) {
-            auto it = m_components.find(entity);
-            if (it == m_components.end()) {
+            if (entity >= m_components.size() || !m_components[entity].has_value()) {
                 std::ostringstream oss;
                 oss << "Component '" << typeid(T).name() << "' not found for entity " << entity;
                 throw std::runtime_error(oss.str());
             }
-            return it->second;
+            return m_components[entity].value();
         }
 
         template <typename T>
         const T& ComponentPool<T>::Get(Entity entity) const {
-            auto it = m_components.find(entity);
-            if (it == m_components.end()) {
+            if (entity >= m_components.size() || !m_components[entity].has_value()) {
                 std::ostringstream oss;
                 oss << "Component '" << typeid(T).name() << "' not found for entity " << entity;
                 throw std::runtime_error(oss.str());
             }
-            return it->second;
+            return m_components[entity].value();
         }
 
         template <typename T>
         bool ComponentPool<T>::Has(Entity entity) const {
-            return m_components.find(entity) != m_components.end();
+            return entity < m_components.size() && m_components[entity].has_value();
         }
 
         template <typename T>
         void ComponentPool<T>::Remove(Entity entity) {
-            auto it = m_components.find(entity);
-            if (it == m_components.end()) {
+            if (entity >= m_components.size() || !m_components[entity].has_value()) {
                 std::ostringstream oss;
                 oss << "Component '" << typeid(T).name() << "' not found for entity " << entity;
                 throw std::runtime_error(oss.str());
             }
-            m_components.erase(it);
+            m_components.erase(entity);
         }
 
         template <typename T>
         std::vector<Entity> ComponentPool<T>::GetEntities() const {
             std::vector<Entity> entities;
-            entities.reserve(m_components.size());
-            for (const auto& [entity, _] : m_components) {
-                entities.push_back(entity);
+            for (size_t i = 0; i < m_components.size(); ++i) {
+                if (m_components[i].has_value()) {
+                    entities.push_back(static_cast<Entity>(i));
+                }
             }
             return entities;
         }
