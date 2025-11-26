@@ -46,6 +46,14 @@ namespace RType {
             Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
                 : spriteId(sprite), layer(renderLayer) {}
         };
+
+        struct Controllable : public IComponent {
+            float speed = 200.0f;  // Pixels per second
+
+            Controllable() = default;
+            Controllable(float moveSpeed)
+                : speed(moveSpeed) {}
+        };
     }
 
 }
