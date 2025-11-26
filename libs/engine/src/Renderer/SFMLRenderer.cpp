@@ -2,6 +2,7 @@
 #include "Core/Engine.hpp"
 #include "Core/Logger.hpp"
 #include <cmath>
+#include <unordered_map>
 
 namespace Renderer {
 
@@ -23,8 +24,7 @@ namespace Renderer {
     }
 
     bool SFMLRenderer::Initialize(RType::Core::Engine* engine) {
-        RType::Core::Logger::Info("Initializing SFMLRenderer module (SFML {}.{})",
-                                  SFML_VERSION_MAJOR, SFML_VERSION_MINOR);
+        RType::Core::Logger::Info("Initializing SFMLRenderer module (SFML 2.6)");
         m_engine = engine;
         m_clock.restart();
         return true;
@@ -37,7 +37,7 @@ namespace Renderer {
         m_textures.clear();
         m_fonts.clear();
 
-        DestroyWindow();
+        Destroy();
         m_engine = nullptr;
     }
 
@@ -89,7 +89,7 @@ namespace Renderer {
         return true;
     }
 
-    void SFMLRenderer::DestroyWindow() {
+    void SFMLRenderer::Destroy() {
         if (m_window) {
             RType::Core::Logger::Info("Destroying window");
             m_window->close();

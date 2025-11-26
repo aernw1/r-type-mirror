@@ -30,22 +30,7 @@ add_custom_target(copy_assets ALL
     ${CMAKE_BINARY_DIR}/assets
 )
 
-include(FetchContent)
-FetchContent_Declare(
-    asio
-    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-    GIT_TAG asio-1-28-0
-    GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(asio)
-
-add_library(asio INTERFACE)
-target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
-target_compile_definitions(asio INTERFACE ASIO_STANDALONE)
-if(WIN32)
-    target_link_libraries(asio INTERFACE ws2_32 wsock32)
-endif()
-
+find_package(asio CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 
 add_subdirectory(libs/engine)
@@ -66,9 +51,8 @@ target_link_libraries(test_sparse_array PRIVATE rtype_ecs)
 if(TARGET rtype_sfml_renderer)
     add_executable(test_renderer tests/test_renderer.cpp)
     target_link_libraries(test_renderer PRIVATE
-        rtype_sfml_renderer
         rtype_core
         rtype_ecs
     )
-    message(STATUS "test_renderer will be built")
+    message(STATUS "test_renderer will be built (loads renderer plugin dynamically)")
 endif()

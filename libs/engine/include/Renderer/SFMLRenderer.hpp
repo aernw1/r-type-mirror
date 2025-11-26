@@ -20,7 +20,7 @@ namespace Renderer {
         bool ShouldUpdateInRenderThread() const override;
 
         bool CreateWindow(const WindowConfig& config) override;
-        void DestroyWindow() override;
+        void Destroy() override;
         bool IsWindowOpen() const override;
         void Resize(std::uint32_t width, std::uint32_t height) override;
         void SetWindowTitle(const std::string& title) override;
@@ -95,4 +95,4 @@ namespace Renderer {
         sf::Clock m_clock;
     };
 
-} // namespace Renderer
+}

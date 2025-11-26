@@ -22,3 +22,7 @@ target_include_directories(rtype_ecs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../include>
     $<INSTALL_INTERFACE:include>
 )
+
+set_target_properties(rtype_ecs PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)

@@ -26,3 +26,15 @@ target_link_libraries(rtype_core PUBLIC
 )
 
 target_compile_features(rtype_core PUBLIC cxx_std_17)
+
+set_target_properties(rtype_core PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
+
+if(WIN32)
+    target_compile_definitions(rtype_core PUBLIC
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
+        _CRT_SECURE_NO_WARNINGS
+    )
+endif()

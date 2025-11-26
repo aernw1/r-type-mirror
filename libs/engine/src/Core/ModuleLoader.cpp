@@ -25,7 +25,7 @@ namespace RType {
             }
 
             // Load the shared library
-            LibraryHandle handle = LoadLibrary(pluginPath);
+            LibraryHandle handle = LoadLibraryFromPath(pluginPath);
             if (!handle) {
                 Logger::Error("Failed to load library '{}': {}", pluginPath, GetLastErrorMessage());
                 return nullptr;
@@ -37,7 +37,7 @@ namespace RType {
             if (!createFunc) {
                 Logger::Error("Failed to find CreateModule function in '{}': {}", pluginPath,
                               GetLastErrorMessage());
-                FreeLibrary(handle);
+                FreeLibraryHandle(handle);
                 return nullptr;
             }
 
@@ -47,7 +47,7 @@ namespace RType {
             if (!destroyFunc) {
                 Logger::Error("Failed to find DestroyModule function in '{}': {}", pluginPath,
                               GetLastErrorMessage());
-                FreeLibrary(handle);
+                FreeLibraryHandle(handle);
                 return nullptr;
             }
 
@@ -55,7 +55,7 @@ namespace RType {
             IModule* module = createFunc();
             if (!module) {
                 Logger::Error("CreateModule returned nullptr for '{}'", pluginPath);
-                FreeLibrary(handle);
+                FreeLibraryHandle(handle);
                 return nullptr;
             }
 
@@ -90,7 +90,7 @@ namespace RType {
 
             // Unload the library
             if (info.handle) {
-                FreeLibrary(info.handle);
+                FreeLibraryHandle(info.handle);
                 info.handle = nullptr;
             }
 
@@ -136,7 +136,7 @@ namespace RType {
             return m_loadedPlugins.find(pluginName) != m_loadedPlugins.end();
         }
 
-        LibraryHandle ModuleLoader::LoadLibrary(const std::string& path) {
+        LibraryHandle ModuleLoader::LoadLibraryFromPath(const std::string& path) {
 #ifdef _WIN32
             return ::LoadLibraryA(path.c_str());
 #else
@@ -144,7 +144,7 @@ namespace RType {
 #endif
         }
 
-        void ModuleLoader::FreeLibrary(LibraryHandle handle) {
+        void ModuleLoader::FreeLibraryHandle(LibraryHandle handle) {
             if (!handle)
                 return;
 #ifdef _WIN32
