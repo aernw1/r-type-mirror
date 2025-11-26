@@ -91,15 +91,6 @@ namespace RType {
                 : amount(damageAmount) {}
         };
 
-        struct Collider : public IComponent {
-            float width = 0.0f;
-            float height = 0.0f;
-            bool isActive = true;
-
-            Collider() = default;
-            Collider(float w, float h, bool active = true)
-                : width(w), height(h), isActive(active) {}
-        };
     }
 
 }
