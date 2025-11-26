@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <cstring>
 #include <cstdint>
 #include <typeindex>
 #include <type_traits>
@@ -45,6 +46,33 @@ namespace RType {
             Drawable() = default;
             Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
                 : spriteId(sprite), layer(renderLayer) {}
+        };
+
+        struct NetworkPlayer : public IComponent {
+            uint8_t playerNumber = 0;
+            uint64_t playerHash = 0;
+            char name[32] = {};
+            bool ready = false;
+
+            NetworkPlayer() = default;
+            NetworkPlayer(uint8_t num, uint64_t hash, const char* playerName, bool isReady = false)
+                : playerNumber(num), playerHash(hash), ready(isReady) {
+                if (playerName) {
+                    std::strncpy(name, playerName, 31);
+                    name[31] = '\0';
+                }
+            }
+        };
+
+        struct TextLabel : public IComponent {
+            std::string text;
+            Renderer::FontId fontId = Renderer::INVALID_FONT_ID;
+            Math::Color color{1.0f, 1.0f, 1.0f, 1.0f};
+            float scale = 1.0f;
+
+            TextLabel() = default;
+            TextLabel(const std::string& txt, Renderer::FontId font = Renderer::INVALID_FONT_ID)
+                : text(txt), fontId(font) {}
         };
     }
 
