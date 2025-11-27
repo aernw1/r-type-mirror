@@ -47,6 +47,14 @@ namespace RType {
                 : spriteId(sprite), layer(renderLayer) {}
         };
 
+        struct BoxCollider : public IComponent {
+            float width = 0.0f;
+            float height = 0.0f;
+
+            BoxCollider() = default;
+            BoxCollider(float width, float height)
+                : width(width), height(height) {}
+        
         struct Controllable : public IComponent {
             float speed = 200.0f;  // Pixels per second
 
