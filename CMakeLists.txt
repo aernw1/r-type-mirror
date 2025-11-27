@@ -42,6 +42,20 @@ target_link_libraries(r-type_server PRIVATE rtype_network)
 add_executable(r-type_client client/main.cpp)
 target_link_libraries(r-type_client PRIVATE rtype_network)
 
+add_executable(lobby_visual
+    client/src/VisualLobbyClient.cpp
+    client/src/lobby_visual_main.cpp
+)
+target_include_directories(lobby_visual PRIVATE
+    ${CMAKE_SOURCE_DIR}/client/include
+)
+target_link_libraries(lobby_visual PRIVATE
+    rtype_network
+    rtype_ecs
+    rtype_core
+    rtype_sfml_renderer
+)
+
 add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network)
 
