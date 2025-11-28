@@ -69,4 +69,11 @@ if(TARGET rtype_sfml_renderer)
         rtype_ecs
     )
     message(STATUS "test_renderer will be built (loads renderer plugin dynamically)")
+
+    add_executable(test_player_system tests/test_player_system.cpp)
+    target_link_libraries(test_player_system PRIVATE
+        rtype_core
+        rtype_ecs
+    )
+    message(STATUS "test_player_system will be built (loads renderer plugin dynamically)")
 endif()
