@@ -16,10 +16,9 @@ namespace RType {
             }
             
             for (auto enemyKilled : enemiesKilled) {
-                if (!registry.IsEntityAlive(enemyKilled)) {
-                        continue;
+                if (!registry.IsEntityAlive(enemyKilled) || !registry.HasComponent<EnemyKilled>(enemyKilled) || !registry.HasComponent<ScoreValue>(enemyKilled)) {
+                    continue;
                 }
-
                 const auto& enemyKilledComp = registry.GetComponent<EnemyKilled>(enemyKilled);
                 Entity killer = enemyKilledComp.killedBy;
                 const auto& ennemyScoreValue = registry.GetComponent<ScoreValue>(enemyKilled);

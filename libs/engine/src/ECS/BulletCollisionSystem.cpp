@@ -25,12 +25,20 @@ namespace RType {
                     }
 
                     if (CollisionSystem::CheckCollision(registry, bullet, enemy)) {
+                        if (!registry.HasComponent<Health>(enemy) || !registry.HasComponent<Damage>(bullet)) {
+                            continue;
+                        }
                         auto& healthComp = registry.GetComponent<Health>(enemy);
                         const auto& damageComp = registry.GetComponent<Damage>(bullet);
                         
-                        int healthEnemy = healthComp.current -= damageComp.amount;
+                        healthComp.current = healthComp.current - damageComp.amount;
+                        int healthEnemy = healthComp.current;
+                        
                         
                         if (healthEnemy <= 0) {
+                            if (!registry.HasComponent<Enemy>(enemy) || !registry.HasComponent<Bullet>(bullet)) {
+                                continue;
+                            }
                             const auto& enemyComp = registry.GetComponent<Enemy>(enemy);
                             const auto& bulletComp = registry.GetComponent<Bullet>(bullet);
                             
