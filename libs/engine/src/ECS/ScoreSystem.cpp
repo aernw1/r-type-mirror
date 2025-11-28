@@ -9,31 +9,30 @@ namespace RType {
         void ScoreSystem::Update(Registry& registry, float deltaTime) {
             (void)deltaTime;
 
-            auto ennemiesKilled = registry.GetEntitiesWithComponent<EnnemyKilled>();
+            auto enemiesKilled = registry.GetEntitiesWithComponent<EnemyKilled>();
 
-            if (ennemiesKilled.empty()) {
+            if (enemiesKilled.empty()) {
                 return;
             }
             
-            for (auto enemyKilled : ennemiesKilled) {
+            for (auto enemyKilled : enemiesKilled) {
                 if (!registry.IsEntityAlive(enemyKilled)) {
                         continue;
                 }
 
-                const auto& ennemyKilledComp = registry.GetComponent<EnnemyKilled>(enemyKilled);
-                Entity killer = ennemyKilledComp.killedBy;
+                const auto& enemyKilledComp = registry.GetComponent<EnemyKilled>(enemyKilled);
+                Entity killer = enemyKilledComp.killedBy;
                 const auto& ennemyScoreValue = registry.GetComponent<ScoreValue>(enemyKilled);
 
                 if (killer == NULL_ENTITY || !registry.IsEntityAlive(killer) || !registry.HasComponent<ScoreValue>(killer)) {
-                    registry.RemoveComponent<EnnemyKilled>(enemyKilled);
+                    registry.RemoveComponent<EnemyKilled>(enemyKilled);
                     continue;
                 }
 
                 auto& killerScoreComp = registry.GetComponent<ScoreValue>(killer);
                 killerScoreComp.points += ennemyScoreValue.points;
                 
-                registry.RemoveComponent<EnnemyKilled>(enemyKilled);
-                continue;
+                registry.RemoveComponent<EnemyKilled>(enemyKilled);
             }
         }
     }
