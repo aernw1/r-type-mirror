@@ -145,6 +145,23 @@ namespace RType {
             Damage(int damageAmount)
                 : amount(damageAmount) {}
         };
+
+        struct EnnemyKilled : public IComponent {
+            uint32_t enemyId = 0;
+            Entity killedBy = NULL_ENTITY;
+
+            EnnemyKilled() = default;
+            EnnemyKilled(uint32_t id, Entity killer = NULL_ENTITY)
+                : enemyId(id), killedBy(NULL_ENTITY) {}
+        };
+
+        struct Bullet : public IComponent {
+            Entity owner = NULL_ENTITY;
+
+            Bullet() = default;
+            Bullet(Entity shooter)
+                : owner(shooter) {}
+        };
     }
 
 }
