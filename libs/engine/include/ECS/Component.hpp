@@ -83,7 +83,7 @@ namespace RType {
             BoxCollider(float width, float height)
                 : width(width), height(height) {}
         };
-        
+
         struct Controllable : public IComponent {
             float speed = 200.0f;  // Pixels per second
 
@@ -101,7 +101,7 @@ namespace RType {
             Player(uint8_t number, uint64_t hash, bool local = false)
                 : playerNumber(number), playerHash(hash), isLocalPlayer(local) {}
         };
-       
+
          enum class EnemyType : uint8_t {
             BASIC = 0,
             FAST = 1,

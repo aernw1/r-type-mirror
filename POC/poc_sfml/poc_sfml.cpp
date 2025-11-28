@@ -22,8 +22,12 @@ int main()
 
     sf::SoundBuffer buffer;
     sf::Sound sound;
-    if (buffer.loadFromFile("assets/shoot.wav")) {
+    bool soundLoaded = buffer.loadFromFile("assets/shoot.wav");
+    if (soundLoaded) {
         sound.setBuffer(buffer);
+        std::cout << "Sound loaded successfully" << std::endl;
+    } else {
+        std::cout << "Warning: Could not load shoot.wav" << std::endl;
     }
 
     std::cout << "Window created successfully" << std::endl;
@@ -45,7 +49,7 @@ int main()
             if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::Escape)
                     window.close();
-                if (event.key.code == sf::Keyboard::Space && buffer.getSampleCount() > 0)
+                if (event.key.code == sf::Keyboard::Space && soundLoaded)
                     sound.play();
             }
         }
