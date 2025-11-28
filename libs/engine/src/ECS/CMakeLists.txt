@@ -5,6 +5,8 @@ set(ECS_SOURCES
     RenderingSystem.cpp
     TextRenderingSystem.cpp
     PlayerSystem.cpp
+    EnemySystem.cpp
+    EnemyFactory.cpp
 )
 
 set(ECS_HEADERS
@@ -17,6 +19,8 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/RenderingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/TextRenderingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemySystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemyFactory.hpp
 )
 
 add_library(rtype_ecs STATIC
