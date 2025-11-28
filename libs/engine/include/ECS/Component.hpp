@@ -73,6 +73,7 @@ namespace RType {
             TextLabel() = default;
             TextLabel(const std::string& txt, Renderer::FontId font = Renderer::INVALID_FONT_ID)
                 : text(txt), fontId(font) {}
+        };
 
         struct BoxCollider : public IComponent {
             float width = 0.0f;
@@ -81,6 +82,7 @@ namespace RType {
             BoxCollider() = default;
             BoxCollider(float width, float height)
                 : width(width), height(height) {}
+        };
         
         struct Controllable : public IComponent {
             float speed = 200.0f;  // Pixels per second
