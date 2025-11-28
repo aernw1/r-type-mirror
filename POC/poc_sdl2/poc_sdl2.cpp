@@ -52,7 +52,9 @@ int main(int argc, char* argv[])
     SDL_Rect spriteRect = {400, 300, 50, 50};
 
     Mix_Chunk* sound = Mix_LoadWAV("assets/shoot.wav");
-    if (!sound) {
+    if (sound) {
+        std::cout << "Sound loaded successfully" << std::endl;
+    } else {
         std::cout << "Warning: Could not load shoot.wav" << std::endl;
     }
 
@@ -109,7 +111,7 @@ int main(int argc, char* argv[])
 
         SDL_RenderPresent(renderer);
 
-        SDL_Delay(16);
+        SDL_Delay(16); // ~60 FPS
     }
 
     if (texture) SDL_DestroyTexture(texture);
