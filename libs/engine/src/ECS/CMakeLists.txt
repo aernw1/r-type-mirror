@@ -3,6 +3,8 @@ set(ECS_SOURCES
     MovementSystem.cpp
     RenderingSystem.cpp
     TextRenderingSystem.cpp
+    CollisionSystem.cpp
+    InputSystem.cpp
 )
 
 set(ECS_HEADERS
@@ -13,6 +15,9 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MovementSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/RenderingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/TextRenderingSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/CollisionSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/InputSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/SparseArray.hpp
 )
 
 add_library(rtype_ecs STATIC
