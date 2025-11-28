@@ -4,6 +4,8 @@ set(ECS_SOURCES
     InputSystem.cpp
     RenderingSystem.cpp
     TextRenderingSystem.cpp
+    CollisionSystem.cpp
+    InputSystem.cpp
     PlayerSystem.cpp
 )
 
@@ -16,6 +18,9 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/InputSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/RenderingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/TextRenderingSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/CollisionSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/InputSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/SparseArray.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
 )
 

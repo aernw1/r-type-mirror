@@ -5,8 +5,10 @@
 #include "ECS/Component.hpp"
 #include "ECS/MovementSystem.hpp"
 #include "ECS/RenderingSystem.hpp"
+#include "ECS/CollisionSystem.hpp"
 #include <memory>
 #include <chrono>
+#include <vector>
 
 int main(int, char*[]) {
     using namespace RType;
@@ -53,6 +55,9 @@ int main(int, char*[]) {
     auto movementSystem = std::make_unique<ECS::MovementSystem>();
     engine->RegisterSystem(std::move(movementSystem));
 
+    auto collisionSystem = std::make_unique<ECS::CollisionSystem>();
+    engine->RegisterSystem(std::move(collisionSystem));
+
     auto renderingSystem = std::make_unique<ECS::RenderingSystem>(rendererPtr);
     engine->RegisterSystem(std::move(renderingSystem));
 
@@ -60,46 +65,57 @@ int main(int, char*[]) {
 
     Core::Logger::Info("Loading sprite assets...");
 
-    auto playerTexture = rendererPtr->LoadTexture("assets/player.png");
+    auto playerTexture = rendererPtr->LoadTexture("assets/spaceships/player_red.png");
     if (playerTexture == Renderer::INVALID_TEXTURE_ID) {
         Core::Logger::Error("Failed to load player texture");
         return 1;
     }
+    Core::Logger::Info("Player texture loaded: ID={}", playerTexture);
     auto playerSprite = rendererPtr->CreateSprite(playerTexture, Renderer::Rectangle{{0, 0}, {50, 50}});
+    Core::Logger::Info("Player sprite created: ID={}", playerSprite);
 
-    auto enemyTexture = rendererPtr->LoadTexture("assets/enemy.png");
+    auto enemyTexture = rendererPtr->LoadTexture("assets/spaceships/nave2.png");
     if (enemyTexture == Renderer::INVALID_TEXTURE_ID) {
         Core::Logger::Error("Failed to load enemy texture");
         return 1;
     }
+    Core::Logger::Info("Enemy texture loaded: ID={}", enemyTexture);
     auto enemySprite = rendererPtr->CreateSprite(enemyTexture, Renderer::Rectangle{{0, 0}, {40, 40}});
+    Core::Logger::Info("Enemy sprite created: ID={}", enemySprite);
 
     Core::Logger::Info("Creating test entities...");
 
     auto player = registry.CreateEntity();
     registry.AddComponent<ECS::Position>(player, ECS::Position(640.0f, 360.0f));
     registry.AddComponent<ECS::Drawable>(player, ECS::Drawable(playerSprite, 1));
+    registry.AddComponent<ECS::BoxCollider>(player, ECS::BoxCollider(50.0f, 50.0f));
 
     auto enemy1 = registry.CreateEntity();
     registry.AddComponent<ECS::Position>(enemy1, ECS::Position(200.0f, 100.0f));
     registry.AddComponent<ECS::Velocity>(enemy1, ECS::Velocity(100.0f, 50.0f));
     registry.AddComponent<ECS::Drawable>(enemy1, ECS::Drawable(enemySprite, 0));
+    registry.AddComponent<ECS::BoxCollider>(enemy1, ECS::BoxCollider(40.0f, 40.0f));
 
     auto enemy2 = registry.CreateEntity();
     registry.AddComponent<ECS::Position>(enemy2, ECS::Position(640.0f, 100.0f));
     registry.AddComponent<ECS::Velocity>(enemy2, ECS::Velocity(-80.0f, 60.0f));
     registry.AddComponent<ECS::Drawable>(enemy2, ECS::Drawable(enemySprite, 0));
+    registry.AddComponent<ECS::BoxCollider>(enemy2, ECS::BoxCollider(40.0f, 40.0f));
 
     auto enemy3 = registry.CreateEntity();
     registry.AddComponent<ECS::Position>(enemy3, ECS::Position(1080.0f, 100.0f));
     registry.AddComponent<ECS::Velocity>(enemy3, ECS::Velocity(-120.0f, 40.0f));
     registry.AddComponent<ECS::Drawable>(enemy3, ECS::Drawable(enemySprite, 0));
+    registry.AddComponent<ECS::BoxCollider>(enemy3, ECS::BoxCollider(40.0f, 40.0f));
 
     Core::Logger::Info("Created {} entities", registry.GetEntityCount());
+
+    std::vector<ECS::Entity> enemies = {enemy1, enemy2, enemy3};
 
     auto lastTime = std::chrono::steady_clock::now();
 
     Core::Logger::Info("Starting render loop...");
+    Core::Logger::Info("Move the player with arrow keys - collisions will be logged!");
 
     while (rendererPtr->IsWindowOpen()) {
         auto currentTime = std::chrono::steady_clock::now();
@@ -126,6 +142,48 @@ int main(int, char*[]) {
         rendererPtr->BeginFrame();
         rendererPtr->Clear(Renderer::Color{0.1f, 0.1f, 0.2f, 1.0f});
         engine->UpdateSystems(deltaTime);
+
+        bool playerColliding = false;
+        for (auto enemy : enemies) {
+            if (!registry.IsEntityAlive(enemy)) continue;
+
+            if (ECS::CollisionSystem::CheckCollision(registry, player, enemy)) {
+                auto& enemyPos = registry.GetComponent<ECS::Position>(enemy);
+                Core::Logger::Warning("COLLISION! Player hit enemy at ({}, {})",
+                                     enemyPos.x, enemyPos.y);
+
+                auto& enemyDrawable = registry.GetComponent<ECS::Drawable>(enemy);
+                enemyDrawable.tint = Renderer::Color{1.0f, 0.0f, 0.0f, 1.0f};
+
+                playerColliding = true;
+            } else {
+                auto& enemyDrawable = registry.GetComponent<ECS::Drawable>(enemy);
+                enemyDrawable.tint = Renderer::Color{1.0f, 1.0f, 1.0f, 1.0f};
+            }
+        }
+
+        auto& playerDrawable = registry.GetComponent<ECS::Drawable>(player);
+        if (playerColliding) {
+            playerDrawable.tint = Renderer::Color{1.0f, 0.5f, 0.0f, 1.0f};
+        } else {
+            playerDrawable.tint = Renderer::Color{1.0f, 1.0f, 1.0f, 1.0f};
+        }
+
+        auto& playerCol = registry.GetComponent<ECS::BoxCollider>(player);
+        rendererPtr->DrawRectangle(
+            Renderer::Rectangle{{playerPos.x, playerPos.y}, {playerCol.width, playerCol.height}},
+            Renderer::Color{0.0f, 1.0f, 0.0f, 0.5f}
+        );
+
+        for (auto enemy : enemies) {
+            if (!registry.IsEntityAlive(enemy)) continue;
+            auto& enemyPos = registry.GetComponent<ECS::Position>(enemy);
+            auto& enemyCol = registry.GetComponent<ECS::BoxCollider>(enemy);
+            rendererPtr->DrawRectangle(
+                Renderer::Rectangle{{enemyPos.x, enemyPos.y}, {enemyCol.width, enemyCol.height}},
+                Renderer::Color{1.0f, 0.0f, 0.0f, 0.5f}
+            );
+        }
 
         rendererPtr->EndFrame();
     }
