@@ -1,8 +1,10 @@
 set(ECS_SOURCES
     Registry.cpp
     MovementSystem.cpp
+    InputSystem.cpp
     RenderingSystem.cpp
     TextRenderingSystem.cpp
+    PlayerSystem.cpp
 )
 
 set(ECS_HEADERS
@@ -11,8 +13,10 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Registry.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ISystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MovementSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/InputSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/RenderingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/TextRenderingSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
 )
 
 add_library(rtype_ecs STATIC
