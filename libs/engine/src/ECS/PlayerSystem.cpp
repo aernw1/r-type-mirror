@@ -38,6 +38,10 @@ namespace RType {
 
             registry.AddComponent<Controllable>(player, Controllable(200.0f));
 
+            registry.AddComponent<ScoreValue>(player, ScoreValue(0));
+
+            registry.AddComponent<Shooter>(player, Shooter(0.2f));
+
             registry.AddComponent<Health>(player, Health(100, 100));
 
             registry.AddComponent<BoxCollider>(player, BoxCollider(50.0f, 50.0f));

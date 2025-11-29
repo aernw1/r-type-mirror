@@ -162,6 +162,14 @@ namespace RType {
             Bullet(Entity shooter)
                 : owner(shooter) {}
         };
+
+        struct Shooter : IComponent {
+            float fireRate = 0.2f;
+            float cooldown = 0.0f;
+            
+            Shooter() = default;
+            Shooter(float rate) : fireRate(rate) {}
+        };
     }
 
 }
