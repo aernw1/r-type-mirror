@@ -77,10 +77,10 @@ if(TARGET rtype_sfml_renderer)
     )
     message(STATUS "test_player_system will be built (loads renderer plugin dynamically)")
 
-    add_executable(test_enemy_system tests/test_enemy_system.cpp)
-    target_link_libraries(test_enemy_system PRIVATE
+    add_executable(test_health_system tests/test_health_system.cpp)
+    target_link_libraries(test_health_system PRIVATE
         rtype_core
         rtype_ecs
     )
-    message(STATUS "test_enemy_system will be built (loads renderer plugin dynamically)")
+    message(STATUS "test_health_system will be built (loads renderer plugin dynamically)")
 endif()
