@@ -2,10 +2,54 @@
 #include "Core/Logger.hpp"
 #include <algorithm>
 #include <cmath>
+#include <array>
+#include <atomic>
 
 namespace RType {
 
     namespace ECS {
+
+        namespace {
+            static std::atomic<uint32_t> s_enemyIdCounter{1};
+        }
+
+        namespace {
+            struct EnemyData {
+                Math::Color color;
+                const char* spritePath;
+                float speed;
+                int health;
+                int damage;
+                uint32_t score;
+            };
+
+            const std::array<EnemyData, 5> ENEMY_DATA_TABLE = {{
+                // BASIC
+                {Math::Color(1.0f, 1.0f, 1.0f, 1.0f), "../assets/spaceships/nave2.png", 100.0f, 100, 10, 100},
+                // FAST
+                {Math::Color(1.0f, 0.3f, 0.3f, 1.0f), "../assets/spaceships/nave2_red.png", 200.0f, 50, 5, 150},
+                // TANK
+                {Math::Color(0.3f, 0.3f, 1.0f, 1.0f), "../assets/spaceships/nave2_blue.png", 50.0f, 200, 20, 200},
+                // BOSS
+                {Math::Color(1.0f, 0.0f, 1.0f, 1.0f), "../assets/spaceships/nave2.png", 75.0f, 1000, 50, 1000},
+                // FORMATION
+                {Math::Color(0.5f, 0.5f, 0.5f, 1.0f), "../assets/spaceships/nave2.png", 100.0f, 100, 10, 100}
+            }};
+
+            const EnemyData& GetEnemyData(EnemyType type) {
+                size_t index = static_cast<size_t>(type);
+                if (index >= ENEMY_DATA_TABLE.size()) {
+                    return ENEMY_DATA_TABLE[0];
+                }
+                return ENEMY_DATA_TABLE[index];
+            }
+        }
+            size_t index = static_cast<size_t>(type);
+            if (index >= ENEMY_DATA_TABLE.size()) {
+                return ENEMY_DATA_TABLE[0];
+            }
+            return ENEMY_DATA_TABLE[index];
+        }
 
         Entity EnemyFactory::CreateEnemy(Registry& registry, EnemyType type, float startX, float startY,
                                        Renderer::IRenderer* renderer) {
@@ -13,24 +57,21 @@ namespace RType {
 
             registry.AddComponent<Position>(enemy, Position(startX, startY));
 
-            float speed = GetEnemySpeed(type);
+            const EnemyData& data = GetEnemyData(type);
+            float speed = data.speed;
             registry.AddComponent<Velocity>(enemy, Velocity(-speed, 0.0f));
 
-            registry.AddComponent<Enemy>(enemy, Enemy(type, 0));
+            uint32_t uniqueId = s_enemyIdCounter.fetch_add(1);
+            registry.AddComponent<Enemy>(enemy, Enemy(type, uniqueId));
 
-            int health = GetEnemyHealth(type);
-            registry.AddComponent<Health>(enemy, Health(health, health));
-
-            int damage = GetEnemyDamage(type);
-            registry.AddComponent<Damage>(enemy, Damage(damage));
-
-            uint32_t score = GetEnemyScore(type);
-            registry.AddComponent<ScoreValue>(enemy, ScoreValue(score));
+            registry.AddComponent<Health>(enemy, Health(data.health, data.health));
+            registry.AddComponent<Damage>(enemy, Damage(data.damage));
+            registry.AddComponent<ScoreValue>(enemy, ScoreValue(data.score));
 
             registry.AddComponent<BoxCollider>(enemy, BoxCollider(50.0f, 50.0f));
 
             if (renderer) {
-                std::string spritePath = GetEnemySpritePath(type);
+                std::string spritePath(data.spritePath);
                 Renderer::TextureId textureId = renderer->LoadTexture(spritePath);
 
                 if (textureId == Renderer::INVALID_TEXTURE_ID) {
@@ -43,7 +84,7 @@ namespace RType {
                         textureId, Renderer::Rectangle{{0.0f, 0.0f}, {256.0f, 256.0f}});
 
                     auto& drawable = registry.AddComponent<Drawable>(enemy, Drawable(spriteId, 1));
-                    drawable.tint = GetEnemyColor(type);
+                    drawable.tint = data.color;
                     drawable.scale = Math::Vector2(0.5f, 0.5f);
                 } else {
                     Core::Logger::Error("Failed to load any enemy texture for type {}", static_cast<int>(type));
@@ -55,106 +96,20 @@ namespace RType {
             return enemy;
         }
 
-        Math::Color EnemyFactory::GetEnemyColor(EnemyType type) {
-            switch (type) {
-            case EnemyType::BASIC:
-                return Math::Color(1.0f, 1.0f, 1.0f, 1.0f);
-            case EnemyType::FAST:
-                return Math::Color(1.0f, 0.3f, 0.3f, 1.0f);
-            case EnemyType::TANK:
-                return Math::Color(0.3f, 0.3f, 1.0f, 1.0f);
-            case EnemyType::BOSS:
-                return Math::Color(1.0f, 0.0f, 1.0f, 1.0f);
-            case EnemyType::FORMATION:
-                return Math::Color(0.5f, 0.5f, 0.5f, 1.0f);
-            default:
-                return Math::Color(1.0f, 1.0f, 1.0f, 1.0f);
-            }
-        }
-
-        std::string EnemyFactory::GetEnemySpritePath(EnemyType type) {
-            switch (type) {
-            case EnemyType::BASIC:
-                return "../assets/spaceships/nave2.png";
-            case EnemyType::FAST:
-                return "../assets/spaceships/nave2_red.png";
-            case EnemyType::TANK:
-                return "../assets/spaceships/nave2_blue.png";
-            case EnemyType::BOSS:
-                return "../assets/spaceships/nave2.png";
-            case EnemyType::FORMATION:
-                return "../assets/spaceships/nave2.png";
-            default:
-                return "../assets/spaceships/nave2.png";
-            }
-        }
-
         float EnemyFactory::GetEnemySpeed(EnemyType type) {
-            switch (type) {
-            case EnemyType::BASIC:
-                return 100.0f;
-            case EnemyType::FAST:
-                return 200.0f;
-            case EnemyType::TANK:
-                return 50.0f;
-            case EnemyType::BOSS:
-                return 75.0f;
-            case EnemyType::FORMATION:
-                return 100.0f;
-            default:
-                return 100.0f;
-            }
+            return GetEnemyData(type).speed;
         }
 
         int EnemyFactory::GetEnemyHealth(EnemyType type) {
-            switch (type) {
-            case EnemyType::BASIC:
-                return 100;
-            case EnemyType::FAST:
-                return 50;
-            case EnemyType::TANK:
-                return 200;
-            case EnemyType::BOSS:
-                return 1000;
-            case EnemyType::FORMATION:
-                return 100;
-            default:
-                return 100;
-            }
+            return GetEnemyData(type).health;
         }
 
         int EnemyFactory::GetEnemyDamage(EnemyType type) {
-            switch (type) {
-            case EnemyType::BASIC:
-                return 10;
-            case EnemyType::FAST:
-                return 5;
-            case EnemyType::TANK:
-                return 20;
-            case EnemyType::BOSS:
-                return 50;
-            case EnemyType::FORMATION:
-                return 10;
-            default:
-                return 10;
-            }
+            return GetEnemyData(type).damage;
         }
 
         uint32_t EnemyFactory::GetEnemyScore(EnemyType type) {
-            switch (type) {
-            case EnemyType::BASIC:
-                return 100;
-            case EnemyType::FAST:
-                return 150;
-            case EnemyType::TANK:
-                return 200;
-            case EnemyType::BOSS:
-                return 1000;
-            case EnemyType::FORMATION:
-                return 100;
-            default:
-                return 100;
-            }
+            return GetEnemyData(type).score;
         }
 
     }
