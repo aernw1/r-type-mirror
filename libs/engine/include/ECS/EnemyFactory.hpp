@@ -20,9 +20,6 @@ namespace RType {
             static int GetEnemyDamage(EnemyType type);
             static uint32_t GetEnemyScore(EnemyType type);
 
-        private:
-            static Math::Color GetEnemyColor(EnemyType type);
-            static std::string GetEnemySpritePath(EnemyType type);
         };
 
     }
