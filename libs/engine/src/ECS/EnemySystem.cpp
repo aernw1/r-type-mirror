@@ -10,14 +10,22 @@ namespace RType {
 
     namespace ECS {
 
-        EnemySystem::EnemySystem(Renderer::IRenderer* renderer)
-            : m_renderer(renderer), m_rng(std::random_device{}()) {}
+        constexpr float ENEMY_SPAWN_OFFSET_X = 50.0f;
+        constexpr float ENEMY_SPAWN_MARGIN_Y = 50.0f;
+        constexpr float ENEMY_DESTROY_OFFSET_X = -100.0f;
+        constexpr float ENEMY_FAST_SIN_AMPLITUDE = 50.0f;
+        constexpr float ENEMY_FAST_SIN_FREQUENCY = 0.01f;
+        constexpr float ENEMY_SPAWN_MIN_Y = 50.0f;
+
+        EnemySystem::EnemySystem(Renderer::IRenderer* renderer, float screenWidth, float screenHeight)
+            : m_renderer(renderer), m_screenWidth(screenWidth), m_screenHeight(screenHeight),
+              m_rng(std::random_device{}()) {}
 
         void EnemySystem::Update(Registry& registry, float deltaTime) {
             m_spawnTimer += deltaTime;
 
             if (m_spawnTimer >= m_spawnInterval) {
-                SpawnRandomEnemy(registry, 1280.0f, 720.0f);
+                SpawnRandomEnemy(registry);
                 m_spawnTimer = 0.0f;
             }
 
@@ -31,14 +39,14 @@ namespace RType {
                 ApplyMovementPattern(registry, enemy, deltaTime);
             }
 
-            DestroyEnemiesOffScreen(registry, 1280.0f);
+            DestroyEnemiesOffScreen(registry, m_screenWidth);
         }
 
-        void EnemySystem::SpawnRandomEnemy(Registry& registry, float screenWidth, float screenHeight) {
-            std::uniform_real_distribution<float> yDist(50.0f, screenHeight - 50.0f);
+        void EnemySystem::SpawnRandomEnemy(Registry& registry) {
+            std::uniform_real_distribution<float> yDist(ENEMY_SPAWN_MIN_Y, m_screenHeight - ENEMY_SPAWN_MARGIN_Y);
             std::uniform_int_distribution<int> typeDist(0, 2);
 
-            float spawnX = screenWidth + 50.0f;
+            float spawnX = m_screenWidth + ENEMY_SPAWN_OFFSET_X;
             float spawnY = yDist(m_rng);
 
             EnemyType type = static_cast<EnemyType>(typeDist(m_rng));
@@ -56,7 +64,7 @@ namespace RType {
 
                 const auto& pos = registry.GetComponent<Position>(enemy);
 
-                if (pos.x < -100.0f) {
+                if (pos.x < ENEMY_DESTROY_OFFSET_X) {
                     registry.DestroyEntity(enemy);
                 }
             }
@@ -81,7 +89,7 @@ namespace RType {
                     const auto& pos = registry.GetComponent<Position>(enemy);
                     float speed = EnemyFactory::GetEnemySpeed(EnemyType::FAST);
                     velocity.dx = -speed;
-                    velocity.dy = std::sin(pos.x * 0.01f) * 50.0f;
+                    velocity.dy = std::sin(pos.x * ENEMY_FAST_SIN_FREQUENCY) * ENEMY_FAST_SIN_AMPLITUDE;
                 }
                 break;
             }
