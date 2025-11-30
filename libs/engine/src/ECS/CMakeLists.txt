@@ -7,6 +7,8 @@ set(ECS_SOURCES
     CollisionSystem.cpp
     InputSystem.cpp
     PlayerSystem.cpp
+    EnemySystem.cpp
+    EnemyFactory.cpp
 )
 
 set(ECS_HEADERS
@@ -22,6 +24,8 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/InputSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/SparseArray.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemySystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemyFactory.hpp
 )
 
 add_library(rtype_ecs STATIC
