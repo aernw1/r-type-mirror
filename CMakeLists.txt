@@ -39,8 +39,17 @@ add_subdirectory(libs/network)
 add_executable(r-type_server server/main.cpp)
 target_link_libraries(r-type_server PRIVATE rtype_network)
 
-add_executable(r-type_client client/main.cpp)
-target_link_libraries(r-type_client PRIVATE rtype_network)
+add_executable(r-type_client
+    client/main.cpp
+    client/src/Menu/MainMenu.cpp
+)
+target_include_directories(r-type_client PRIVATE
+    ${CMAKE_SOURCE_DIR}/client/include
+)
+target_link_libraries(r-type_client PRIVATE
+    rtype_network
+    rtype_sfml_renderer
+)
 
 add_executable(lobby_visual
     client/src/VisualLobbyClient.cpp
