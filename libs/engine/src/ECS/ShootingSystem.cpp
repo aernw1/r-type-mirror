@@ -7,33 +7,33 @@
 namespace RType {
     namespace ECS {
 
-            ShootingSystem::ShootingSystem(Renderer::SpriteId bulletSprite)
-                : m_bulletSprite(bulletSprite) {}
+        ShootingSystem::ShootingSystem(Renderer::SpriteId bulletSprite)
+            : m_bulletSprite(bulletSprite) {}
 
-            void ShootingSystem::Update(Registry& registry, float deltaTime) {
+        void ShootingSystem::Update(Registry& registry, float deltaTime) {
 
-                auto shooters = registry.GetEntitiesWithComponent<Shooter>();
-                auto bullets = registry.GetEntitiesWithComponent<Bullet>();
+            auto shooters = registry.GetEntitiesWithComponent<Shooter>();
+            auto bullets = registry.GetEntitiesWithComponent<Bullet>();
 
-                for (auto shooterEntity : shooters) {
-                    if (!registry.IsEntityAlive(shooterEntity) || !registry.HasComponent<Shooter>(shooterEntity)) {
-                        continue;
-                    }
-                    auto &shooterComp = registry.GetComponent<Shooter>(shooterEntity);
+            for (auto shooterEntity : shooters) {
+                if (!registry.IsEntityAlive(shooterEntity) || !registry.HasComponent<Shooter>(shooterEntity)) {
+                    continue;
+                }
+                auto& shooterComp = registry.GetComponent<Shooter>(shooterEntity);
 
-                    shooterComp.cooldown = shooterComp.cooldown - deltaTime;
+                shooterComp.cooldown = shooterComp.cooldown - deltaTime;
 
-                    if (shooterComp.cooldown < 0.0f) {
-                        shooterComp.cooldown = 0.0f;
-                    }
+                if (shooterComp.cooldown < 0.0f) {
+                    shooterComp.cooldown = 0.0f;
+                }
 
-                    if (registry.HasComponent<ShootCommand>(shooterEntity)) {
-                        auto& shootCmd = registry.GetComponent<ShootCommand>(shooterEntity);
+                if (registry.HasComponent<ShootCommand>(shooterEntity)) {
+                    auto& shootCmd = registry.GetComponent<ShootCommand>(shooterEntity);
 
-                        if (shootCmd.wantsToShoot && shooterComp.cooldown <= 0.0f) {
-                            if (!registry.HasComponent<Position>(shooterEntity)) {
-                                continue;
-                            
+                    if (shootCmd.wantsToShoot && shooterComp.cooldown <= 0.0f) {
+                        if (!registry.HasComponent<Position>(shooterEntity)) {
+                            continue;
+
                             const auto& positionComp = registry.GetComponent<Position>(shooterEntity);
 
                             auto bulletEntity = registry.CreateEntity();
@@ -52,4 +52,3 @@ namespace RType {
         }
     }
 }
-

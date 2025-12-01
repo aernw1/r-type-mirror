@@ -50,7 +50,6 @@ namespace RType {
                     auto& shootCmd = registry.GetComponent<ShootCommand>(entity);
                     shootCmd.wantsToShoot = m_renderer->IsKeyPressed(Renderer::Key::E);
                 }
-
             }
         }
     }
