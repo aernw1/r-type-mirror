@@ -1,73 +1,45 @@
 #include "GameStateMachine.hpp"
 #include "Menu/MainMenu.hpp"
+#include "Renderer/SFMLRenderer.hpp"
 #include <iostream>
+#include <memory>
 
-int main(int argc, char* argv[]) {
+int main(int, char*[]) {
+    auto renderer = std::make_shared<Renderer::SFMLRenderer>();
+    Renderer::WindowConfig config;
+    config.title = "R-Type Client";
+    config.width = 1280;
+    config.height = 720;
+    config.targetFramerate = 60;
+    
+    if (!renderer->CreateWindow(config)) {
+        std::cerr << "Failed to create window" << std::endl;
+        return 1;
+    }
+
     RType::Client::GameContext context;
-    context.window = std::make_shared<sf::RenderWindow>(
-        sf::VideoMode(1280, 720), "R-Type Client"
-    );
-    context.window->setFramerateLimit(60);
+    context.renderer = renderer;
+    context.registry = std::make_shared<RType::ECS::Registry>();
 
     RType::Client::GameStateMachine machine;
     
     machine.PushState(std::make_unique<RType::Client::MainMenu>(machine, context));
 
     sf::Clock clock;
-    while (context.window->isOpen() && machine.IsRunning()) {
+    while (renderer->IsWindowOpen() && machine.IsRunning()) {
         float dt = clock.restart().asSeconds();
+        
+        renderer->Update(dt);
+        
+        renderer->BeginFrame();
         
         machine.HandleInput();
         machine.Update(dt);
         machine.Draw();
+        
+        renderer->EndFrame();
     }
 
     return 0;
 }
 
-/*
-#include "LobbyClient.hpp"
-#include <iostream>
-#include <thread>
-#include <chrono>
-
-int main(int argc, char* argv[]) {
-   std::string addr = "127.0.0.1";
-   uint16_t port = 4242;
-   std::string name = "Player";
-
-   if (argc > 1)
-       addr = argv[1];
-   if (argc > 2)
-       port = std::stoi(argv[2]);
-   if (argc > 3)
-       name = argv[3];
-
-   std::cout << "Connecting to " << addr << ":" << port << " as " << name << std::endl;
-
-   network::LobbyClient client(addr, port);
-   client.connect(name);
-
-   while (!client.isConnected()) {
-       client.update();
-       std::this_thread::sleep_for(std::chrono::milliseconds(16));
-   }
-
-   std::cout << "Press Enter to ready up..." << std::endl;
-   std::cin.get();
-   client.ready();
-
-   std::cout << "Press Enter to start game..." << std::endl;
-   std::cin.get();
-   client.requestStart();
-
-   while (!client.isGameStarted()) {
-       client.update();
-       std::this_thread::sleep_for(std::chrono::milliseconds(16));
-   }
-
-   std::cout << "Game started!" << std::endl;
-
-   return 0;
-}
-*/

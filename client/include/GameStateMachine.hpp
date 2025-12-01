@@ -2,7 +2,8 @@
 
 #include <memory>
 #include <stack>
-#include <SFML/Graphics.hpp>
+#include "Renderer/IRenderer.hpp"
+#include "ECS/Registry.hpp"
 
 namespace RType {
     namespace Client {
@@ -16,7 +17,8 @@ namespace RType {
         };
 
         struct GameContext {
-            std::shared_ptr<sf::RenderWindow> window;
+            std::shared_ptr<Renderer::IRenderer> renderer;
+            std::shared_ptr<ECS::Registry> registry;
             
             std::string playerName;
             std::string serverIp;
@@ -28,6 +30,7 @@ namespace RType {
             virtual ~IState() = default;
             
             virtual void Init() = 0;
+            virtual void Cleanup() {}
             virtual void HandleInput() = 0;
             virtual void Update(float dt) = 0;
             virtual void Draw() = 0;
@@ -38,22 +41,20 @@ namespace RType {
             GameStateMachine() = default;
 
             void PushState(std::unique_ptr<IState> state) {
-                if (!m_states.empty()) {
-                }
                 m_states.push(std::move(state));
                 m_states.top()->Init();
             }
 
             void PopState() {
                 if (!m_states.empty()) {
+                    m_states.top()->Cleanup();
                     m_states.pop();
-                }
-                if (!m_states.empty()) {
                 }
             }
 
             void ChangeState(std::unique_ptr<IState> state) {
                 if (!m_states.empty()) {
+                    m_states.top()->Cleanup();
                     m_states.pop();
                 }
                 PushState(std::move(state));
