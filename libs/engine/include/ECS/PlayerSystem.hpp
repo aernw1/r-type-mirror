@@ -2,8 +2,6 @@
 
 #include "ISystem.hpp"
 #include "Renderer/IRenderer.hpp"
-#include "Math/Types.hpp"
-#include <string>
 
 namespace RType {
 
@@ -23,8 +21,6 @@ namespace RType {
                                             float screenHeight = 720.0f);
         private:
             Renderer::IRenderer* m_renderer;
-            static Math::Color GetPlayerColor(uint8_t playerNumber);
-            static std::string GetPlayerSpritePath(uint8_t playerNumber);
         };
 
     }

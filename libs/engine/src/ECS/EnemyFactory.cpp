@@ -39,7 +39,6 @@ namespace RType {
                 }
                 return ENEMY_DATA_TABLE[index];
             }
-
         }
 
         Entity EnemyFactory::CreateEnemy(Registry& registry, EnemyType type, float startX, float startY,

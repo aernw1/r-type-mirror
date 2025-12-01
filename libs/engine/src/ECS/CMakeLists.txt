@@ -6,10 +6,14 @@ set(ECS_SOURCES
     TextRenderingSystem.cpp
     MenuSystem.cpp
     PlayerSystem.cpp
+    PlayerFactory.cpp
     CollisionSystem.cpp
     BulletCollisionSystem.cpp
     EnemySystem.cpp
     EnemyFactory.cpp
+    HealthSystem.cpp
+    ScoreSystem.cpp
+    ShootingSystem.cpp
 )
 
 set(ECS_HEADERS
@@ -26,10 +30,14 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/TextRenderingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MenuSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerFactory.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/CollisionSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BulletCollisionSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemySystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemyFactory.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/HealthSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ScoreSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShootingSystem.hpp
 )
 
 add_library(rtype_ecs STATIC

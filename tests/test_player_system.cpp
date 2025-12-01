@@ -5,6 +5,7 @@
 #include "ECS/Component.hpp"
 #include "ECS/InputSystem.hpp"
 #include "ECS/PlayerSystem.hpp"
+#include "ECS/PlayerFactory.hpp"
 #include "ECS/MovementSystem.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include <memory>
@@ -73,7 +74,7 @@ int main(int, char*[]) {
 
     for (uint8_t i = 1; i <= 4; ++i) {
         uint64_t playerHash = static_cast<uint64_t>(i) * 1000;
-        ECS::PlayerSystem::CreatePlayer(registry, i, playerHash, 100.0f, 200.0f, rendererPtr);
+        ECS::PlayerFactory::CreatePlayer(registry, i, playerHash, 100.0f, 200.0f, rendererPtr);
     }
 
     Core::Logger::Info("Created {} entities", registry.GetEntityCount());
