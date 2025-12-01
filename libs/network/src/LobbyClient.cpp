@@ -80,6 +80,8 @@ namespace network {
             return "DISCONNECT";
         case LobbyPacket::PLAYER_LEFT:
             return "PLAYER_LEFT";
+        case LobbyPacket::COUNTDOWN:
+            return "COUNTDOWN";
         case LobbyPacket::ERROR_MSG:
             return "ERROR";
         default:
@@ -109,6 +111,9 @@ namespace network {
         case LobbyPacket::PLAYER_LEFT:
             handlePlayerLeft(d);
             break;
+        case LobbyPacket::COUNTDOWN:
+            handleCountdown(d);
+            break;
         case LobbyPacket::GAME_START:
             handleGameStart(d);
             break;
@@ -120,7 +125,16 @@ namespace network {
     void LobbyClient::handleConnectAck(Deserializer& d) {
         uint8_t status = d.readU8();
         if (status != 0) {
-            std::cout << "[Client] Connection refused (status=" << (int)status << ")" << std::endl;
+            std::string errorMsg = "Server is full";
+            if (status == 0x01) {
+                errorMsg = "Server is full";
+            } else {
+                errorMsg = "Connection refused (status=" + std::to_string((int)status) + ")";
+            }
+            std::cout << "[Client] " << errorMsg << std::endl;
+            if (_onConnectionError) {
+                _onConnectionError(errorMsg);
+            }
             _socket.disconnect();
             return;
         }
@@ -146,11 +160,11 @@ namespace network {
         uint8_t num = d.readU8();
         for (auto& p : _players) {
             if (p.number == num) {
-                p.ready = true;
+                p.ready = !p.ready;
+                std::cout << "[Client] Player #" << (int)num << " is " << (p.ready ? "ready" : "not ready") << std::endl;
                 break;
             }
         }
-        std::cout << "[Client] Player #" << (int)num << " is ready" << std::endl;
     }
 
     void LobbyClient::handlePlayerLeft(Deserializer& d) {
@@ -159,6 +173,19 @@ namespace network {
         std::cout << "[Client] Player #" << (int)num << " left" << std::endl;
         if (_onPlayerLeft)
             _onPlayerLeft(num);
+    }
+
+    void LobbyClient::handleCountdown(Deserializer& d) {
+        uint8_t seconds = d.readU8();
+        _countdownSeconds = seconds;
+        if (seconds == 0) {
+            std::cout << "[Client] Countdown cancelled" << std::endl;
+        } else {
+            std::cout << "[Client] Game starting in " << (int)seconds << " seconds..." << std::endl;
+        }
+        if (_onCountdown) {
+            _onCountdown(seconds);
+        }
     }
 
     void LobbyClient::handleGameStart(Deserializer& d) {

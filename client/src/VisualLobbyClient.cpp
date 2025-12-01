@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** VisualLobbyClient
+*/
+
 #include "VisualLobbyClient.hpp"
 #include <chrono>
 #include <iostream>
@@ -7,10 +14,7 @@ using namespace RType::ECS;
 
 namespace Client {
 
-    VisualLobbyClient::VisualLobbyClient(const std::string& serverAddr,
-        uint16_t port,
-        const std::string& playerName)
-        : m_client(serverAddr, port), m_playerName(playerName) {
+    VisualLobbyClient::VisualLobbyClient(const std::string& serverAddr, uint16_t port, const std::string& playerName) : m_client(serverAddr, port), m_playerName(playerName) {
 
         m_renderer = std::make_unique<Renderer::SFMLRenderer>();
 
@@ -91,8 +95,7 @@ namespace Client {
 
         Entity instructions = m_registry.CreateEntity();
         m_registry.AddComponent<Position>(instructions, Position{50.0f, 500.0f});
-        m_registry.AddComponent<TextLabel>(instructions,
-            TextLabel{"Press R to ready | Press S to start game", m_font});
+        m_registry.AddComponent<TextLabel>(instructions, TextLabel{"Press R to ready | Press S to start game", m_font});
         auto& instrLabel = m_registry.GetComponent<TextLabel>(instructions);
         instrLabel.color = Math::Color{0.7f, 0.7f, 0.7f, 1.0f};
     }
@@ -145,8 +148,7 @@ namespace Client {
 
             float yPos = 250.0f + (player.number * 50.0f);
             m_registry.AddComponent<Position>(entity, Position{50.0f, yPos});
-            m_registry.AddComponent<NetworkPlayer>(entity,
-                NetworkPlayer{player.number, player.hash, player.name, player.ready});
+            m_registry.AddComponent<NetworkPlayer>(entity, NetworkPlayer{player.number, player.hash, player.name, player.ready});
             if (m_font != Renderer::INVALID_FONT_ID) {
                 m_registry.AddComponent<TextLabel>(entity, TextLabel{"", m_font});
             }
@@ -159,8 +161,7 @@ namespace Client {
         }
 
         const auto& netPlayer = m_registry.GetComponent<NetworkPlayer>(entity);
-        std::string displayText = "Player " + std::to_string(netPlayer.playerNumber) + ": "
-                                  + std::string(netPlayer.name);
+        std::string displayText = "Player " + std::to_string(netPlayer.playerNumber) + ": " + std::string(netPlayer.name);
         if (netPlayer.ready) {
             displayText += " [READY]";
         }
@@ -168,8 +169,7 @@ namespace Client {
         if (m_font != Renderer::INVALID_FONT_ID) {
             auto& label = m_registry.GetComponent<TextLabel>(entity);
             label.text = displayText;
-            label.color = netPlayer.ready ? Math::Color{0.2f, 1.0f, 0.2f, 1.0f}
-                                          : Math::Color{1.0f, 1.0f, 1.0f, 1.0f};
+            label.color = netPlayer.ready ? Math::Color{0.2f, 1.0f, 0.2f, 1.0f} : Math::Color{1.0f, 1.0f, 1.0f, 1.0f};
         } else if (isNewPlayer) {
             std::cout << "[Player] " << displayText << std::endl;
         }
@@ -210,4 +210,3 @@ namespace Client {
     }
 
 }
-

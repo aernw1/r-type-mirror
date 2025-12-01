@@ -13,16 +13,14 @@ namespace RType {
         class EnemyFactory {
         public:
             static Entity CreateEnemy(Registry& registry, EnemyType type, float startX, float startY,
-                                    Renderer::IRenderer* renderer);
+                                      Renderer::IRenderer* renderer);
 
             static float GetEnemySpeed(EnemyType type);
             static int GetEnemyHealth(EnemyType type);
             static int GetEnemyDamage(EnemyType type);
             static uint32_t GetEnemyScore(EnemyType type);
-
         };
 
     }
 
 }
-

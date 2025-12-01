@@ -82,8 +82,10 @@ namespace Renderer {
             m_window->setFramerateLimit(config.targetFramerate);
         }
 
-        m_defaultView = m_window->getDefaultView();
+        m_defaultView.setSize(1280.0f, 720.0f);
+        m_defaultView.setCenter(640.0f, 360.0f);
         m_currentView = m_defaultView;
+        m_window->setView(m_currentView);
 
         RType::Core::Logger::Info("Window created successfully");
         return true;
@@ -107,12 +109,20 @@ namespace Renderer {
             return;
         }
 
+        if (width == 0 || height == 0) {
+            RType::Core::Logger::Warning("Invalid window dimensions: {}x{}", width, height);
+            return;
+        }
+
         m_windowConfig.width = width;
         m_windowConfig.height = height;
-        m_window->setSize(sf::Vector2u(width, height));
 
-        m_defaultView.setSize(static_cast<float>(width), static_cast<float>(height));
-        m_defaultView.setCenter(static_cast<float>(width) / 2.0f, static_cast<float>(height) / 2.0f);
+        const float targetWidth = 1280.0f;
+        const float targetHeight = 720.0f;
+
+        m_defaultView.setSize(targetWidth, targetHeight);
+        m_defaultView.setCenter(targetWidth / 2.0f, targetHeight / 2.0f);
+        m_defaultView.setViewport(sf::FloatRect(0.0f, 0.0f, 1.0f, 1.0f));
 
         if (!m_usingCustomCamera) {
             m_currentView = m_defaultView;
@@ -191,6 +201,15 @@ namespace Renderer {
 
         m_textures.erase(it);
         RType::Core::Logger::Debug("Unloaded texture ID: {}", textureId);
+    }
+
+    Vector2 SFMLRenderer::GetTextureSize(TextureId textureId) const {
+        auto it = m_textures.find(textureId);
+        if (it == m_textures.end()) {
+            return {0.0f, 0.0f};
+        }
+        sf::Vector2u size = it->second.texture->getSize();
+        return {static_cast<float>(size.x), static_cast<float>(size.y)};
     }
 
     SpriteId SFMLRenderer::CreateSprite(TextureId textureId, const Rectangle& region) {
@@ -315,8 +334,14 @@ namespace Renderer {
         sfText.setCharacterSize(it->second.characterSize);
         sfText.setRotation(params.rotation);
         sfText.setFillColor(ToSFMLColor(params.color));
-        sfText.setPosition(ToSFMLVector(params.position));
         sfText.setScale(sf::Vector2f(params.scale, params.scale));
+
+        if (params.centered) {
+            sf::FloatRect bounds = sfText.getLocalBounds();
+            sfText.setOrigin(bounds.left + bounds.width / 2.0f, bounds.top + bounds.height / 2.0f);
+        }
+
+        sfText.setPosition(ToSFMLVector(params.position));
 
         m_window->draw(sfText);
         m_stats.drawCalls++;
@@ -448,6 +473,32 @@ namespace Renderer {
 
     bool SFMLRenderer::IsKeyPressed(Key key) const {
         return sf::Keyboard::isKeyPressed(ToSFMLKey(key));
+    }
+
+    bool SFMLRenderer::IsMouseButtonPressed(MouseButton button) const {
+        sf::Mouse::Button sfBtn;
+        switch (button) {
+        case MouseButton::Left:
+            sfBtn = sf::Mouse::Left;
+            break;
+        case MouseButton::Right:
+            sfBtn = sf::Mouse::Right;
+            break;
+        case MouseButton::Middle:
+            sfBtn = sf::Mouse::Middle;
+            break;
+        default:
+            return false;
+        }
+        return sf::Mouse::isButtonPressed(sfBtn);
+    }
+
+    Vector2 SFMLRenderer::GetMousePosition() const {
+        if (!m_window)
+            return {0, 0};
+        sf::Vector2i pos = sf::Mouse::getPosition(*m_window);
+        sf::Vector2f worldPos = m_window->mapPixelToCoords(pos, m_currentView);
+        return {worldPos.x, worldPos.y};
     }
 
 }

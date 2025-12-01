@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** VisualLobbyClient
+*/
+
 #pragma once
 
 #include "LobbyClient.hpp"
@@ -17,11 +24,10 @@ namespace Client {
     class VisualLobbyClient {
     public:
         VisualLobbyClient(const std::string& serverAddr,
-            uint16_t port,
-            const std::string& playerName);
+                          uint16_t port,
+                          const std::string& playerName);
 
         void run();
-
     private:
         void createTitleEntity();
         void createInstructionsEntity();
@@ -49,4 +55,3 @@ namespace Client {
     };
 
 }
-

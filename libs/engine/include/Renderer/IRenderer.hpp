@@ -50,6 +50,7 @@ namespace Renderer {
         float scale = 1.0f;
         float letterSpacing = 0.0f;
         float lineSpacing = 0.0f;
+        bool centered = false;
     };
 
     struct Camera2D {
@@ -140,6 +141,7 @@ namespace Renderer {
         virtual TextureId LoadTexture(const std::string& path,
                                       const TextureConfig& config = TextureConfig{}) = 0;
         virtual void UnloadTexture(TextureId textureId) = 0;
+        virtual Vector2 GetTextureSize(TextureId textureId) const = 0;
 
         virtual SpriteId CreateSprite(TextureId textureId, const Rectangle& region) = 0;
         virtual void DestroySprite(SpriteId spriteId) = 0;
@@ -158,6 +160,14 @@ namespace Renderer {
         virtual RenderStats GetRenderStats() const = 0;
 
         virtual bool IsKeyPressed(Key key) const = 0;
+
+        enum class MouseButton {
+            Left,
+            Right,
+            Middle
+        };
+        virtual bool IsMouseButtonPressed(MouseButton button) const = 0;
+        virtual Vector2 GetMousePosition() const = 0;
     };
 
 }
