@@ -13,7 +13,7 @@ namespace RType {
                 return;
 
             auto entities = registry.GetEntitiesWithComponent<TextLabel>();
-            
+
             for (Entity entity : entities) {
                 if (!registry.HasComponent<Position>(entity))
                     continue;

@@ -478,16 +478,24 @@ namespace Renderer {
     bool SFMLRenderer::IsMouseButtonPressed(MouseButton button) const {
         sf::Mouse::Button sfBtn;
         switch (button) {
-            case MouseButton::Left: sfBtn = sf::Mouse::Left; break;
-            case MouseButton::Right: sfBtn = sf::Mouse::Right; break;
-            case MouseButton::Middle: sfBtn = sf::Mouse::Middle; break;
-            default: return false;
+        case MouseButton::Left:
+            sfBtn = sf::Mouse::Left;
+            break;
+        case MouseButton::Right:
+            sfBtn = sf::Mouse::Right;
+            break;
+        case MouseButton::Middle:
+            sfBtn = sf::Mouse::Middle;
+            break;
+        default:
+            return false;
         }
         return sf::Mouse::isButtonPressed(sfBtn);
     }
 
     Vector2 SFMLRenderer::GetMousePosition() const {
-        if (!m_window) return {0, 0};
+        if (!m_window)
+            return {0, 0};
         sf::Vector2i pos = sf::Mouse::getPosition(*m_window);
         sf::Vector2f worldPos = m_window->mapPixelToCoords(pos, m_currentView);
         return {worldPos.x, worldPos.y};

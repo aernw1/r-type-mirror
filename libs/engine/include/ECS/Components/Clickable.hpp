@@ -15,10 +15,10 @@ namespace RType {
         struct Clickable : public IComponent {
             float width = 0.0f;
             float height = 0.0f;
-            
+
             ButtonState state = ButtonState::Idle;
-            
-            int actionId = 0; 
+
+            int actionId = 0;
 
             Clickable() = default;
             Clickable(float w, float h, int action)
@@ -27,4 +27,3 @@ namespace RType {
 
     }
 }
-

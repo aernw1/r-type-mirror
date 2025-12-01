@@ -18,10 +18,9 @@ namespace RType {
             const char* GetName() const override { return "PlayerSystem"; }
 
             static Entity CreatePlayer(Registry& registry, uint8_t playerNumber, uint64_t playerHash,
-                                     float startX, float startY, Renderer::IRenderer* renderer);
+                                       float startX, float startY, Renderer::IRenderer* renderer);
             static void ClampPlayerToScreen(Registry& registry, Entity player, float screenWidth = 1280.0f,
-                                          float screenHeight = 720.0f);
-
+                                            float screenHeight = 720.0f);
         private:
             Renderer::IRenderer* m_renderer;
             static Math::Color GetPlayerColor(uint8_t playerNumber);
@@ -31,4 +30,3 @@ namespace RType {
     }
 
 }
-

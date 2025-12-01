@@ -6,7 +6,7 @@
 
 namespace RType {
     namespace ECS {
-        
+
         struct TextLabel : public IComponent {
             std::string text;
             Renderer::FontId fontId = 0;
@@ -23,4 +23,3 @@ namespace RType {
         };
     }
 }
-

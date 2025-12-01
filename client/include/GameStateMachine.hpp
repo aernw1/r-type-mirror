@@ -72,23 +72,24 @@ namespace RType {
             }
 
             void Update(float dt) {
-                if (GetCurrentState()) GetCurrentState()->Update(dt);
+                if (GetCurrentState())
+                    GetCurrentState()->Update(dt);
             }
 
             void Draw() {
-                if (GetCurrentState()) GetCurrentState()->Draw();
+                if (GetCurrentState())
+                    GetCurrentState()->Draw();
             }
 
             void HandleInput() {
-                if (GetCurrentState()) GetCurrentState()->HandleInput();
+                if (GetCurrentState())
+                    GetCurrentState()->HandleInput();
             }
 
             bool IsRunning() const { return !m_states.empty(); }
-
         private:
             std::stack<std::unique_ptr<IState>> m_states;
         };
 
     }
 }
-

@@ -75,7 +75,7 @@ namespace RType {
         };
 
         struct Controllable : public IComponent {
-            float speed = 200.0f; 
+            float speed = 200.0f;
 
             Controllable() = default;
             Controllable(float moveSpeed)
@@ -92,7 +92,7 @@ namespace RType {
                 : playerNumber(number), playerHash(hash), isLocalPlayer(local) {}
         };
 
-         enum class EnemyType : uint8_t {
+        enum class EnemyType : uint8_t {
             BASIC = 0,
             FAST = 1,
             TANK = 2,

@@ -10,7 +10,8 @@ namespace RType {
             : m_renderer(renderer) {}
 
         void MenuSystem::Update(Registry& registry, float deltaTime) {
-            if (!m_renderer) return;
+            if (!m_renderer)
+                return;
 
             Renderer::Vector2 mousePos = m_renderer->GetMousePosition();
             bool isMouseDown = m_renderer->IsMouseButtonPressed(Renderer::IRenderer::MouseButton::Left);
@@ -18,17 +19,17 @@ namespace RType {
             auto entities = registry.GetEntitiesWithComponent<Clickable>();
 
             for (Entity entity : entities) {
-                if (!registry.HasComponent<Position>(entity)) 
+                if (!registry.HasComponent<Position>(entity))
                     continue;
 
                 const auto& pos = registry.GetComponent<Position>(entity);
                 auto& clickable = registry.GetComponent<Clickable>(entity);
-                
+
                 Drawable* drawable = nullptr;
                 if (registry.HasComponent<Drawable>(entity)) {
                     drawable = &registry.GetComponent<Drawable>(entity);
                 }
-                
+
                 TextLabel* textLabel = nullptr;
                 if (registry.HasComponent<TextLabel>(entity)) {
                     textLabel = &registry.GetComponent<TextLabel>(entity);
@@ -40,8 +41,10 @@ namespace RType {
                 if (hovered) {
                     if (isMouseDown) {
                         clickable.state = ButtonState::Active;
-                        if (drawable) drawable->tint = {0.5f, 0.5f, 0.5f, 1.0f}; 
-                        if (textLabel) textLabel->color = {0.5f, 0.5f, 0.5f, 1.0f};
+                        if (drawable)
+                            drawable->tint = {0.5f, 0.5f, 0.5f, 1.0f};
+                        if (textLabel)
+                            textLabel->color = {0.5f, 0.5f, 0.5f, 1.0f};
                     } else {
                         if (m_wasMouseDown && clickable.state == ButtonState::Active) {
                             if (m_callback) {
@@ -49,13 +52,17 @@ namespace RType {
                             }
                         }
                         clickable.state = ButtonState::Hover;
-                        if (drawable) drawable->tint = {0.8f, 0.8f, 0.8f, 1.0f};
-                        if (textLabel) textLabel->color = {0.8f, 0.8f, 0.8f, 1.0f};
+                        if (drawable)
+                            drawable->tint = {0.8f, 0.8f, 0.8f, 1.0f};
+                        if (textLabel)
+                            textLabel->color = {0.8f, 0.8f, 0.8f, 1.0f};
                     }
                 } else {
                     clickable.state = ButtonState::Idle;
-                    if (drawable) drawable->tint = {1.0f, 1.0f, 1.0f, 1.0f};
-                    if (textLabel) textLabel->color = {1.0f, 1.0f, 1.0f, 1.0f};
+                    if (drawable)
+                        drawable->tint = {1.0f, 1.0f, 1.0f, 1.0f};
+                    if (textLabel)
+                        textLabel->color = {1.0f, 1.0f, 1.0f, 1.0f};
                 }
             }
 

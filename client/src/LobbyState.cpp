@@ -120,7 +120,8 @@ namespace RType {
                 m_registry.AddComponent<Drawable>(m_bgEntity, std::move(drawable));
             }
 
-            if (m_fontLarge == Renderer::INVALID_FONT_ID) return;
+            if (m_fontLarge == Renderer::INVALID_FONT_ID)
+                return;
             m_titleEntity = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(m_titleEntity, Position{640.0f, 50.0f});
             TextLabel titleLabel("MULTIPLAYER LOBBY", m_fontLarge, 36);
@@ -149,11 +150,16 @@ namespace RType {
 
         Renderer::TextureId LobbyState::getPlayerTexture(uint8_t playerNum) {
             switch (playerNum) {
-                case 0: return m_playerBlueTexture;
-                case 1: return m_playerGreenTexture;
-                case 2: return m_nave2BlueTexture;
-                case 3: return m_nave2Texture;
-                default: return m_playerBlueTexture;
+            case 0:
+                return m_playerBlueTexture;
+            case 1:
+                return m_playerGreenTexture;
+            case 2:
+                return m_nave2BlueTexture;
+            case 3:
+                return m_nave2Texture;
+            default:
+                return m_playerBlueTexture;
             }
         }
 
@@ -208,7 +214,8 @@ namespace RType {
 
         void LobbyState::updatePlayerCardVisuals(uint8_t playerNum, const network::PlayerInfo& player) {
             auto it = m_playerEntities.find(playerNum);
-            if (it == m_playerEntities.end()) return;
+            if (it == m_playerEntities.end())
+                return;
 
             Entity entity = it->second;
             const auto& netPlayer = m_registry.GetComponent<NetworkPlayer>(entity);

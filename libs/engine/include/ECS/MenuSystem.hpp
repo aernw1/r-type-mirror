@@ -18,17 +18,15 @@ namespace RType {
             const char* GetName() const override {
                 return "MenuSystem";
             }
-            
+
             void SetActionCallback(ActionCallback callback) {
                 m_callback = callback;
             }
-
         private:
             Renderer::IRenderer* m_renderer;
-            ActionCallback m_callback;            
+            ActionCallback m_callback;
             bool m_wasMouseDown = false;
         };
 
     }
 }
-

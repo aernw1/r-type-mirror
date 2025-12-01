@@ -77,7 +77,8 @@ namespace RType {
                 m_registry.AddComponent(bg, std::move(drawable));
             }
 
-            if (m_fontLarge == Renderer::INVALID_FONT_ID) return;
+            if (m_fontLarge == Renderer::INVALID_FONT_ID)
+                return;
 
             m_titleEntity = m_registry.CreateEntity();
             m_entities.push_back(m_titleEntity);
@@ -153,7 +154,6 @@ namespace RType {
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
                 m_playKeyPressed = false;
             }
-
         }
 
         void MenuState::Update(float dt) {
