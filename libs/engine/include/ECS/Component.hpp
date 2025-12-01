@@ -166,9 +166,18 @@ namespace RType {
         struct Shooter : IComponent {
             float fireRate = 0.2f;
             float cooldown = 0.0f;
+            float offsetX = 50.0f;
+            float offsetY = 20.0f;
             
             Shooter() = default;
-            Shooter(float rate) : fireRate(rate) {}
+            Shooter(float rate, float oX = 50.0f, float oY = 20.0f) : fireRate(rate), offsetX(oX), offsetY(oY) {}
+        };
+
+        struct ShootCommand : public IComponent {
+            bool wantsToShoot = false;
+            
+            ShootCommand() = default;
+            ShootCommand(bool shoot) : wantsToShoot(shoot) {}
         };
     }
 

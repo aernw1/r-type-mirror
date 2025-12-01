@@ -7,38 +7,46 @@
 namespace RType {
     namespace ECS {
 
-        ShootingSystem::ShootingSystem(Renderer::IRenderer* renderer, Renderer::SpriteId bulletSprite)
-            : m_renderer(renderer), m_bulletSprite(bulletSprite) {}
+            ShootingSystem::ShootingSystem(Renderer::SpriteId bulletSprite)
+                : m_bulletSprite(bulletSprite) {}
 
-        void ShootingSystem::Update(Registry& registry, float deltaTime) {
-            (void)deltaTime;
+            void ShootingSystem::Update(Registry& registry, float deltaTime) {
 
-            auto shooters = registry.GetEntitiesWithComponent<Shooter>();
-            auto bullets = registry.GetEntitiesWithComponent<Bullet>();
+                auto shooters = registry.GetEntitiesWithComponent<Shooter>();
+                auto bullets = registry.GetEntitiesWithComponent<Bullet>();
 
-            for (auto shooterEntity : shooters) {
-                if (!registry.IsEntityAlive(shooterEntity) || !registry.HasComponent<Shooter>(shooterEntity)) {
-                    continue;
-                }
-                auto &shooterComp = registry.GetComponent<Shooter>(shooterEntity);
-
-                shooterComp.cooldown = shooterComp.cooldown - deltaTime;
-
-                if (m_renderer->IsKeyPressed(Renderer::Key::E) && shooterComp.cooldown <= 0.0f) {
-                    if (!registry.HasComponent<Position>(shooterEntity)) {
+                for (auto shooterEntity : shooters) {
+                    if (!registry.IsEntityAlive(shooterEntity) || !registry.HasComponent<Shooter>(shooterEntity)) {
                         continue;
                     }
-                    const auto& positionComp = registry.GetComponent<Position>(shooterEntity);
+                    auto &shooterComp = registry.GetComponent<Shooter>(shooterEntity);
 
-                    auto bulletEntity = registry.CreateEntity();
-                    registry.AddComponent<Position>(bulletEntity, Position(positionComp.x + 50.0f, positionComp.y + 20.0f));
-                    registry.AddComponent<Velocity>(bulletEntity, Velocity(600.0f, 0.0f));
-                    registry.AddComponent<Bullet>(bulletEntity, Bullet(shooterEntity));
-                    registry.AddComponent<Drawable>(bulletEntity, Drawable(m_bulletSprite, 2));
-                    registry.AddComponent<Damage>(bulletEntity, Damage(25));
-                    registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
+                    shooterComp.cooldown = shooterComp.cooldown - deltaTime;
 
-                    shooterComp.cooldown = shooterComp.fireRate;
+                    if (shooterComp.cooldown < 0.0f) {
+                        shooterComp.cooldown = 0.0f;
+                    }
+
+                    if (registry.HasComponent<ShootCommand>(shooterEntity)) {
+                        auto& shootCmd = registry.GetComponent<ShootCommand>(shooterEntity);
+
+                        if (shootCmd.wantsToShoot && shooterComp.cooldown <= 0.0f) {
+                            if (!registry.HasComponent<Position>(shooterEntity)) {
+                                continue;
+                            
+                            const auto& positionComp = registry.GetComponent<Position>(shooterEntity);
+
+                            auto bulletEntity = registry.CreateEntity();
+                            registry.AddComponent<Position>(bulletEntity, Position(positionComp.x + shooterComp.offsetX, positionComp.y + shooterComp.offsetY));
+                            registry.AddComponent<Velocity>(bulletEntity, Velocity(600.0f, 0.0f));
+                            registry.AddComponent<Bullet>(bulletEntity, Bullet(shooterEntity));
+                            registry.AddComponent<Drawable>(bulletEntity, Drawable(m_bulletSprite, 2));
+                            registry.AddComponent<Damage>(bulletEntity, Damage(25));
+                            registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
+
+                            shooterComp.cooldown = shooterComp.fireRate;
+                        }
+                    }
                 }
             }
         }

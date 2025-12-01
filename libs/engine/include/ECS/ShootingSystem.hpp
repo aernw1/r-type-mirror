@@ -8,15 +8,13 @@ namespace RType {
 
         class ShootingSystem : public ISystem {
         public:
-            ShootingSystem() = default;
-            ShootingSystem(Renderer::IRenderer* renderer, Renderer::SpriteId bulletSprite);
+            ShootingSystem(Renderer::SpriteId bulletSprite);
             ~ShootingSystem() override = default;
 
             const char* GetName() const override { return "ShootingSystem"; }
 
             void Update(Registry& registry, float deltaTime) override;
         private:
-            Renderer::IRenderer* m_renderer;
             Renderer::SpriteId m_bulletSprite;
         };
     }

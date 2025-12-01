@@ -46,6 +46,11 @@ namespace RType {
                     vel.dx = controllable.speed;
                 }
 
+                if (registry.HasComponent<ShootCommand>(entity)) {
+                    auto& shootCmd = registry.GetComponent<ShootCommand>(entity);
+                    shootCmd.wantsToShoot = m_renderer->IsKeyPressed(Renderer::Key::E);
+                }
+
             }
         }
     }
