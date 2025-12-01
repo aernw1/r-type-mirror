@@ -16,6 +16,7 @@
 #include <random>
 #include <optional>
 #include <memory>
+#include <chrono>
 
 namespace network {
 
@@ -48,12 +49,19 @@ namespace network {
         size_t findFreeSlot() const;
         size_t activePlayerCount() const;
 
+        void updateCountdown();
+        bool allPlayersReady() const;
+
         TcpServer _server;
         std::vector<std::optional<TcpSocket>> _clients;
         std::vector<std::optional<PlayerInfo>> _players;
         size_t _maxPlayers;
         size_t _minPlayers;
         bool _gameStarted = false;
+
+        bool _countdownActive = false;
+        float _countdownTimer = 5.0f;
+        std::chrono::steady_clock::time_point _lastUpdateTime;
 
         std::mt19937_64 _rng;
     };

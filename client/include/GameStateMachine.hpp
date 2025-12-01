@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** GameStateMachine
+*/
+
 #pragma once
 
 #include <memory>
@@ -19,7 +26,7 @@ namespace RType {
         struct GameContext {
             std::shared_ptr<Renderer::IRenderer> renderer;
             std::shared_ptr<ECS::Registry> registry;
-            
+
             std::string playerName;
             std::string serverIp;
             uint16_t serverPort;
@@ -28,7 +35,7 @@ namespace RType {
         class IState {
         public:
             virtual ~IState() = default;
-            
+
             virtual void Init() = 0;
             virtual void Cleanup() {}
             virtual void HandleInput() = 0;
@@ -71,7 +78,7 @@ namespace RType {
             void Draw() {
                 if (GetCurrentState()) GetCurrentState()->Draw();
             }
-            
+
             void HandleInput() {
                 if (GetCurrentState()) GetCurrentState()->HandleInput();
             }

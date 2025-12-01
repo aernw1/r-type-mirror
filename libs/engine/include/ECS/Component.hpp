@@ -7,6 +7,7 @@
 #include <type_traits>
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
+#include "Entity.hpp"
 
 namespace RType {
 
