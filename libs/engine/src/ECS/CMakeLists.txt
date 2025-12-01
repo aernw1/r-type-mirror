@@ -6,6 +6,7 @@ set(ECS_SOURCES
     TextRenderingSystem.cpp
     CollisionSystem.cpp
     PlayerSystem.cpp
+    PlayerFactory.cpp
     EnemySystem.cpp
     EnemyFactory.cpp
     HealthSystem.cpp
@@ -22,6 +23,7 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/TextRenderingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/CollisionSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerFactory.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemySystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemyFactory.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/HealthSystem.hpp
