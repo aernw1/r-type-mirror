@@ -44,12 +44,6 @@ namespace RType {
                 return ENEMY_DATA_TABLE[index];
             }
         }
-            size_t index = static_cast<size_t>(type);
-            if (index >= ENEMY_DATA_TABLE.size()) {
-                return ENEMY_DATA_TABLE[0];
-            }
-            return ENEMY_DATA_TABLE[index];
-        }
 
         Entity EnemyFactory::CreateEnemy(Registry& registry, EnemyType type, float startX, float startY,
                                        Renderer::IRenderer* renderer) {
