@@ -1,5 +1,6 @@
 #include "ECS/PlayerSystem.hpp"
 #include "ECS/Component.hpp"
+#include "ECS/PlayerFactory.hpp"
 #include <algorithm>
 
 namespace RType {
@@ -21,8 +22,13 @@ namespace RType {
             }
         }
 
+        Entity PlayerSystem::CreatePlayer(Registry& registry, uint8_t playerNumber, uint64_t playerHash,
+                                          float startX, float startY, Renderer::IRenderer* renderer) {
+            return PlayerFactory::CreatePlayer(registry, playerNumber, playerHash, startX, startY, renderer);
+        }
+
         void PlayerSystem::ClampPlayerToScreen(Registry& registry, Entity player, float screenWidth,
-                                             float screenHeight) {
+                                               float screenHeight) {
             if (!registry.HasComponent<Position>(player)) {
                 return;
             }
@@ -48,4 +54,3 @@ namespace RType {
     }
 
 }
-

@@ -28,12 +28,11 @@ namespace RType {
 
             return CheckAABB(
                 posA.x, posA.y, colA.width, colA.height,
-                posB.x, posB.y, colB.width, colB.height
-            );
+                posB.x, posB.y, colB.width, colB.height);
         }
 
         bool CollisionSystem::CheckAABB(float x1, float y1, float w1, float h1,
-            float x2, float y2, float w2, float h2) {
+                                        float x2, float y2, float w2, float h2) {
 
             bool separated =
                 (x1 + w1 < x2) ||

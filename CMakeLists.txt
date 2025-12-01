@@ -39,17 +39,15 @@ add_subdirectory(libs/network)
 add_executable(r-type_server server/main.cpp)
 target_link_libraries(r-type_server PRIVATE rtype_network)
 
-add_executable(r-type_client client/main.cpp)
-target_link_libraries(r-type_client PRIVATE rtype_network)
-
-add_executable(lobby_visual
-    client/src/VisualLobbyClient.cpp
-    client/src/lobby_visual_main.cpp
+add_executable(r-type_client
+    client/main.cpp
+    client/src/MenuState.cpp
+    client/src/LobbyState.cpp
 )
-target_include_directories(lobby_visual PRIVATE
+target_include_directories(r-type_client PRIVATE
     ${CMAKE_SOURCE_DIR}/client/include
 )
-target_link_libraries(lobby_visual PRIVATE
+target_link_libraries(r-type_client PRIVATE
     rtype_network
     rtype_ecs
     rtype_core

@@ -5,11 +5,11 @@
 namespace RType {
     namespace ECS {
 
-    InputSystem::InputSystem(Renderer::IRenderer* renderer)
-        : m_renderer(renderer) {}
+        InputSystem::InputSystem(Renderer::IRenderer* renderer)
+            : m_renderer(renderer) {}
 
-    void InputSystem::Update(Registry& registry, float deltaTime) {
-        auto entities = registry.GetEntitiesWithComponent<Controllable>();
+        void InputSystem::Update(Registry& registry, float deltaTime) {
+            auto entities = registry.GetEntitiesWithComponent<Controllable>();
 
             for (Entity entity : entities) {
                 if (!registry.HasComponent<Velocity>(entity)) {
@@ -46,6 +46,10 @@ namespace RType {
                     vel.dx = controllable.speed;
                 }
 
+                if (registry.HasComponent<ShootCommand>(entity)) {
+                    auto& shootCmd = registry.GetComponent<ShootCommand>(entity);
+                    shootCmd.wantsToShoot = m_renderer->IsKeyPressed(Renderer::Key::E);
+                }
             }
         }
     }

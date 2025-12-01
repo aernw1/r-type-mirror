@@ -11,7 +11,7 @@ namespace RType {
         class EnemySystem : public ISystem {
         public:
             explicit EnemySystem(Renderer::IRenderer* renderer = nullptr, float screenWidth = 1280.0f,
-                                float screenHeight = 720.0f);
+                                 float screenHeight = 720.0f);
             ~EnemySystem() override = default;
 
             void Update(Registry& registry, float deltaTime) override;
@@ -20,7 +20,6 @@ namespace RType {
             void SpawnRandomEnemy(Registry& registry);
             static void DestroyEnemiesOffScreen(Registry& registry, float screenWidth);
             static void ApplyMovementPattern(Registry& registry, Entity enemy, float /* deltaTime */);
-
         private:
             Renderer::IRenderer* m_renderer;
             float m_screenWidth;
@@ -33,4 +32,3 @@ namespace RType {
     }
 
 }
-

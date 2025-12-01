@@ -13,6 +13,7 @@
 #include "ECS/HealthSystem.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
+#include "ECS/Components/TextLabel.hpp"
 #include <memory>
 #include <chrono>
 #include <sstream>
@@ -107,7 +108,6 @@ int main(int, char*[]) {
         registry.AddComponent<ECS::TextLabel>(healthDisplay, ECS::TextLabel("Health: 100/100", fontId));
         auto& healthLabel = registry.GetComponent<ECS::TextLabel>(healthDisplay);
         healthLabel.color = Math::Color(1.0f, 1.0f, 1.0f, 1.0f);
-        healthLabel.scale = 0.5f;
     }
 
     Core::Logger::Info("Created {} entities", registry.GetEntityCount());
@@ -177,4 +177,3 @@ int main(int, char*[]) {
 
     return 0;
 }
-
