@@ -166,7 +166,6 @@ public:
     void reserve(size_type new_capacity) {
         _data.reserve(new_capacity);
     }
-
 private:
     void ensure_capacity(size_type required_size) {
         if (required_size <= _data.size()) {

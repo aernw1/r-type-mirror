@@ -32,14 +32,18 @@ namespace network {
         const PlayerInfo& getMyInfo() const { return _myInfo; }
         const std::vector<PlayerInfo>& getPlayers() const { return _players; }
         uint32_t getGameSeed() const { return _gameSeed; }
+        uint8_t getCountdownSeconds() const { return _countdownSeconds; }
 
         void onPlayerLeft(std::function<void(uint8_t)> callback) { _onPlayerLeft = callback; }
+        void onConnectionError(std::function<void(const std::string&)> callback) { _onConnectionError = callback; }
+        void onCountdown(std::function<void(uint8_t)> callback) { _onCountdown = callback; }
     private:
         void handlePacket(const std::vector<uint8_t>& data);
         void handleConnectAck(Deserializer& d);
         void handlePlayerJoin(Deserializer& d);
         void handlePlayerReady(Deserializer& d);
         void handlePlayerLeft(Deserializer& d);
+        void handleCountdown(Deserializer& d);
         void handleGameStart(Deserializer& d);
 
         void send(LobbyPacket type, const std::vector<uint8_t>& payload = {});
@@ -51,8 +55,11 @@ namespace network {
         bool _joined = false;
         bool _gameStarted = false;
         uint32_t _gameSeed = 0;
+        uint8_t _countdownSeconds = 0;
 
         std::function<void(uint8_t)> _onPlayerLeft;
+        std::function<void(const std::string&)> _onConnectionError;
+        std::function<void(uint8_t)> _onCountdown;
     };
 
 }

@@ -5,7 +5,7 @@
 namespace RType {
     namespace ECS {
 
-    class CollisionSystem : public ISystem {
+        class CollisionSystem : public ISystem {
         public:
             CollisionSystem() = default;
             ~CollisionSystem() override = default;
@@ -15,10 +15,9 @@ namespace RType {
             void Update(Registry& registry, float deltaTime) override;
 
             static bool CheckCollision(Registry& registry, Entity a, Entity b);
-
         private:
             static bool CheckAABB(float x1, float y1, float w1, float h1,
-                float x2, float y2, float w2, float h2);
+                                  float x2, float y2, float w2, float h2);
         };
     }
 }

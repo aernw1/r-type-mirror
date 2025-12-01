@@ -30,18 +30,18 @@ namespace RType {
                         }
                         auto& healthComp = registry.GetComponent<Health>(enemy);
                         const auto& damageComp = registry.GetComponent<Damage>(bullet);
-                        
+
                         healthComp.current = healthComp.current - damageComp.amount;
                         int healthEnemy = healthComp.current;
-                        
-                        
+
+
                         if (healthEnemy <= 0) {
                             if (!registry.HasComponent<Enemy>(enemy) || !registry.HasComponent<Bullet>(bullet)) {
                                 continue;
                             }
                             const auto& enemyComp = registry.GetComponent<Enemy>(enemy);
                             const auto& bulletComp = registry.GetComponent<Bullet>(bullet);
-                            
+
                             auto& enemyKilledComp = registry.AddComponent<EnemyKilled>(enemy, EnemyKilled(enemyComp.id, bulletComp.owner));
                         }
 

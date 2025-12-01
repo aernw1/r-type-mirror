@@ -1,44 +1,53 @@
-#include "LobbyClient.hpp"
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** main
+*/
+
+#include "GameStateMachine.hpp"
+#include "MenuState.hpp"
+#include "Renderer/SFMLRenderer.hpp"
 #include <iostream>
-#include <thread>
-#include <chrono>
+#include <memory>
 
-int main(int argc, char* argv[]) {
-    std::string addr = "127.0.0.1";
-    uint16_t port = 4242;
-    std::string name = "Player";
+int main(int, char*[]) {
+    auto renderer = std::make_shared<Renderer::SFMLRenderer>();
 
-    if (argc > 1)
-        addr = argv[1];
-    if (argc > 2)
-        port = std::stoi(argv[2]);
-    if (argc > 3)
-        name = argv[3];
+    Renderer::WindowConfig config;
+    config.title = "R-Type";
+    config.width = 1280;
+    config.height = 720;
+    config.resizable = true;
+    config.fullscreen = false;
+    config.targetFramerate = 60;
 
-    std::cout << "Connecting to " << addr << ":" << port << " as " << name << std::endl;
-
-    network::LobbyClient client(addr, port);
-    client.connect(name);
-
-    while (!client.isConnected()) {
-        client.update();
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    if (!renderer->CreateWindow(config)) {
+        std::cerr << "Failed to create window" << std::endl;
+        return 1;
     }
 
-    std::cout << "Press Enter to ready up..." << std::endl;
-    std::cin.get();
-    client.ready();
+    RType::Client::GameContext context;
+    context.renderer = renderer;
 
-    std::cout << "Press Enter to start game..." << std::endl;
-    std::cin.get();
-    client.requestStart();
+    RType::Client::GameStateMachine machine;
 
-    while (!client.isGameStarted()) {
-        client.update();
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    machine.PushState(std::make_unique<RType::Client::MenuState>(machine, context));
+
+    sf::Clock clock;
+    while (renderer->IsWindowOpen() && machine.IsRunning()) {
+        float dt = clock.restart().asSeconds();
+
+        renderer->Update(dt);
+        renderer->BeginFrame();
+
+        machine.HandleInput();
+        machine.Update(dt);
+        machine.Draw();
+
+        renderer->EndFrame();
     }
 
-    std::cout << "Game started!" << std::endl;
-
+    std::cout << "Exiting R-Type client..." << std::endl;
     return 0;
 }

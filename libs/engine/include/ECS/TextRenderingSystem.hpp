@@ -4,7 +4,6 @@
 #include "Renderer/IRenderer.hpp"
 
 namespace RType {
-
     namespace ECS {
 
         class TextRenderingSystem : public ISystem {
@@ -19,5 +18,4 @@ namespace RType {
         };
 
     }
-
 }

@@ -16,12 +16,14 @@ namespace network {
         : _server(port), _maxPlayers(maxPlayers), _minPlayers(minPlayers), _rng(std::random_device{}()) {
         _clients.resize(_maxPlayers);
         _players.resize(_maxPlayers);
+        _lastUpdateTime = std::chrono::steady_clock::now();
         std::cout << "[Lobby] Server started on port " << port << " (min=" << _minPlayers << ", max=" << _maxPlayers << ")" << std::endl;
     }
 
     void LobbyServer::update() {
         acceptNewClients();
         processClients();
+        updateCountdown();
     }
 
     void LobbyServer::acceptNewClients() {
@@ -76,6 +78,8 @@ namespace network {
             return "DISCONNECT";
         case LobbyPacket::PLAYER_LEFT:
             return "PLAYER_LEFT";
+        case LobbyPacket::COUNTDOWN:
+            return "COUNTDOWN";
         case LobbyPacket::ERROR_MSG:
             return "ERROR";
         default:
@@ -152,13 +156,23 @@ namespace network {
         if (!_players[clientIdx] || _players[clientIdx]->hash != hash)
             return;
 
-        _players[clientIdx]->ready = true;
+        _players[clientIdx]->ready = !_players[clientIdx]->ready;
 
         Serializer s;
         s.writeU8(_players[clientIdx]->number);
         broadcast(LobbyPacket::PLAYER_READY, s.finalize());
 
-        std::cout << "[Lobby] Player #" << (int)_players[clientIdx]->number << " is ready" << std::endl;
+        std::cout << "[Lobby] Player #" << (int)_players[clientIdx]->number << " is "
+                  << (_players[clientIdx]->ready ? "ready" : "not ready") << std::endl;
+
+        if (!_players[clientIdx]->ready && _countdownActive) {
+            _countdownActive = false;
+            _countdownTimer = 5.0f;
+            Serializer countdownCancel;
+            countdownCancel.writeU8(0);
+            broadcast(LobbyPacket::COUNTDOWN, countdownCancel.finalize());
+            std::cout << "[Lobby] Countdown cancelled - player unready" << std::endl;
+        }
     }
 
     void LobbyServer::handleStart(size_t /*clientIdx*/) {
@@ -267,5 +281,56 @@ namespace network {
     }
 
     uint64_t LobbyServer::generateHash() { return _rng(); }
+
+    bool LobbyServer::allPlayersReady() const {
+        size_t connectedPlayers = activePlayerCount();
+        if (connectedPlayers < _minPlayers)
+            return false;
+        for (const auto& p : _players) {
+            if (p && !p->ready)
+                return false;
+        }
+        return true;
+    }
+
+    void LobbyServer::updateCountdown() {
+        auto now = std::chrono::steady_clock::now();
+        float deltaTime = std::chrono::duration<float>(now - _lastUpdateTime).count();
+        _lastUpdateTime = now;
+
+        if (allPlayersReady() && !_countdownActive && !_gameStarted) {
+            _countdownActive = true;
+            _countdownTimer = 5.0f;
+            std::cout << "[Lobby] All players ready! Starting countdown..." << std::endl;
+        }
+
+        if (_countdownActive) {
+            _countdownTimer -= deltaTime;
+
+            int currentSecond = static_cast<int>(std::ceil(_countdownTimer));
+            static int lastBroadcastedSecond = -1;
+
+            if (currentSecond != lastBroadcastedSecond && currentSecond > 0) {
+                Serializer s;
+                s.writeU8(static_cast<uint8_t>(currentSecond));
+                broadcast(LobbyPacket::COUNTDOWN, s.finalize());
+                std::cout << "[Lobby] Countdown: " << currentSecond << "..." << std::endl;
+                lastBroadcastedSecond = currentSecond;
+            }
+
+            if (_countdownTimer <= 0.0f) {
+                _countdownActive = false;
+                _gameStarted = true;
+                lastBroadcastedSecond = -1;
+
+                Serializer s;
+                s.writeU32(static_cast<uint32_t>(_rng()));
+                s.writeU16(60);
+                broadcast(LobbyPacket::GAME_START, s.finalize());
+
+                std::cout << "[Lobby] Game starting!" << std::endl;
+            }
+        }
+    }
 
 }

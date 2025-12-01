@@ -22,6 +22,7 @@ namespace network {
         GAME_START = 0x16,
         DISCONNECT = 0x17,
         PLAYER_LEFT = 0x18,
+        COUNTDOWN = 0x19,
         ERROR_MSG = 0x1F, // @haloys i renamed to avoid Windows macro conflict
     };
 

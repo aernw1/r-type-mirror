@@ -14,7 +14,7 @@ namespace RType {
             if (enemiesKilled.empty()) {
                 return;
             }
-            
+
             for (auto enemyKilled : enemiesKilled) {
                 if (!registry.IsEntityAlive(enemyKilled) || !registry.HasComponent<EnemyKilled>(enemyKilled) || !registry.HasComponent<ScoreValue>(enemyKilled)) {
                     continue;
@@ -30,7 +30,7 @@ namespace RType {
 
                 auto& killerScoreComp = registry.GetComponent<ScoreValue>(killer);
                 killerScoreComp.points += ennemyScoreValue.points;
-                
+
                 registry.RemoveComponent<EnemyKilled>(enemyKilled);
             }
         }
