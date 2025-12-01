@@ -6,6 +6,8 @@ set(ECS_SOURCES
     TextRenderingSystem.cpp
     MenuSystem.cpp
     PlayerSystem.cpp
+    CollisionSystem.cpp
+    BulletCollisionSystem.cpp
 )
 
 set(ECS_HEADERS
@@ -22,6 +24,8 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/TextRenderingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MenuSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/CollisionSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BulletCollisionSystem.hpp
 )
 
 add_library(rtype_ecs STATIC
