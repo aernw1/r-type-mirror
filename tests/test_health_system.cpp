@@ -5,6 +5,7 @@
 #include "ECS/Component.hpp"
 #include "ECS/InputSystem.hpp"
 #include "ECS/PlayerSystem.hpp"
+#include "ECS/PlayerFactory.hpp"
 #include "ECS/EnemySystem.hpp"
 #include "ECS/EnemyFactory.hpp"
 #include "ECS/MovementSystem.hpp"
@@ -89,7 +90,7 @@ int main(int, char*[]) {
 
     Core::Logger::Info("Creating player...");
     uint64_t playerHash = 1000;
-    ECS::Entity player = ECS::PlayerSystem::CreatePlayer(registry, 1, playerHash, 100.0f, 360.0f, rendererPtr);
+    ECS::Entity player = ECS::PlayerFactory::CreatePlayer(registry, 1, playerHash, 100.0f, 360.0f, rendererPtr);
 
     Core::Logger::Info("Creating test enemies...");
     ECS::EnemyFactory::CreateEnemy(registry, ECS::EnemyType::BASIC, 800.0f, 300.0f, rendererPtr);
