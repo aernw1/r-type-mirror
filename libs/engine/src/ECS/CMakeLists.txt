@@ -4,23 +4,23 @@ set(ECS_SOURCES
     InputSystem.cpp
     RenderingSystem.cpp
     TextRenderingSystem.cpp
-    CollisionSystem.cpp
-    InputSystem.cpp
+    MenuSystem.cpp
     PlayerSystem.cpp
 )
 
 set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Component.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Components/TextLabel.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Components/Clickable.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Entity.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Registry.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ISystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/SparseArray.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MovementSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/InputSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/RenderingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/TextRenderingSystem.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/CollisionSystem.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/InputSystem.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/SparseArray.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MenuSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
 )
 
