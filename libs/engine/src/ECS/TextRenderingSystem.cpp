@@ -24,8 +24,9 @@ namespace RType {
                 Renderer::TextParams params;
                 params.position = {pos.x + label.offsetX, pos.y + label.offsetY};
                 params.color = label.color;
-                params.scale = 1.0f; 
+                params.scale = 1.0f;
                 params.rotation = 0.0f;
+                params.centered = label.centered;
 
                 m_renderer->DrawText(label.fontId, label.text, params);
             }
