@@ -39,8 +39,20 @@ add_subdirectory(libs/network)
 add_executable(r-type_server server/main.cpp)
 target_link_libraries(r-type_server PRIVATE rtype_network)
 
-add_executable(r-type_client client/main.cpp)
-target_link_libraries(r-type_client PRIVATE rtype_network)
+add_executable(r-type_client
+    client/main.cpp
+    client/src/MenuState.cpp
+    client/src/LobbyState.cpp
+)
+target_include_directories(r-type_client PRIVATE
+    ${CMAKE_SOURCE_DIR}/client/include
+)
+target_link_libraries(r-type_client PRIVATE
+    rtype_network
+    rtype_ecs
+    rtype_core
+    rtype_sfml_renderer
+)
 
 add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network)
@@ -55,4 +67,18 @@ if(TARGET rtype_sfml_renderer)
         rtype_ecs
     )
     message(STATUS "test_renderer will be built (loads renderer plugin dynamically)")
+
+    add_executable(test_player_system tests/test_player_system.cpp)
+    target_link_libraries(test_player_system PRIVATE
+        rtype_core
+        rtype_ecs
+    )
+    message(STATUS "test_player_system will be built (loads renderer plugin dynamically)")
+
+    add_executable(test_health_system tests/test_health_system.cpp)
+    target_link_libraries(test_health_system PRIVATE
+        rtype_core
+        rtype_ecs
+    )
+    message(STATUS "test_health_system will be built (loads renderer plugin dynamically)")
 endif()

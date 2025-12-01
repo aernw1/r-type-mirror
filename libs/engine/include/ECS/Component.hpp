@@ -1,11 +1,13 @@
 #pragma once
 
 #include <string>
+#include <cstring>
 #include <cstdint>
 #include <typeindex>
 #include <type_traits>
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
+#include "Entity.hpp"
 
 namespace RType {
 
@@ -45,6 +47,127 @@ namespace RType {
             Drawable() = default;
             Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
                 : spriteId(sprite), layer(renderLayer) {}
+        };
+
+        struct NetworkPlayer : public IComponent {
+            uint8_t playerNumber = 0;
+            uint64_t playerHash = 0;
+            char name[32] = {};
+            bool ready = false;
+
+            NetworkPlayer() = default;
+            NetworkPlayer(uint8_t num, uint64_t hash, const char* playerName, bool isReady = false)
+                : playerNumber(num), playerHash(hash), ready(isReady) {
+                if (playerName) {
+                    std::strncpy(name, playerName, 31);
+                    name[31] = '\0';
+                }
+            }
+        };
+
+        struct BoxCollider : public IComponent {
+            float width = 0.0f;
+            float height = 0.0f;
+
+            BoxCollider() = default;
+            BoxCollider(float width, float height)
+                : width(width), height(height) {}
+        };
+
+        struct Controllable : public IComponent {
+            float speed = 200.0f;
+
+            Controllable() = default;
+            Controllable(float moveSpeed)
+                : speed(moveSpeed) {}
+        };
+
+        struct Player : public IComponent {
+            uint8_t playerNumber = 0;
+            uint64_t playerHash = 0;
+            bool isLocalPlayer = false;
+
+            Player() = default;
+            Player(uint8_t number, uint64_t hash, bool local = false)
+                : playerNumber(number), playerHash(hash), isLocalPlayer(local) {}
+        };
+
+        enum class EnemyType : uint8_t {
+            BASIC = 0,
+            FAST = 1,
+            TANK = 2,
+            BOSS = 3,
+            FORMATION = 4
+        };
+
+        struct Enemy : public IComponent {
+            EnemyType type = EnemyType::BASIC;
+            uint32_t id = 0;
+
+            Enemy() = default;
+            Enemy(EnemyType enemyType, uint32_t enemyId = 0)
+                : type(enemyType), id(enemyId) {}
+        };
+
+        struct Health : public IComponent {
+            int current = 100;
+            int max = 100;
+
+            Health() = default;
+            Health(int maxHealth)
+                : current(maxHealth), max(maxHealth) {}
+            Health(int currentHealth, int maxHealth)
+                : current(currentHealth), max(maxHealth) {}
+        };
+
+        struct ScoreValue : public IComponent {
+            uint32_t points = 100;
+
+            ScoreValue() = default;
+            ScoreValue(uint32_t scorePoints)
+                : points(scorePoints) {}
+        };
+
+        struct Damage : public IComponent {
+            int amount = 10;
+
+            Damage() = default;
+            Damage(int damageAmount)
+                : amount(damageAmount) {}
+        };
+
+        struct EnemyKilled : public IComponent {
+            uint32_t enemyId = 0;
+            Entity killedBy = NULL_ENTITY;
+
+            EnemyKilled() = default;
+            EnemyKilled(uint32_t id, Entity killer = NULL_ENTITY)
+                : enemyId(id), killedBy(killer) {}
+        };
+
+        struct Bullet : public IComponent {
+            Entity owner = NULL_ENTITY;
+
+            Bullet() = default;
+            Bullet(Entity shooter)
+                : owner(shooter) {}
+        };
+
+        struct Shooter : IComponent {
+            float fireRate = 0.2f;
+            float cooldown = 0.0f;
+            float offsetX = 50.0f;
+            float offsetY = 20.0f;
+
+            Shooter() = default;
+            Shooter(float rate, float oX = 50.0f, float oY = 20.0f) : fireRate(rate), offsetX(oX), offsetY(oY) {}
+        };
+
+        struct ShootCommand : public IComponent {
+            bool wantsToShoot = false;
+
+            ShootCommand() = default;
+            ShootCommand(bool shoot) : wantsToShoot(shoot) {}
         };
     }
 

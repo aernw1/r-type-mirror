@@ -1,16 +1,43 @@
 set(ECS_SOURCES
     Registry.cpp
     MovementSystem.cpp
+    InputSystem.cpp
     RenderingSystem.cpp
+    TextRenderingSystem.cpp
+    MenuSystem.cpp
+    PlayerSystem.cpp
+    PlayerFactory.cpp
+    CollisionSystem.cpp
+    BulletCollisionSystem.cpp
+    EnemySystem.cpp
+    EnemyFactory.cpp
+    HealthSystem.cpp
+    ScoreSystem.cpp
+    ShootingSystem.cpp
 )
 
 set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Component.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Components/TextLabel.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Components/Clickable.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Entity.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Registry.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ISystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/SparseArray.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MovementSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/InputSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/RenderingSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/TextRenderingSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MenuSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerFactory.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/CollisionSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BulletCollisionSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemySystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemyFactory.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/HealthSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ScoreSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShootingSystem.hpp
 )
 
 add_library(rtype_ecs STATIC

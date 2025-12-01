@@ -32,6 +32,7 @@ namespace Renderer {
         TextureId LoadTexture(const std::string& path,
                               const TextureConfig& config = TextureConfig{}) override;
         void UnloadTexture(TextureId textureId) override;
+        Vector2 GetTextureSize(TextureId textureId) const override;
 
         SpriteId CreateSprite(TextureId textureId, const Rectangle& region) override;
         void DestroySprite(SpriteId spriteId) override;
@@ -50,7 +51,11 @@ namespace Renderer {
 
         RenderStats GetRenderStats() const override;
 
+        float GetDeltaTime() override;
+
         bool IsKeyPressed(Key key) const override;
+        bool IsMouseButtonPressed(MouseButton button) const override;
+        Vector2 GetMousePosition() const override;
 
         const sf::RenderWindow* GetWindow() const { return m_window.get(); }
         void ProcessEvents();
@@ -93,6 +98,7 @@ namespace Renderer {
         RenderStats m_stats;
 
         sf::Clock m_clock;
+        float m_lastDeltaTime = 0.0f;
     };
 
 }

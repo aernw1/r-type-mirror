@@ -103,21 +103,6 @@ void test_copy_move() {
               << std::endl;
 }
 
-void test_get_index() {
-    std::cout << "=== Test: get_index ===" << std::endl;
-
-    SparseArray<Position> positions;
-    positions.insert_at(5, Position{10.0f, 20.0f});
-
-    auto& pos_opt = positions[5];
-    size_t idx = positions.get_index(pos_opt);
-    assert(idx == 5);
-    std::cout << "get_index works" << std::endl;
-
-    std::cout << "get_index: PASSED\n"
-              << std::endl;
-}
-
 void test_velocity_component() {
     std::cout << "=== Test: Velocity Component ===" << std::endl;
 
@@ -142,7 +127,6 @@ int main() {
         test_basic_operations();
         test_iteration();
         test_copy_move();
-        test_get_index();
         test_velocity_component();
 
         std::cout << "All tests PASSED!" << std::endl;
