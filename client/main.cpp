@@ -34,9 +34,8 @@ int main(int, char*[]) {
 
     machine.PushState(std::make_unique<RType::Client::MenuState>(machine, context));
 
-    sf::Clock clock;
     while (renderer->IsWindowOpen() && machine.IsRunning()) {
-        float dt = clock.restart().asSeconds();
+        float dt = renderer->GetDeltaTime();
 
         renderer->Update(dt);
         renderer->BeginFrame();

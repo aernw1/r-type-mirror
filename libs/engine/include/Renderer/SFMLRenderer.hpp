@@ -51,6 +51,8 @@ namespace Renderer {
 
         RenderStats GetRenderStats() const override;
 
+        float GetDeltaTime() override;
+
         bool IsKeyPressed(Key key) const override;
         bool IsMouseButtonPressed(MouseButton button) const override;
         Vector2 GetMousePosition() const override;
@@ -96,6 +98,7 @@ namespace Renderer {
         RenderStats m_stats;
 
         sf::Clock m_clock;
+        float m_lastDeltaTime = 0.0f;
     };
 
 }

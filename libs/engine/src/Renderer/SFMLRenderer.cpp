@@ -378,6 +378,11 @@ namespace Renderer {
         return m_stats;
     }
 
+    float SFMLRenderer::GetDeltaTime() {
+        m_lastDeltaTime = m_clock.restart().asSeconds();
+        return m_lastDeltaTime;
+    }
+
     void SFMLRenderer::ProcessEvents() {
         if (!m_window) {
             return;
@@ -519,8 +524,7 @@ __declspec(dllexport)
 #else
 __attribute__((visibility("default")))
 #endif
-void
-DestroyModule(RType::Core::IModule* module) {
+void DestroyModule(RType::Core::IModule* module) {
     delete module;
 }
 };
