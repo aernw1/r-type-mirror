@@ -159,6 +159,8 @@ namespace Renderer {
 
         virtual RenderStats GetRenderStats() const = 0;
 
+        virtual float GetDeltaTime() = 0;
+
         virtual bool IsKeyPressed(Key key) const = 0;
 
         enum class MouseButton {
