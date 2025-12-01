@@ -12,9 +12,10 @@ namespace RType {
             Renderer::FontId fontId = 0;
             unsigned int characterSize = 24;
             Math::Color color{1.0f, 1.0f, 1.0f, 1.0f};
-            
+
             float offsetX = 0.0f;
             float offsetY = 0.0f;
+            bool centered = false;
 
             TextLabel() = default;
             TextLabel(const std::string& t, Renderer::FontId font, unsigned int size = 24)

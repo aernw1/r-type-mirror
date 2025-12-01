@@ -50,6 +50,7 @@ namespace Renderer {
         float scale = 1.0f;
         float letterSpacing = 0.0f;
         float lineSpacing = 0.0f;
+        bool centered = false;
     };
 
     struct Camera2D {
