@@ -1,19 +1,17 @@
 #include "ECS/EnemyFactory.hpp"
 #include "Core/Logger.hpp"
-#include <algorithm>
-#include <cmath>
 #include <array>
 #include <atomic>
+#include <string>
 
 namespace RType {
 
     namespace ECS {
 
         namespace {
-            static std::atomic<uint32_t> s_enemyIdCounter{1};
-        }
 
-        namespace {
+            std::atomic<uint32_t> s_enemyIdCounter{1};
+
             struct EnemyData {
                 Math::Color color;
                 const char* spritePath;
@@ -41,74 +39,68 @@ namespace RType {
                 }
                 return ENEMY_DATA_TABLE[index];
             }
+
         }
-        size_t index = static_cast<size_t>(type);
-        if (index >= ENEMY_DATA_TABLE.size()) {
-            return ENEMY_DATA_TABLE[0];
-        }
-        return ENEMY_DATA_TABLE[index];
-    }
 
-    Entity EnemyFactory::CreateEnemy(Registry& registry, EnemyType type, float startX, float startY,
-                                     Renderer::IRenderer* renderer) {
-        Entity enemy = registry.CreateEntity();
+        Entity EnemyFactory::CreateEnemy(Registry& registry, EnemyType type, float startX, float startY,
+                                         Renderer::IRenderer* renderer) {
+            Entity enemy = registry.CreateEntity();
 
-        registry.AddComponent<Position>(enemy, Position(startX, startY));
+            registry.AddComponent<Position>(enemy, Position(startX, startY));
 
-        const EnemyData& data = GetEnemyData(type);
-        float speed = data.speed;
-        registry.AddComponent<Velocity>(enemy, Velocity(-speed, 0.0f));
+            const EnemyData& data = GetEnemyData(type);
+            registry.AddComponent<Velocity>(enemy, Velocity(-data.speed, 0.0f));
 
-        uint32_t uniqueId = s_enemyIdCounter.fetch_add(1);
-        registry.AddComponent<Enemy>(enemy, Enemy(type, uniqueId));
+            uint32_t uniqueId = s_enemyIdCounter.fetch_add(1);
+            registry.AddComponent<Enemy>(enemy, Enemy(type, uniqueId));
 
-        registry.AddComponent<Health>(enemy, Health(data.health, data.health));
-        registry.AddComponent<Damage>(enemy, Damage(data.damage));
-        registry.AddComponent<ScoreValue>(enemy, ScoreValue(data.score));
+            registry.AddComponent<Health>(enemy, Health(data.health, data.health));
+            registry.AddComponent<Damage>(enemy, Damage(data.damage));
+            registry.AddComponent<ScoreValue>(enemy, ScoreValue(data.score));
+            registry.AddComponent<BoxCollider>(enemy, BoxCollider(50.0f, 50.0f));
 
-        registry.AddComponent<BoxCollider>(enemy, BoxCollider(50.0f, 50.0f));
+            if (renderer) {
+                std::string spritePath(data.spritePath);
+                Renderer::TextureId textureId = renderer->LoadTexture(spritePath);
 
-        if (renderer) {
-            std::string spritePath(data.spritePath);
-            Renderer::TextureId textureId = renderer->LoadTexture(spritePath);
+                if (textureId == Renderer::INVALID_TEXTURE_ID) {
+                    Core::Logger::Warning("Failed to load enemy texture: {}, using default", spritePath);
+                    textureId = renderer->LoadTexture("../assets/spaceships/nave2.png");
+                }
 
-            if (textureId == Renderer::INVALID_TEXTURE_ID) {
-                Core::Logger::Warning("Failed to load enemy texture: {}, using default", spritePath);
-                textureId = renderer->LoadTexture("../assets/spaceships/nave2.png");
+                if (textureId != Renderer::INVALID_TEXTURE_ID) {
+                    Renderer::SpriteId spriteId =
+                        renderer->CreateSprite(textureId, Renderer::Rectangle{{0.0f, 0.0f}, {256.0f, 256.0f}});
+
+                    auto& drawable = registry.AddComponent<Drawable>(enemy, Drawable(spriteId, 1));
+                    drawable.tint = data.color;
+                    drawable.scale = Math::Vector2(0.5f, 0.5f);
+                } else {
+                    Core::Logger::Error("Failed to load any enemy texture for type {}", static_cast<int>(type));
+                }
             }
 
-            if (textureId != Renderer::INVALID_TEXTURE_ID) {
-                Renderer::SpriteId spriteId = renderer->CreateSprite(
-                    textureId, Renderer::Rectangle{{0.0f, 0.0f}, {256.0f, 256.0f}});
+            Core::Logger::Info("Created enemy type {} at position ({}, {})", static_cast<int>(type), startX, startY);
 
-                auto& drawable = registry.AddComponent<Drawable>(enemy, Drawable(spriteId, 1));
-                drawable.tint = data.color;
-                drawable.scale = Math::Vector2(0.5f, 0.5f);
-            } else {
-                Core::Logger::Error("Failed to load any enemy texture for type {}", static_cast<int>(type));
-            }
+            return enemy;
         }
 
-        Core::Logger::Info("Created enemy type {} at position ({}, {})", static_cast<int>(type), startX, startY);
+        float EnemyFactory::GetEnemySpeed(EnemyType type) {
+            return GetEnemyData(type).speed;
+        }
 
-        return enemy;
+        int EnemyFactory::GetEnemyHealth(EnemyType type) {
+            return GetEnemyData(type).health;
+        }
+
+        int EnemyFactory::GetEnemyDamage(EnemyType type) {
+            return GetEnemyData(type).damage;
+        }
+
+        uint32_t EnemyFactory::GetEnemyScore(EnemyType type) {
+            return GetEnemyData(type).score;
+        }
+
     }
 
-    float EnemyFactory::GetEnemySpeed(EnemyType type) {
-        return GetEnemyData(type).speed;
-    }
-
-    int EnemyFactory::GetEnemyHealth(EnemyType type) {
-        return GetEnemyData(type).health;
-    }
-
-    int EnemyFactory::GetEnemyDamage(EnemyType type) {
-        return GetEnemyData(type).damage;
-    }
-
-    uint32_t EnemyFactory::GetEnemyScore(EnemyType type) {
-        return GetEnemyData(type).score;
-    }
-
-}
 }
