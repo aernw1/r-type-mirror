@@ -9,7 +9,7 @@ namespace RType {
     namespace ECS {
 
         Entity PlayerFactory::CreatePlayer(Registry& registry, uint8_t playerNumber, uint64_t playerHash,
-                                         float startX, float startY, Renderer::IRenderer* renderer) {
+                                           float startX, float startY, Renderer::IRenderer* renderer) {
             Entity player = registry.CreateEntity();
 
             float yPos = startY + (playerNumber - 1) * 150.0f;
@@ -85,4 +85,3 @@ namespace RType {
     }
 
 }
-

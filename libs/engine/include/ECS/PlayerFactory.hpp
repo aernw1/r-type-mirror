@@ -13,8 +13,7 @@ namespace RType {
         class PlayerFactory {
         public:
             static Entity CreatePlayer(Registry& registry, uint8_t playerNumber, uint64_t playerHash,
-                                     float startX, float startY, Renderer::IRenderer* renderer);
-
+                                       float startX, float startY, Renderer::IRenderer* renderer);
         private:
             static Math::Color GetPlayerColor(uint8_t playerNumber);
             static std::string GetPlayerSpritePath(uint8_t playerNumber);
@@ -23,4 +22,3 @@ namespace RType {
     }
 
 }
-
