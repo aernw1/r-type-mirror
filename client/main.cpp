@@ -11,11 +11,31 @@
 #include <iostream>
 #include <memory>
 
-int main(int, char*[]) {
+int main(int argc, char* argv[]) {
+    std::string serverIp = "127.0.0.1";
+    uint16_t serverPort = 4242;
+    std::string playerName = "Player1";
+
+    if (argc > 1) {
+        serverIp = argv[1];
+    }
+    if (argc > 2) {
+        serverPort = static_cast<uint16_t>(std::stoi(argv[2]));
+    }
+    if (argc > 3) {
+        playerName = argv[3];
+    }
+
+    std::cout << "=== R-Type Client ===" << std::endl;
+    std::cout << "Server IP: " << serverIp << std::endl;
+    std::cout << "Server Port: " << serverPort << std::endl;
+    std::cout << "Player Name: " << playerName << std::endl;
+    std::cout << "=====================" << std::endl;
+
     auto renderer = std::make_shared<Renderer::SFMLRenderer>();
 
     Renderer::WindowConfig config;
-    config.title = "R-Type";
+    config.title = "R-Type - " + playerName;
     config.width = 1280;
     config.height = 720;
     config.resizable = true;
@@ -29,6 +49,9 @@ int main(int, char*[]) {
 
     RType::Client::GameContext context;
     context.renderer = renderer;
+    context.serverIp = serverIp;
+    context.serverPort = serverPort;
+    context.playerName = playerName;
 
     RType::Client::GameStateMachine machine;
 

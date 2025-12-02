@@ -46,6 +46,12 @@ namespace RType {
         class GameStateMachine {
         public:
             GameStateMachine() = default;
+            ~GameStateMachine() {
+                while (!m_states.empty()) {
+                    m_states.top()->Cleanup();
+                    m_states.pop();
+                }
+            }
 
             void PushState(std::unique_ptr<IState> state) {
                 m_states.push(std::move(state));

@@ -220,7 +220,7 @@ namespace RType {
             Entity entity = it->second;
             const auto& netPlayer = m_registry.GetComponent<NetworkPlayer>(entity);
 
-            std::string displayText = "P" + std::to_string(netPlayer.playerNumber);
+            std::string displayText = "P" + std::to_string(netPlayer.playerNumber) + " - " + std::string(player.name);
             if (netPlayer.ready) {
                 displayText += "\n[READY]";
             } else {

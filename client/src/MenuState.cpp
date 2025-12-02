@@ -144,10 +144,8 @@ namespace RType {
                 m_playKeyPressed = true;
 
                 std::cout << "[MenuState] Starting game... Transitioning to Lobby" << std::endl;
-
-                m_context.serverIp = "127.0.0.1";
-                m_context.serverPort = 4242;
-                m_context.playerName = "Player1";
+                std::cout << "[MenuState] Connecting to " << m_context.serverIp << ":" << m_context.serverPort
+                          << " as '" << m_context.playerName << "'" << std::endl;
 
                 m_machine.PushState(std::make_unique<LobbyState>(m_machine, m_context));
 
