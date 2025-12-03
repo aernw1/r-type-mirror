@@ -60,6 +60,10 @@ target_link_libraries(test_lobby PRIVATE rtype_network)
 add_executable(test_sparse_array tests/test_sparse_array.cpp)
 target_link_libraries(test_sparse_array PRIVATE rtype_ecs)
 
+add_executable(test_udp_protocol tests/test_udp_protocol.cpp)
+target_link_libraries(test_udp_protocol PRIVATE rtype_network)
+message(STATUS "test_udp_protocol will be built (UDP game protocol test)")
+
 if(TARGET rtype_sfml_renderer)
     add_executable(test_renderer tests/test_renderer.cpp)
     target_link_libraries(test_renderer PRIVATE
