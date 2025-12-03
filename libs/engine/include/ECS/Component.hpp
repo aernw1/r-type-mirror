@@ -153,7 +153,7 @@ namespace RType {
                 : owner(shooter) {}
         };
 
-        struct Shooter : IComponent {
+        struct Shooter : public IComponent {
             float fireRate = 0.2f;
             float cooldown = 0.0f;
             float offsetX = 50.0f;
@@ -168,6 +168,20 @@ namespace RType {
 
             ShootCommand() = default;
             ShootCommand(bool shoot) : wantsToShoot(shoot) {}
+        };
+
+        struct Scrollable : public IComponent {
+            float speed = -100.0f;
+    
+            Scrollable() = default;
+            Scrollable(float scrollSpeed) : speed(scrollSpeed) {}
+        };
+
+        struct Obstacle : public IComponent {
+            bool blocking = true;
+
+            Obstacle() = default;
+            Obstacle(bool isBlocking) : blocking(isBlocking) {}
         };
     }
 
