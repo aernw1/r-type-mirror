@@ -169,8 +169,57 @@ namespace RType {
                 m_registry.AddComponent<Obstacle>(m_obstacleGameEntity, Obstacle(true));
                 
                 m_obstacleEntities.push_back(m_obstacleGameEntity);
+            }
+        }
+        
+        void GameState::HandleInput() {
+            // Handle player input (to be implemented)
+        }
+        
+        void GameState::Draw() {
+            m_renderingSystem->Update(m_registry, 0.0f);
+            m_textSystem->Update(m_registry, 0.0f);
+        }
+        
+        void GameState::Cleanup() {
+            std::cout << "[GameState] Cleaning up game state..." << std::endl;
+            
+            for (auto& bg : m_backgroundEntities) {
+                if (m_registry.IsEntityAlive(bg)) {
+                    m_registry.DestroyEntity(bg);
+                }
+            }
+            m_backgroundEntities.clear();
+            
+            for (auto& obstacle : m_obstacleEntities) {
+                if (m_registry.IsEntityAlive(obstacle)) {
+                    m_registry.DestroyEntity(obstacle);
+                }
+            }
+            m_obstacleEntities.clear();
+        }
 
+        void GameState::Update(float dt) {
+            m_scrollingSystem->Update(m_registry, dt);
 
+            for (auto& bg : m_backgroundEntities) {
+                if (!m_registry.HasComponent<Position>(bg))
+                    continue;
+                // Loop of background
+                auto& pos = m_registry.GetComponent<Position>(bg);
+                if (pos.x <= -1280.0f) {
+                    pos.x = pos.x + 3 * 1280.0f;
+                }
+            }
+
+            for (auto& obstacle : m_obstacleEntities) {
+                if (!m_registry.HasComponent<Position>(obstacle))
+                    continue;
+                // Loop of obstacles
+                auto& pos = m_registry.GetComponent<Position>(obstacle);
+                if (pos.x <= -1500.0f) {
+                    pos.x = pos.x + 5 * 1500.0f;
+                }
             }
         }
     }
