@@ -43,6 +43,7 @@ add_executable(r-type_client
     client/main.cpp
     client/src/MenuState.cpp
     client/src/LobbyState.cpp
+    client/src/GameState.cpp
 )
 target_include_directories(r-type_client PRIVATE
     ${CMAKE_SOURCE_DIR}/client/include
@@ -81,4 +82,12 @@ if(TARGET rtype_sfml_renderer)
         rtype_ecs
     )
     message(STATUS "test_health_system will be built (loads renderer plugin dynamically)")
+
+    add_executable(test_background tests/test_background.cpp)
+    target_link_libraries(test_background PRIVATE
+        rtype_core
+        rtype_ecs
+        rtype_sfml_renderer
+    )
+    message(STATUS "test_background will be built")
 endif()
