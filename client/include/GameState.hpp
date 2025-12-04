@@ -22,6 +22,18 @@
 namespace RType {
     namespace Client {
 
+        struct ObstacleData {
+            Renderer::SpriteId sprite;
+            float x;
+            float y;
+        };
+
+        struct ColliderBoxData {
+            float x1, y1, w1, h1;
+            float x2, y2, w2, h2;
+            float x3, y3, w3, h3;
+        };
+
         class GameState : public IState {
         public:
             GameState(GameStateMachine& machine, GameContext& context, uint32_t seed);
@@ -68,19 +80,20 @@ namespace RType {
             Renderer::TextureId m_bgTexture = Renderer::INVALID_TEXTURE_ID;
             Renderer::SpriteId m_bgSprite = Renderer::INVALID_SPRITE_ID;
 
-            Renderer::TextureId m_rock1Texture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_rock2Texture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_rock3Texture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_rock4Texture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_rock5Texture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_obstacle1Texture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_obstacle2Texture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_obstacle3Texture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_obstacle4Texture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_obstacle5Texture = Renderer::INVALID_TEXTURE_ID;
 
-            Renderer::SpriteId m_rock1Sprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_rock2Sprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_rock3Sprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_rock4Sprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_rock5Sprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_obstacle1Sprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_obstacle2Sprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_obstacle3Sprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_obstacle4Sprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_obstacle5Sprite = Renderer::INVALID_SPRITE_ID;
 
             RType::ECS::Entity m_bgGameEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_obstacleGameEntity = RType::ECS::NULL_ENTITY;
 
             // Background and obstacles entities
             std::vector<RType::ECS::Entity> m_backgroundEntities;
