@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <typeindex>
 #include <type_traits>
+#include <vector>
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
 #include "Entity.hpp"
@@ -182,6 +183,29 @@ namespace RType {
 
             Obstacle() = default;
             Obstacle(bool isBlocking) : blocking(isBlocking) {}
+        };
+
+        struct ColliderBox {
+            float x = 0.0f;
+            float y = 0.0f;
+            float width = 0.0f;
+            float height = 0.0f;
+
+            ColliderBox() = default;
+            ColliderBox(float offsetX, float offsetY, float w, float h)
+                : x(offsetX), y(offsetY), width(w), height(h) {}
+        };
+
+        struct MultiBoxCollider : public IComponent {
+            std::vector<ColliderBox> boxes;
+
+            MultiBoxCollider() = default;
+            MultiBoxCollider(const std::vector<ColliderBox>& colliderBoxes)
+                : boxes(colliderBoxes) {}
+
+            void AddBox(float offsetX, float offsetY, float width, float height) {
+                boxes.emplace_back(offsetX, offsetY, width, height);
+            }
         };
     }
 
