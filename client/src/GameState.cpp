@@ -6,7 +6,10 @@
 */
 
 #include "../include/GameState.hpp"
+
 #include <iostream>
+
+using namespace RType::ECS;
 
 namespace RType {
     namespace Client {
@@ -73,6 +76,38 @@ namespace RType {
             if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
                 m_bgTexture = m_renderer->LoadTexture("../assets/backgrounds/Cave_one.png");
             }
+        }
+
+        void GameState::createSystems() {
+            m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
+            m_renderingSystem = std::make_unique<RType::ECS::RenderingSystem>(m_renderer.get());
+            m_textSystem = std::make_unique<RType::ECS::TextRenderingSystem>(m_renderer.get());
+        }
+
+        void GameState::initializeBackground() {
+            if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
+                std::cerr << "[GameState] Error: Background texture not loaded!" << std::endl;
+                return;
+            }
+
+            m_bgSprite = m_renderer->CreateSprite(m_bgTexture, {});
+            auto bgSize = m_renderer->GetTextureSize(m_bgTexture);
+            
+            //Need to see if we use Types.hpp class with Vectors
+            float scaleX = 1280.0f / bgSize.x;
+            float scaleY = 720.0f / bgSize.y;
+
+            for (int i = 0; i < 3; i++) {
+                m_bgGameEntity = m_registry.CreateEntity();
+                
+                m_registry.AddComponent<Position>(m_bgGameEntity, Position{i * 1280.0f, 0.0f});
+                auto& bgDrawable = m_registry.AddComponent<Drawable>(m_bgGameEntity, Drawable(m_bgSprite, -100));
+                bgDrawable.scale = {scaleX, scaleY};
+                m_registry.AddComponent<Scrollable>(m_bgGameEntity, Scrollable(-150.0f));
+                
+                m_backgroundEntities.push_back(m_bgGameEntity);
+            }
+
         }
     }
 }

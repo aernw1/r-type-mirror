@@ -12,6 +12,7 @@
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
 #include "ECS/ScrollingSystem.hpp"
+#include "ECS/Component.hpp"
 #include "Renderer/IRenderer.hpp"
 
 #include <memory>
@@ -78,6 +79,8 @@ namespace RType {
             Renderer::SpriteId m_rock3Sprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_rock4Sprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_rock5Sprite = Renderer::INVALID_SPRITE_ID;
+
+            RType::ECS::Entity m_bgGameEntity = RType::ECS::NULL_ENTITY;
 
             // Background and obstacles entities
             std::vector<RType::ECS::Entity> m_backgroundEntities;
