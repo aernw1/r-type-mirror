@@ -28,16 +28,20 @@ namespace RType {
             float y;
         };
 
+        struct ObstacleTextureData {
+            Renderer::TextureId texture;
+        };
+
         struct ColliderBoxData {
             float x1, y1, w1, h1;
             float x2, y2, w2, h2;
             float x3, y3, w3, h3;
         };
 
-        class GameState : public IState {
+        class InGameState : public IState {
         public:
-            GameState(GameStateMachine& machine, GameContext& context, uint32_t seed);
-            ~GameState() override = default;
+            InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed);
+            ~InGameState() override = default;
 
             void Init() override;
             void Cleanup() override;
@@ -98,6 +102,8 @@ namespace RType {
             // Background and obstacles entities
             std::vector<RType::ECS::Entity> m_backgroundEntities;
             std::vector<RType::ECS::Entity> m_obstacleEntities;
+
+            bool m_escapeKeyPressed = false;
         };
 
     }

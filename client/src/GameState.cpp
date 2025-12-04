@@ -14,7 +14,7 @@ using namespace RType::ECS;
 namespace RType {
     namespace Client {
 
-        GameState::GameState(GameStateMachine& machine, GameContext& context, uint32_t seed)
+        InGameState::InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed)
             : m_machine(machine),
               m_context(context),
               m_gameSeed(seed)
@@ -22,7 +22,7 @@ namespace RType {
             m_renderer = context.renderer;
         }
 
-        void GameState::Init() {
+        void InGameState::Init() {
             std::cout << "[GameState] === Initialisation du jeu ===" << std::endl;
 
             std::cout << "[GameState] Étape 1/5: Textures Loading" << std::endl;
@@ -44,11 +44,11 @@ namespace RType {
             std::cout << "[GameState] === Initialisation terminée! ===" << std::endl;
         }
 
-        void GameState::loadTextures() {
+        void InGameState::loadTextures() {
             loadMapTextures();
         }
 
-        void GameState::loadMapTextures() {
+        void InGameState::loadMapTextures() {
             m_obstacle1Texture = m_renderer->LoadTexture("assets/backgrounds/obstacles/obstacle_first.png");
             if (m_obstacle1Texture == Renderer::INVALID_TEXTURE_ID) {
                 m_obstacle1Texture = m_renderer->LoadTexture("../assets/backgrounds/obstacles/obstacle_first.png");
@@ -78,13 +78,13 @@ namespace RType {
             }
         }
 
-        void GameState::createSystems() {
+        void InGameState::createSystems() {
             m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
             m_renderingSystem = std::make_unique<RType::ECS::RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<RType::ECS::TextRenderingSystem>(m_renderer.get());
         }
 
-        void GameState::initializeBackground() {
+        void InGameState::initializeBackground() {
             if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
                 std::cerr << "[GameState] Error: Background texture not loaded!" << std::endl;
                 return;
@@ -109,7 +109,7 @@ namespace RType {
             }
         }
 
-        void GameState::initializeObstacles() {
+        void InGameState::initializeObstacles() {
             if (m_obstacle1Texture == Renderer::INVALID_TEXTURE_ID ||
                 m_obstacle2Texture == Renderer::INVALID_TEXTURE_ID ||
                 m_obstacle3Texture == Renderer::INVALID_TEXTURE_ID ||
@@ -136,6 +136,14 @@ namespace RType {
                 {m_obstacle5Sprite, 6300.0f, 0.0f}
             };
 
+            ObstacleTextureData obstacleTextures[5] = {
+                {m_obstacle1Texture},
+                {m_obstacle2Texture},
+                {m_obstacle3Texture},
+                {m_obstacle4Texture},
+                {m_obstacle5Texture}
+            };
+
             ColliderBoxData obstacleColliders[5] = {
                 // Obstacle 1
                 {0.0f, 80.0f, 180.0f, 280.0f,  220.0f, 120.0f, 210.0f, 240.0f,  480.0f, 60.0f, 240.0f, 300.0f},
@@ -153,7 +161,7 @@ namespace RType {
                 m_obstacleGameEntity = m_registry.CreateEntity();
                 m_registry.AddComponent<Position>(m_obstacleGameEntity, Position{obstacles[i].x, obstacles[i].y});
                 
-                auto obsSize = m_renderer->GetTextureSize(obstacles[i].sprite);
+                auto obsSize = m_renderer->GetTextureSize(obstacleTextures[i].texture);
                 auto& obstacleDrawable = m_registry.AddComponent<Drawable>(m_obstacleGameEntity, Drawable(obstacles[i].sprite, 1));
                 obstacleDrawable.scale = {width / obsSize.x, height / obsSize.y};
 
@@ -172,16 +180,22 @@ namespace RType {
             }
         }
         
-        void GameState::HandleInput() {
-            // Handle player input (to be implemented)
+        void InGameState::HandleInput() {
+            if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
+                m_escapeKeyPressed = true;
+                std::cout << "[LobbyState] Returning to menu..." << std::endl;
+                m_machine.PopState();
+            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
+                m_escapeKeyPressed = false;
+            }
         }
         
-        void GameState::Draw() {
+        void InGameState::Draw() {
             m_renderingSystem->Update(m_registry, 0.0f);
             m_textSystem->Update(m_registry, 0.0f);
         }
         
-        void GameState::Cleanup() {
+        void InGameState::Cleanup() {
             std::cout << "[GameState] Cleaning up game state..." << std::endl;
             
             for (auto& bg : m_backgroundEntities) {
@@ -199,8 +213,14 @@ namespace RType {
             m_obstacleEntities.clear();
         }
 
-        void GameState::Update(float dt) {
+        void InGameState::Update(float dt) {
             m_scrollingSystem->Update(m_registry, dt);
+            
+            const float obstacleWidth = 1200.0f;
+            const float obstacleSpacing = 1200.0f;
+            const float firstObstacleX = 1500.0f;
+            const float lastObstacleX = 6300.0f;
+            const float totalObstacleDistance = lastObstacleX - firstObstacleX + obstacleSpacing;
 
             for (auto& bg : m_backgroundEntities) {
                 if (!m_registry.HasComponent<Position>(bg))
@@ -217,8 +237,8 @@ namespace RType {
                     continue;
                 // Loop of obstacles
                 auto& pos = m_registry.GetComponent<Position>(obstacle);
-                if (pos.x <= -1500.0f) {
-                    pos.x = pos.x + 5 * 1500.0f;
+                if (pos.x <= -obstacleWidth) {
+                    pos.x += totalObstacleDistance;
                 }
             }
         }
