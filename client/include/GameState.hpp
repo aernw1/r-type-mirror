@@ -48,7 +48,6 @@ namespace RType {
             void HandleInput() override;
             void Update(float dt) override;
             void Draw() override;
-
         private:
             void loadTextures();
             void loadMapTextures();
@@ -59,14 +58,13 @@ namespace RType {
             void initializePlayers();
 
             // Ennemy System (Dryss)
-             void spawnEnemies();
-            
+            void spawnEnemies();
+
             // Score UI (Matthieu)
             void initializeUI();
 
             // ECS systems
             void createSystems();
-
         private:
             GameStateMachine& m_machine;
             GameContext& m_context;

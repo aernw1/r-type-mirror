@@ -173,7 +173,7 @@ namespace RType {
 
         struct Scrollable : public IComponent {
             float speed = -100.0f;
-    
+
             Scrollable() = default;
             Scrollable(float scrollSpeed) : speed(scrollSpeed) {}
         };

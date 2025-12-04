@@ -17,8 +17,7 @@ namespace RType {
         InGameState::InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed)
             : m_machine(machine),
               m_context(context),
-              m_gameSeed(seed)
-        {
+              m_gameSeed(seed) {
             m_renderer = context.renderer;
         }
 
@@ -92,19 +91,19 @@ namespace RType {
 
             m_bgSprite = m_renderer->CreateSprite(m_bgTexture, {});
             auto bgSize = m_renderer->GetTextureSize(m_bgTexture);
-            
-            //Need to see if we use Types.hpp class with Vectors
+
+            // Need to see if we use Types.hpp class with Vectors
             float scaleX = 1280.0f / bgSize.x;
             float scaleY = 720.0f / bgSize.y;
 
             for (int i = 0; i < 3; i++) {
                 m_bgGameEntity = m_registry.CreateEntity();
-                
+
                 m_registry.AddComponent<Position>(m_bgGameEntity, Position{i * 1280.0f, 0.0f});
                 auto& bgDrawable = m_registry.AddComponent<Drawable>(m_bgGameEntity, Drawable(m_bgSprite, -100));
                 bgDrawable.scale = {scaleX, scaleY};
                 m_registry.AddComponent<Scrollable>(m_bgGameEntity, Scrollable(-150.0f));
-                
+
                 m_backgroundEntities.push_back(m_bgGameEntity);
             }
         }
@@ -128,58 +127,55 @@ namespace RType {
             float width = 1200.0f;
             float height = 720.0f;
 
-            ObstacleData obstacles[5] {
+            ObstacleData obstacles[5]{
                 {m_obstacle1Sprite, 1500.0f, 0.0f},
                 {m_obstacle2Sprite, 2700.0f, 0.0f},
                 {m_obstacle3Sprite, 3900.0f, 0.0f},
                 {m_obstacle4Sprite, 5100.0f, 0.0f},
-                {m_obstacle5Sprite, 6300.0f, 0.0f}
-            };
+                {m_obstacle5Sprite, 6300.0f, 0.0f}};
 
             ObstacleTextureData obstacleTextures[5] = {
                 {m_obstacle1Texture},
                 {m_obstacle2Texture},
                 {m_obstacle3Texture},
                 {m_obstacle4Texture},
-                {m_obstacle5Texture}
-            };
+                {m_obstacle5Texture}};
 
             ColliderBoxData obstacleColliders[5] = {
                 // Obstacle 1
-                {0.0f, 80.0f, 180.0f, 280.0f,  220.0f, 120.0f, 210.0f, 240.0f,  480.0f, 60.0f, 240.0f, 300.0f},
+                {0.0f, 80.0f, 180.0f, 280.0f, 220.0f, 120.0f, 210.0f, 240.0f, 480.0f, 60.0f, 240.0f, 300.0f},
                 // Obstacle 2
-                {0.0f, 60.0f, 200.0f, 260.0f,  260.0f, 30.0f, 190.0f, 290.0f,  500.0f, 90.0f, 180.0f, 230.0f},
+                {0.0f, 60.0f, 200.0f, 260.0f, 260.0f, 30.0f, 190.0f, 290.0f, 500.0f, 90.0f, 180.0f, 230.0f},
                 // Obstacle 3
-                {0.0f, 45.0f, 220.0f, 310.0f,  280.0f, 0.0f, 250.0f, 340.0f,  570.0f, 75.0f, 240.0f, 290.0f},
+                {0.0f, 45.0f, 220.0f, 310.0f, 280.0f, 0.0f, 250.0f, 340.0f, 570.0f, 75.0f, 240.0f, 290.0f},
                 // Obstacle 4
-                {0.0f, 110.0f, 210.0f, 270.0f,  260.0f, 65.0f, 240.0f, 315.0f,  550.0f, 125.0f, 210.0f, 255.0f},
+                {0.0f, 110.0f, 210.0f, 270.0f, 260.0f, 65.0f, 240.0f, 315.0f, 550.0f, 125.0f, 210.0f, 255.0f},
                 // Obstacle 5
-                {0.0f, 95.0f, 220.0f, 260.0f,  270.0f, 50.0f, 230.0f, 305.0f,  540.0f, 110.0f, 230.0f, 245.0f}
-            };
+                {0.0f, 95.0f, 220.0f, 260.0f, 270.0f, 50.0f, 230.0f, 305.0f, 540.0f, 110.0f, 230.0f, 245.0f}};
 
             for (int i = 0; i < 5; i++) {
                 m_obstacleGameEntity = m_registry.CreateEntity();
                 m_registry.AddComponent<Position>(m_obstacleGameEntity, Position{obstacles[i].x, obstacles[i].y});
-                
+
                 auto obsSize = m_renderer->GetTextureSize(obstacleTextures[i].texture);
                 auto& obstacleDrawable = m_registry.AddComponent<Drawable>(m_obstacleGameEntity, Drawable(obstacles[i].sprite, 1));
                 obstacleDrawable.scale = {width / obsSize.x, height / obsSize.y};
 
                 auto& collider = m_registry.AddComponent<MultiBoxCollider>(m_obstacleGameEntity);
-                collider.AddBox(obstacleColliders[i].x1, obstacleColliders[i].y1, 
+                collider.AddBox(obstacleColliders[i].x1, obstacleColliders[i].y1,
                                 obstacleColliders[i].w1, obstacleColliders[i].h1);
-                collider.AddBox(obstacleColliders[i].x2, obstacleColliders[i].y2, 
+                collider.AddBox(obstacleColliders[i].x2, obstacleColliders[i].y2,
                                 obstacleColliders[i].w2, obstacleColliders[i].h2);
-                collider.AddBox(obstacleColliders[i].x3, obstacleColliders[i].y3, 
+                collider.AddBox(obstacleColliders[i].x3, obstacleColliders[i].y3,
                                 obstacleColliders[i].w3, obstacleColliders[i].h3);
 
                 m_registry.AddComponent<Scrollable>(m_obstacleGameEntity, Scrollable(-150.0f));
                 m_registry.AddComponent<Obstacle>(m_obstacleGameEntity, Obstacle(true));
-                
+
                 m_obstacleEntities.push_back(m_obstacleGameEntity);
             }
         }
-        
+
         void InGameState::HandleInput() {
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
                 m_escapeKeyPressed = true;
@@ -189,22 +185,22 @@ namespace RType {
                 m_escapeKeyPressed = false;
             }
         }
-        
+
         void InGameState::Draw() {
             m_renderingSystem->Update(m_registry, 0.0f);
             m_textSystem->Update(m_registry, 0.0f);
         }
-        
+
         void InGameState::Cleanup() {
             std::cout << "[GameState] Cleaning up game state..." << std::endl;
-            
+
             for (auto& bg : m_backgroundEntities) {
                 if (m_registry.IsEntityAlive(bg)) {
                     m_registry.DestroyEntity(bg);
                 }
             }
             m_backgroundEntities.clear();
-            
+
             for (auto& obstacle : m_obstacleEntities) {
                 if (m_registry.IsEntityAlive(obstacle)) {
                     m_registry.DestroyEntity(obstacle);
@@ -215,7 +211,7 @@ namespace RType {
 
         void InGameState::Update(float dt) {
             m_scrollingSystem->Update(m_registry, dt);
-            
+
             const float obstacleWidth = 1200.0f;
             const float obstacleSpacing = 1200.0f;
             const float firstObstacleX = 1500.0f;

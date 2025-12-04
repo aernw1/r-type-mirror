@@ -330,10 +330,10 @@ namespace RType {
                 uint32_t seed = m_client.getGameSeed();
                 std::cout << "[LobbyState] Game started! Seed: " << seed << std::endl;
                 std::cout << "[LobbyState] Transitioning to GameState..." << std::endl;
-                
+
                 // Transition to Game
                 m_machine.ChangeState(std::make_unique<InGameState>(m_machine, m_context, seed));
-                return; 
+                return;
             }
         }
 
