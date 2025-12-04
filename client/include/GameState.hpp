@@ -34,6 +34,7 @@ namespace RType {
 
         private:
             void loadTextures();
+            void loadMapTextures();
             void initializeBackground();
             void initializeObstacles();
 
