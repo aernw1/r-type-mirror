@@ -36,10 +36,11 @@ namespace network {
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
 
-    private:
+        // Network communication (called by game loop)
         void SendInput(uint8_t inputs);
         void ReceivePackets();
 
+    private:
         void HandlePacket(const std::vector<uint8_t>& data);
         void HandleWelcome(const std::vector<uint8_t>& data);
         void HandleState(const std::vector<uint8_t>& data);
