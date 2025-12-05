@@ -26,7 +26,7 @@ namespace RType {
 
             // Network callback setup
             if (m_context.networkClient) {
-                m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities) {this->OnServerStateUpdate(tick, entities);});
+                m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities) { this->OnServerStateUpdate(tick, entities); });
                 std::cout << "[GameState] Network callback registered" << std::endl;
             } else {
                 std::cout << "[GameState] WARNING: No network client available!" << std::endl;
@@ -243,7 +243,7 @@ namespace RType {
             if (m_context.networkClient) {
                 m_serverScrollOffset = m_context.networkClient->GetLastScrollOffset();
             }
-            
+
             // Handle spam
             if (tick % 60 == 0) {
                 std::cout << "[GameState] Server update - Tick: " << tick

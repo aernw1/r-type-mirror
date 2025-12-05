@@ -39,7 +39,6 @@ namespace network {
         // Network communication (called by game loop)
         void SendInput(uint8_t inputs);
         void ReceivePackets();
-
     private:
         void HandlePacket(const std::vector<uint8_t>& data);
         void HandleWelcome(const std::vector<uint8_t>& data);
