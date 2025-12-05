@@ -34,7 +34,6 @@ namespace network {
         uint32_t GetLastServerTick() const { return m_lastServerTick; }
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
-
     private:
         void SendInput(uint8_t inputs);
         void ReceivePackets();

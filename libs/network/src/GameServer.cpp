@@ -14,10 +14,7 @@
 namespace network {
 
     GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers)
-        : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port))
-        , m_expectedPlayers(expectedPlayers)
-        , m_lastSpawnTime(std::chrono::steady_clock::now())
-    {
+        : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)), m_expectedPlayers(expectedPlayers), m_lastSpawnTime(std::chrono::steady_clock::now()) {
         std::cout << "GameServer started on UDP port " << port << std::endl;
         std::cout << "Waiting for " << expectedPlayers.size() << " players..." << std::endl;
     }
@@ -123,32 +120,34 @@ namespace network {
     }
 
     void GameServer::HandlePacket(const std::vector<uint8_t>& data, const Endpoint& from) {
-        if (data.empty()) return;
+        if (data.empty())
+            return;
 
         uint8_t type = data[0];
 
         switch (static_cast<GamePacket>(type)) {
-            case GamePacket::HELLO:
-                HandleHello(data, from);
-                break;
-            case GamePacket::INPUT:
-                HandleInput(data, from);
-                break;
-            case GamePacket::PING:
-                HandlePing(data, from);
-                break;
-            default:
-                break;
+        case GamePacket::HELLO:
+            HandleHello(data, from);
+            break;
+        case GamePacket::INPUT:
+            HandleInput(data, from);
+            break;
+        case GamePacket::PING:
+            HandlePing(data, from);
+            break;
+        default:
+            break;
         }
     }
 
     void GameServer::HandleHello(const std::vector<uint8_t>& data, const Endpoint& from) {
-        if (data.size() < sizeof(HelloPacket)) return;
+        if (data.size() < sizeof(HelloPacket))
+            return;
 
         const HelloPacket* hello = reinterpret_cast<const HelloPacket*>(data.data());
 
         auto it = std::find_if(m_expectedPlayers.begin(), m_expectedPlayers.end(),
-            [hello](const PlayerInfo& p) { return p.hash == hello->playerHash; });
+                               [hello](const PlayerInfo& p) { return p.hash == hello->playerHash; });
 
         if (it != m_expectedPlayers.end()) {
             if (m_connectedPlayers.find(hello->playerHash) != m_connectedPlayers.end()) {
@@ -178,32 +177,39 @@ namespace network {
     }
 
     void GameServer::HandleInput(const std::vector<uint8_t>& data, const Endpoint& /*from*/) {
-        if (data.size() < sizeof(InputPacket)) return;
+        if (data.size() < sizeof(InputPacket))
+            return;
 
         const InputPacket* input = reinterpret_cast<const InputPacket*>(data.data());
 
         auto it = m_connectedPlayers.find(input->playerHash);
-        if (it == m_connectedPlayers.end()) return;
+        if (it == m_connectedPlayers.end())
+            return;
 
         it->second.lastInputSequence = input->sequence;
         it->second.lastPingTime = std::chrono::steady_clock::now();
 
         auto playerEntity = std::find_if(m_entities.begin(), m_entities.end(),
-            [hash = input->playerHash](const GameEntity& e) {
-                return e.type == EntityType::PLAYER && e.ownerHash == hash;
-            });
+                                         [hash = input->playerHash](const GameEntity& e) {
+                                             return e.type == EntityType::PLAYER && e.ownerHash == hash;
+                                         });
 
-        if (playerEntity == m_entities.end()) return;
+        if (playerEntity == m_entities.end())
+            return;
 
         const float SPEED = 300.0f;
 
         playerEntity->vx = 0.0f;
         playerEntity->vy = 0.0f;
 
-        if (input->inputs & InputFlags::UP) playerEntity->vy = -SPEED;
-        if (input->inputs & InputFlags::DOWN) playerEntity->vy = SPEED;
-        if (input->inputs & InputFlags::LEFT) playerEntity->vx = -SPEED;
-        if (input->inputs & InputFlags::RIGHT) playerEntity->vx = SPEED;
+        if (input->inputs & InputFlags::UP)
+            playerEntity->vy = -SPEED;
+        if (input->inputs & InputFlags::DOWN)
+            playerEntity->vy = SPEED;
+        if (input->inputs & InputFlags::LEFT)
+            playerEntity->vx = -SPEED;
+        if (input->inputs & InputFlags::RIGHT)
+            playerEntity->vx = SPEED;
 
         if (input->inputs & InputFlags::SHOOT) {
             SpawnBullet(input->playerHash, playerEntity->x + 50.0f, playerEntity->y + 20.0f);
@@ -211,7 +217,8 @@ namespace network {
     }
 
     void GameServer::HandlePing(const std::vector<uint8_t>& data, const Endpoint& from) {
-        if (data.size() < sizeof(PingPacket)) return;
+        if (data.size() < sizeof(PingPacket))
+            return;
 
         const PingPacket* ping = reinterpret_cast<const PingPacket*>(data.data());
 
@@ -229,9 +236,8 @@ namespace network {
         header.tick = m_currentTick;
         header.timestamp = static_cast<uint32_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()
-            ).count()
-        );
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
         header.entityCount = static_cast<uint16_t>(m_entities.size());
 
         std::vector<uint8_t> packet(sizeof(StatePacketHeader) + sizeof(EntityState) * m_entities.size());
@@ -357,10 +363,12 @@ namespace network {
         auto enemies = GetEntitiesByType(EntityType::ENEMY);
 
         for (auto* bullet : bullets) {
-            if (bullet->health == 0) continue;
+            if (bullet->health == 0)
+                continue;
 
             for (auto* enemy : enemies) {
-                if (enemy->health == 0) continue;
+                if (enemy->health == 0)
+                    continue;
 
                 float dx = bullet->x - enemy->x;
                 float dy = bullet->y - enemy->y;
@@ -377,14 +385,13 @@ namespace network {
     void GameServer::CleanupDeadEntities() {
         m_entities.erase(
             std::remove_if(m_entities.begin(), m_entities.end(),
-                [](const GameEntity& e) { return e.health == 0; }),
-            m_entities.end()
-        );
+                           [](const GameEntity& e) { return e.health == 0; }),
+            m_entities.end());
     }
 
     GameEntity* GameServer::FindEntityById(uint32_t id) {
         auto it = std::find_if(m_entities.begin(), m_entities.end(),
-            [id](const GameEntity& e) { return e.id == id; });
+                               [id](const GameEntity& e) { return e.id == id; });
         return it != m_entities.end() ? &(*it) : nullptr;
     }
 

@@ -49,7 +49,6 @@ namespace network {
         size_t GetConnectedPlayerCount() const { return m_connectedPlayers.size(); }
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
-
     private:
         void WaitForAllPlayers();
         void ProcessIncomingPackets();

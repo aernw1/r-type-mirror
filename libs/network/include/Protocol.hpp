@@ -45,12 +45,12 @@ namespace network {
 
     // Input flags bitfield
     enum InputFlags : uint8_t {
-        NONE  = 0,
-        UP    = 1 << 0,  // 0x01
-        DOWN  = 1 << 1,  // 0x02
-        LEFT  = 1 << 2,  // 0x04
-        RIGHT = 1 << 3,  // 0x08
-        SHOOT = 1 << 4,  // 0x10
+        NONE = 0,
+        UP = 1 << 0,    // 0x01
+        DOWN = 1 << 1,  // 0x02
+        LEFT = 1 << 2,  // 0x04
+        RIGHT = 1 << 3, // 0x08
+        SHOOT = 1 << 4, // 0x10
     };
 
     // Entity types for state packets
@@ -78,8 +78,8 @@ namespace network {
         float spawnPositions[MAX_PLAYERS][2]; // [x, y]
     };
 
-    // UDP Packet structures
-    #pragma pack(push, 1)
+// UDP Packet structures
+#pragma pack(push, 1)
 
     // HELLO packet (Client → Server)
     struct HelloPacket {
@@ -98,30 +98,30 @@ namespace network {
     // INPUT packet (Client → Server)
     struct InputPacket {
         uint8_t type = static_cast<uint8_t>(GamePacket::INPUT);
-        uint32_t sequence = 0;      // Client sequence number
-        uint64_t playerHash = 0;    // Player identifier
-        uint8_t inputs = 0;         // Bitfield of InputFlags
-        uint32_t timestamp = 0;     // Client timestamp (ms)
+        uint32_t sequence = 0;   // Client sequence number
+        uint64_t playerHash = 0; // Player identifier
+        uint8_t inputs = 0;      // Bitfield of InputFlags
+        uint32_t timestamp = 0;  // Client timestamp (ms)
     };
 
     // Entity state in STATE packet
     struct EntityState {
         uint32_t entityId = 0;
-        uint8_t entityType = 0;     // EntityType
+        uint8_t entityType = 0; // EntityType
         float x = 0.0f;
         float y = 0.0f;
-        float vx = 0.0f;            // Velocity X
-        float vy = 0.0f;            // Velocity Y
+        float vx = 0.0f; // Velocity X
+        float vy = 0.0f; // Velocity Y
         uint8_t health = 0;
-        uint8_t flags = 0;          // Custom flags per entity type
+        uint8_t flags = 0; // Custom flags per entity type
     };
 
     // STATE packet (Server → Client)
     struct StatePacketHeader {
         uint8_t type = static_cast<uint8_t>(GamePacket::STATE);
-        uint32_t tick = 0;          // Server tick number
-        uint32_t timestamp = 0;     // Server timestamp (ms)
-        uint16_t entityCount = 0;   // Number of entities following
+        uint32_t tick = 0;        // Server tick number
+        uint32_t timestamp = 0;   // Server timestamp (ms)
+        uint16_t entityCount = 0; // Number of entities following
     };
     // Followed by: EntityState[entityCount]
 
@@ -134,9 +134,9 @@ namespace network {
     // PONG packet
     struct PongPacket {
         uint8_t type = static_cast<uint8_t>(GamePacket::PONG);
-        uint32_t timestamp = 0;     // Echo of PING timestamp
+        uint32_t timestamp = 0; // Echo of PING timestamp
     };
 
-    #pragma pack(pop)
+#pragma pack(pop)
 
 }

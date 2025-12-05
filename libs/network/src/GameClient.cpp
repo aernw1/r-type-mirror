@@ -14,10 +14,7 @@
 namespace network {
 
     GameClient::GameClient(const std::string& serverIp, uint16_t serverPort, const PlayerInfo& localPlayer)
-        : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0))
-        , m_serverEndpoint(serverIp, serverPort)
-        , m_localPlayer(localPlayer)
-    {
+        : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0)), m_serverEndpoint(serverIp, serverPort), m_localPlayer(localPlayer) {
         m_socket.non_blocking(true);
         m_inputGenerator = [this]() { return GenerateRandomInputs(); };
     }
@@ -47,8 +44,8 @@ namespace network {
             ReceivePackets();
 
             auto elapsed = std::chrono::duration<float>(
-                std::chrono::steady_clock::now() - startTime
-            ).count();
+                               std::chrono::steady_clock::now() - startTime)
+                               .count();
 
             if (elapsed > TIMEOUT) {
                 std::cerr << "[Client " << m_localPlayer.name << "] Connection timeout!" << std::endl;
@@ -114,9 +111,8 @@ namespace network {
         input.inputs = inputs;
         input.timestamp = static_cast<uint32_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()
-            ).count()
-        );
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
 
         std::vector<uint8_t> packet(sizeof(InputPacket));
         std::memcpy(packet.data(), &input, sizeof(InputPacket));
@@ -145,27 +141,29 @@ namespace network {
     }
 
     void GameClient::HandlePacket(const std::vector<uint8_t>& data) {
-        if (data.empty()) return;
+        if (data.empty())
+            return;
 
         uint8_t type = data[0];
 
         switch (static_cast<GamePacket>(type)) {
-            case GamePacket::WELCOME:
-                HandleWelcome(data);
-                break;
-            case GamePacket::STATE:
-                HandleState(data);
-                break;
-            case GamePacket::PONG:
-                HandlePong(data);
-                break;
-            default:
-                break;
+        case GamePacket::WELCOME:
+            HandleWelcome(data);
+            break;
+        case GamePacket::STATE:
+            HandleState(data);
+            break;
+        case GamePacket::PONG:
+            HandlePong(data);
+            break;
+        default:
+            break;
         }
     }
 
     void GameClient::HandleWelcome(const std::vector<uint8_t>& data) {
-        if (data.size() < sizeof(WelcomePacket)) return;
+        if (data.size() < sizeof(WelcomePacket))
+            return;
 
         const WelcomePacket* welcome = reinterpret_cast<const WelcomePacket*>(data.data());
         m_lastServerTick = welcome->serverTick;
@@ -176,7 +174,8 @@ namespace network {
     }
 
     void GameClient::HandleState(const std::vector<uint8_t>& data) {
-        if (data.size() < sizeof(StatePacketHeader)) return;
+        if (data.size() < sizeof(StatePacketHeader))
+            return;
 
         const StatePacketHeader* header = reinterpret_cast<const StatePacketHeader*>(data.data());
         m_lastServerTick = header->tick;
@@ -185,7 +184,8 @@ namespace network {
         std::vector<EntityState> entities;
 
         for (uint16_t i = 0; i < header->entityCount; i++) {
-            if (offset + sizeof(EntityState) > data.size()) break;
+            if (offset + sizeof(EntityState) > data.size())
+                break;
 
             EntityState entity;
             std::memcpy(&entity, data.data() + offset, sizeof(EntityState));
@@ -200,15 +200,15 @@ namespace network {
     }
 
     void GameClient::HandlePong(const std::vector<uint8_t>& data) {
-        if (data.size() < sizeof(PongPacket)) return;
+        if (data.size() < sizeof(PongPacket))
+            return;
 
         const PongPacket* pong = reinterpret_cast<const PongPacket*>(data.data());
 
         uint32_t now = static_cast<uint32_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()
-            ).count()
-        );
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
 
         uint32_t rtt = now - pong->timestamp;
         (void)rtt;
