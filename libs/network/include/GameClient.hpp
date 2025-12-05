@@ -32,11 +32,14 @@ namespace network {
         }
 
         uint32_t GetLastServerTick() const { return m_lastServerTick; }
+        float GetLastScrollOffset() const { return m_lastScrollOffset; }
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
+
     private:
         void SendInput(uint8_t inputs);
         void ReceivePackets();
+
         void HandlePacket(const std::vector<uint8_t>& data);
         void HandleWelcome(const std::vector<uint8_t>& data);
         void HandleState(const std::vector<uint8_t>& data);
@@ -52,6 +55,7 @@ namespace network {
 
         uint32_t m_inputSequence = 0;
         uint32_t m_lastServerTick = 0;
+        float m_lastScrollOffset = 0.0f;
         std::atomic<bool> m_connected{false};
         std::atomic<bool> m_running{false};
 

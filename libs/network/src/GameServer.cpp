@@ -239,6 +239,7 @@ namespace network {
                 std::chrono::steady_clock::now().time_since_epoch())
                 .count());
         header.entityCount = static_cast<uint16_t>(m_entities.size());
+        header.scrollOffset = m_scrollOffset;  // Send scroll position to clients
 
         std::vector<uint8_t> packet(sizeof(StatePacketHeader) + sizeof(EntityState) * m_entities.size());
         std::memcpy(packet.data(), &header, sizeof(StatePacketHeader));
@@ -278,6 +279,8 @@ namespace network {
     }
 
     void GameServer::UpdateGameLogic(float dt) {
+        m_scrollOffset += SCROLL_SPEED * dt;
+
         UpdateMovement(dt);
         UpdateBullets(dt);
         UpdateEnemies(dt);

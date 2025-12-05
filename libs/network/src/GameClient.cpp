@@ -179,6 +179,7 @@ namespace network {
 
         const StatePacketHeader* header = reinterpret_cast<const StatePacketHeader*>(data.data());
         m_lastServerTick = header->tick;
+        m_lastScrollOffset = header->scrollOffset;
 
         size_t offset = sizeof(StatePacketHeader);
         std::vector<EntityState> entities;

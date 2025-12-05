@@ -85,6 +85,10 @@ namespace network {
         uint32_t m_nextEntityId = 1;
         std::atomic<bool> m_running{false};
 
+        // Map scrolling
+        float m_scrollOffset = 0.0f;
+        const float SCROLL_SPEED = -150.0f;
+
         std::chrono::steady_clock::time_point m_lastSpawnTime;
         float m_enemySpawnInterval = 2.0f;
 
