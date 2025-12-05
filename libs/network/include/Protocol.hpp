@@ -122,6 +122,7 @@ namespace network {
         uint32_t tick = 0;        // Server tick number
         uint32_t timestamp = 0;   // Server timestamp (ms)
         uint16_t entityCount = 0; // Number of entities following
+        float scrollOffset = 0.0f;  // Background scroll offset
     };
     // Followed by: EntityState[entityCount]
 
