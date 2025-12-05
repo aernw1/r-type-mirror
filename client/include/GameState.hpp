@@ -65,6 +65,9 @@ namespace RType {
 
             // ECS systems
             void createSystems();
+
+            // Server state update handler
+            void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
         private:
             GameStateMachine& m_machine;
             GameContext& m_context;
@@ -102,6 +105,11 @@ namespace RType {
             std::vector<RType::ECS::Entity> m_obstacleEntities;
 
             bool m_escapeKeyPressed = false;
+
+            // Network synchronization
+            float m_localScrollOffset = 0.0f;
+            float m_serverScrollOffset = 0.0f;
+            uint8_t m_currentInputs = 0;
         };
 
     }

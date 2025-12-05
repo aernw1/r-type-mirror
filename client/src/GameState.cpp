@@ -24,6 +24,14 @@ namespace RType {
         void InGameState::Init() {
             std::cout << "[GameState] === Initialisation du jeu ===" << std::endl;
 
+            // Network callback setup
+            if (m_context.networkClient) {
+                m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities) {this->OnServerStateUpdate(tick, entities);});
+                std::cout << "[GameState] Network callback registered" << std::endl;
+            } else {
+                std::cout << "[GameState] WARNING: No network client available!" << std::endl;
+            }
+
             std::cout << "[GameState] Étape 1/5: Textures Loading" << std::endl;
             loadTextures();
 
@@ -177,9 +185,30 @@ namespace RType {
         }
 
         void InGameState::HandleInput() {
+            // Reset inputs
+            m_currentInputs = 0;
+
+            // Capture movement keys
+            if (m_renderer->IsKeyPressed(Renderer::Key::Up)) {
+                m_currentInputs |= network::InputFlags::UP;
+            }
+            if (m_renderer->IsKeyPressed(Renderer::Key::Down)) {
+                m_currentInputs |= network::InputFlags::DOWN;
+            }
+            if (m_renderer->IsKeyPressed(Renderer::Key::Left)) {
+                m_currentInputs |= network::InputFlags::LEFT;
+            }
+            if (m_renderer->IsKeyPressed(Renderer::Key::Right)) {
+                m_currentInputs |= network::InputFlags::RIGHT;
+            }
+            if (m_renderer->IsKeyPressed(Renderer::Key::Space)) {
+                m_currentInputs |= network::InputFlags::SHOOT;
+            }
+
+            // Escape to return to lobby
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
                 m_escapeKeyPressed = true;
-                std::cout << "[LobbyState] Returning to menu..." << std::endl;
+                std::cout << "[GameState] Returning to lobby..." << std::endl;
                 m_machine.PopState();
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
                 m_escapeKeyPressed = false;
@@ -209,8 +238,37 @@ namespace RType {
             m_obstacleEntities.clear();
         }
 
+        void InGameState::OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities) {
+            // get scroll offset from server
+            if (m_context.networkClient) {
+                m_serverScrollOffset = m_context.networkClient->GetLastScrollOffset();
+            }
+            
+            // Handle spam
+            if (tick % 60 == 0) {
+                std::cout << "[GameState] Server update - Tick: " << tick
+                          << ", Entities: " << entities.size()
+                          << ", ScrollOffset: " << m_serverScrollOffset << std::endl;
+            }
+
+            // TODO: Sync scroll if difference too large
+            // float diff = m_serverScrollOffset - m_localScrollOffset;
+            // if (abs(diff) > 50.0f) {
+            // m_localScrollOffset = m_serverScrollOffset;
+            // }
+        }
+
         void InGameState::Update(float dt) {
+            if (m_context.networkClient) {
+                m_context.networkClient->SendInput(m_currentInputs);
+            }
+
+            if (m_context.networkClient) {
+                m_context.networkClient->ReceivePackets();
+            }
+
             m_scrollingSystem->Update(m_registry, dt);
+            m_localScrollOffset += -150.0f * dt;
 
             const float obstacleWidth = 1200.0f;
             const float obstacleSpacing = 1200.0f;
