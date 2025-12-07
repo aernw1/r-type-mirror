@@ -273,7 +273,8 @@ namespace network {
         static int sendCount = 0;
         if (sendCount++ % 60 == 0) {
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count();
+                          std::chrono::steady_clock::now().time_since_epoch())
+                          .count();
             std::cout << "[SERVER SEND] t=" << ms << " tick=" << m_currentTick
                       << " Broadcasting state to " << m_connectedPlayers.size() << " clients" << std::endl;
         }

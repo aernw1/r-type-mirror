@@ -158,7 +158,8 @@ namespace network {
         static int frameCount = 0;
         if (packetsRead > 0 && frameCount++ % 60 == 0) {
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count();
+                          std::chrono::steady_clock::now().time_since_epoch())
+                          .count();
             std::cout << "[CLIENT RECV] t=" << ms << " Read " << packetsRead << " packets in one ReceivePackets() call" << std::endl;
         }
     }

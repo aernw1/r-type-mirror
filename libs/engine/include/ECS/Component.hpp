@@ -26,8 +26,6 @@ namespace RType {
             Position() = default;
             Position(float x, float y)
                 : x(x), y(y) {}
-
-
         };
 
         struct Velocity : public IComponent {
@@ -37,8 +35,6 @@ namespace RType {
             Velocity() = default;
             Velocity(float dx, float dy)
                 : dx(dx), dy(dy) {}
-
-
         };
 
         struct Drawable : public IComponent {
@@ -52,8 +48,6 @@ namespace RType {
             Drawable() = default;
             Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
                 : spriteId(sprite), layer(renderLayer) {}
-
-
         };
 
         struct NetworkPlayer : public IComponent {
@@ -70,8 +64,6 @@ namespace RType {
                     name[31] = '\0';
                 }
             }
-
-
         };
 
         struct BoxCollider : public IComponent {
@@ -81,8 +73,6 @@ namespace RType {
             BoxCollider() = default;
             BoxCollider(float width, float height)
                 : width(width), height(height) {}
-
-
         };
 
         struct Controllable : public IComponent {
@@ -91,8 +81,6 @@ namespace RType {
             Controllable() = default;
             Controllable(float moveSpeed)
                 : speed(moveSpeed) {}
-
-
         };
 
         struct Player : public IComponent {
@@ -103,8 +91,6 @@ namespace RType {
             Player() = default;
             Player(uint8_t number, uint64_t hash, bool local = false)
                 : playerNumber(number), playerHash(hash), isLocalPlayer(local) {}
-
-
         };
 
         enum class EnemyType : uint8_t {
@@ -122,8 +108,6 @@ namespace RType {
             Enemy() = default;
             Enemy(EnemyType enemyType, uint32_t enemyId = 0)
                 : type(enemyType), id(enemyId) {}
-
-
         };
 
         struct Health : public IComponent {
@@ -135,8 +119,6 @@ namespace RType {
                 : current(maxHealth), max(maxHealth) {}
             Health(int currentHealth, int maxHealth)
                 : current(currentHealth), max(maxHealth) {}
-
-
         };
 
         struct ScoreValue : public IComponent {
@@ -145,8 +127,6 @@ namespace RType {
             ScoreValue() = default;
             ScoreValue(uint32_t scorePoints)
                 : points(scorePoints) {}
-
-
         };
 
         struct Damage : public IComponent {
@@ -155,8 +135,6 @@ namespace RType {
             Damage() = default;
             Damage(int damageAmount)
                 : amount(damageAmount) {}
-
-
         };
 
         struct EnemyKilled : public IComponent {
@@ -166,8 +144,6 @@ namespace RType {
             EnemyKilled() = default;
             EnemyKilled(uint32_t id, Entity killer = NULL_ENTITY)
                 : enemyId(id), killedBy(killer) {}
-
-
         };
 
         struct Bullet : public IComponent {
@@ -176,8 +152,6 @@ namespace RType {
             Bullet() = default;
             Bullet(Entity shooter)
                 : owner(shooter) {}
-
-
         };
 
         struct Shooter : public IComponent {
@@ -188,8 +162,6 @@ namespace RType {
 
             Shooter() = default;
             Shooter(float rate, float oX = 50.0f, float oY = 20.0f) : fireRate(rate), offsetX(oX), offsetY(oY) {}
-
-
         };
 
         struct ShootCommand : public IComponent {
@@ -197,8 +169,6 @@ namespace RType {
 
             ShootCommand() = default;
             ShootCommand(bool shoot) : wantsToShoot(shoot) {}
-
-
         };
 
         struct Scrollable : public IComponent {
@@ -206,8 +176,6 @@ namespace RType {
 
             Scrollable() = default;
             Scrollable(float scrollSpeed) : speed(scrollSpeed) {}
-
-
         };
 
         struct Obstacle : public IComponent {
@@ -215,8 +183,6 @@ namespace RType {
 
             Obstacle() = default;
             Obstacle(bool isBlocking) : blocking(isBlocking) {}
-
-
         };
 
         struct ColliderBox {
