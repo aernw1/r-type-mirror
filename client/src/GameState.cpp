@@ -54,21 +54,32 @@ namespace RType {
         void InGameState::loadTextures() {
             loadMapTextures();
 
-            // Load player ship sprite from R-Type sprite sheet (space_ships.png)
-            // Each ship in the sprite sheet is 33x16 pixels
-            m_playerShipTexture = m_renderer->LoadTexture("assets/spaceships/space_ships.png");
-            if (m_playerShipTexture == Renderer::INVALID_TEXTURE_ID) {
-                m_playerShipTexture = m_renderer->LoadTexture("../assets/spaceships/space_ships.png");
+            // Load individual player ship textures (green, blue, red)
+            m_playerGreenTexture = m_renderer->LoadTexture("assets/spaceships/player_green.png");
+            if (m_playerGreenTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_playerGreenTexture = m_renderer->LoadTexture("../assets/spaceships/player_green.png");
             }
-            if (m_playerShipTexture != Renderer::INVALID_TEXTURE_ID) {
-                // Extract first ship from sprite sheet (blue ship at top-left)
-                Math::Rectangle shipRegion;
-                shipRegion.position = {0.0f, 0.0f};
-                shipRegion.size = {33.0f, 16.0f};  // Original R-Type ship size
-                m_playerShipSprite = m_renderer->CreateSprite(m_playerShipTexture, shipRegion);
-                std::cout << "[GameState] Player ship sprite loaded from space_ships.png (33x16)" << std::endl;
-            } else {
-                std::cerr << "[GameState] WARNING: Could not load space_ships.png!" << std::endl;
+            if (m_playerGreenTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_playerGreenSprite = m_renderer->CreateSprite(m_playerGreenTexture, {});
+                std::cout << "[GameState] Green player sprite loaded" << std::endl;
+            }
+
+            m_playerBlueTexture = m_renderer->LoadTexture("assets/spaceships/player_blue.png");
+            if (m_playerBlueTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_playerBlueTexture = m_renderer->LoadTexture("../assets/spaceships/player_blue.png");
+            }
+            if (m_playerBlueTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_playerBlueSprite = m_renderer->CreateSprite(m_playerBlueTexture, {});
+                std::cout << "[GameState] Blue player sprite loaded" << std::endl;
+            }
+
+            m_playerRedTexture = m_renderer->LoadTexture("assets/spaceships/player_red.png");
+            if (m_playerRedTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_playerRedTexture = m_renderer->LoadTexture("../assets/spaceships/player_red.png");
+            }
+            if (m_playerRedTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_playerRedSprite = m_renderer->CreateSprite(m_playerRedTexture, {});
+                std::cout << "[GameState] Red player sprite loaded" << std::endl;
             }
         }
 
@@ -290,8 +301,19 @@ namespace RType {
                 auto it = m_networkEntityMap.find(entityState.entityId);
 
                 if (it == m_networkEntityMap.end()) {
-                    // CREATE new player entity
-                    if (m_playerShipSprite == Renderer::INVALID_SPRITE_ID) {
+                    // CREATE new player entity - choose sprite based on player index (round-robin)
+                    Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
+                    size_t playerIndex = m_networkEntityMap.size() % 3;
+
+                    if (playerIndex == 0 && m_playerGreenSprite != Renderer::INVALID_SPRITE_ID) {
+                        playerSprite = m_playerGreenSprite;
+                    } else if (playerIndex == 1 && m_playerBlueSprite != Renderer::INVALID_SPRITE_ID) {
+                        playerSprite = m_playerBlueSprite;
+                    } else if (playerIndex == 2 && m_playerRedSprite != Renderer::INVALID_SPRITE_ID) {
+                        playerSprite = m_playerRedSprite;
+                    }
+
+                    if (playerSprite == Renderer::INVALID_SPRITE_ID) {
                         continue; // Can't create without sprite
                     }
 
@@ -299,8 +321,8 @@ namespace RType {
                     m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                     m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
-                    auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_playerShipSprite, 10)); // Layer 10 = on top
-                    drawable.scale = {2.0f, 2.0f}; // 33x16 → 66x32 pixels (proper R-Type size)
+                    auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10)); // Layer 10 = on top
+                    drawable.scale = {0.25f, 0.25f}; // Divide sprite size by 4
 
                     m_networkEntityMap[entityState.entityId] = newEntity;
 
@@ -309,6 +331,8 @@ namespace RType {
                         m_localPlayerEntity = newEntity;
                         std::cout << "[GameState] ✓ Local player ready - client-side prediction enabled" << std::endl;
                     }
+
+                    std::cout << "[GameState] Created player entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
                 } else {
                     // UPDATE existing entity - LOCKSTEP: server is authoritative, apply ALL updates
                     auto ecsEntity = it->second;
