@@ -9,8 +9,6 @@
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
 #include "Entity.hpp"
-#include "Serialization/Serializer.hpp"
-#include "Serialization/Deserializer.hpp"
 
 namespace RType {
 
@@ -29,15 +27,7 @@ namespace RType {
             Position(float x, float y)
                 : x(x), y(y) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(x);
-                ser.serializeTrivial(y);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(x);
-                deser.deserializeTrivial(y);
-            }
         };
 
         struct Velocity : public IComponent {
@@ -48,15 +38,7 @@ namespace RType {
             Velocity(float dx, float dy)
                 : dx(dx), dy(dy) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(dx);
-                ser.serializeTrivial(dy);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(dx);
-                deser.deserializeTrivial(dy);
-            }
         };
 
         struct Drawable : public IComponent {
@@ -71,33 +53,7 @@ namespace RType {
             Drawable(Renderer::SpriteId sprite, int renderLayer = 0)
                 : spriteId(sprite), layer(renderLayer) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(spriteId);
-                ser.serializeTrivial(scale.x);
-                ser.serializeTrivial(scale.y);
-                ser.serializeTrivial(rotation);
-                ser.serializeTrivial(origin.x);
-                ser.serializeTrivial(origin.y);
-                ser.serializeTrivial(tint.r);
-                ser.serializeTrivial(tint.g);
-                ser.serializeTrivial(tint.b);
-                ser.serializeTrivial(tint.a);
-                ser.serializeTrivial(layer);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(spriteId);
-                deser.deserializeTrivial(scale.x);
-                deser.deserializeTrivial(scale.y);
-                deser.deserializeTrivial(rotation);
-                deser.deserializeTrivial(origin.x);
-                deser.deserializeTrivial(origin.y);
-                deser.deserializeTrivial(tint.r);
-                deser.deserializeTrivial(tint.g);
-                deser.deserializeTrivial(tint.b);
-                deser.deserializeTrivial(tint.a);
-                deser.deserializeTrivial(layer);
-            }
         };
 
         struct NetworkPlayer : public IComponent {
@@ -115,19 +71,7 @@ namespace RType {
                 }
             }
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(playerNumber);
-                ser.serializeTrivial(playerHash);
-                for (int i = 0; i < 32; ++i) ser.serializeTrivial(name[i]);
-                ser.serializeTrivial(ready);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(playerNumber);
-                deser.deserializeTrivial(playerHash);
-                for (int i = 0; i < 32; ++i) deser.deserializeTrivial(name[i]);
-                deser.deserializeTrivial(ready);
-            }
         };
 
         struct BoxCollider : public IComponent {
@@ -138,15 +82,7 @@ namespace RType {
             BoxCollider(float width, float height)
                 : width(width), height(height) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(width);
-                ser.serializeTrivial(height);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(width);
-                deser.deserializeTrivial(height);
-            }
         };
 
         struct Controllable : public IComponent {
@@ -156,13 +92,7 @@ namespace RType {
             Controllable(float moveSpeed)
                 : speed(moveSpeed) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(speed);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(speed);
-            }
         };
 
         struct Player : public IComponent {
@@ -174,17 +104,7 @@ namespace RType {
             Player(uint8_t number, uint64_t hash, bool local = false)
                 : playerNumber(number), playerHash(hash), isLocalPlayer(local) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(playerNumber);
-                ser.serializeTrivial(playerHash);
-                ser.serializeTrivial(isLocalPlayer);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(playerNumber);
-                deser.deserializeTrivial(playerHash);
-                deser.deserializeTrivial(isLocalPlayer);
-            }
         };
 
         enum class EnemyType : uint8_t {
@@ -203,15 +123,7 @@ namespace RType {
             Enemy(EnemyType enemyType, uint32_t enemyId = 0)
                 : type(enemyType), id(enemyId) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(type);
-                ser.serializeTrivial(id);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(type);
-                deser.deserializeTrivial(id);
-            }
         };
 
         struct Health : public IComponent {
@@ -224,15 +136,7 @@ namespace RType {
             Health(int currentHealth, int maxHealth)
                 : current(currentHealth), max(maxHealth) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(current);
-                ser.serializeTrivial(max);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(current);
-                deser.deserializeTrivial(max);
-            }
         };
 
         struct ScoreValue : public IComponent {
@@ -242,13 +146,7 @@ namespace RType {
             ScoreValue(uint32_t scorePoints)
                 : points(scorePoints) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(points);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(points);
-            }
         };
 
         struct Damage : public IComponent {
@@ -258,13 +156,7 @@ namespace RType {
             Damage(int damageAmount)
                 : amount(damageAmount) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(amount);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(amount);
-            }
         };
 
         struct EnemyKilled : public IComponent {
@@ -275,15 +167,7 @@ namespace RType {
             EnemyKilled(uint32_t id, Entity killer = NULL_ENTITY)
                 : enemyId(id), killedBy(killer) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(enemyId);
-                ser.serializeTrivial(killedBy);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(enemyId);
-                deser.deserializeTrivial(killedBy);
-            }
         };
 
         struct Bullet : public IComponent {
@@ -293,13 +177,7 @@ namespace RType {
             Bullet(Entity shooter)
                 : owner(shooter) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(owner);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(owner);
-            }
         };
 
         struct Shooter : public IComponent {
@@ -311,19 +189,7 @@ namespace RType {
             Shooter() = default;
             Shooter(float rate, float oX = 50.0f, float oY = 20.0f) : fireRate(rate), offsetX(oX), offsetY(oY) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(fireRate);
-                ser.serializeTrivial(cooldown);
-                ser.serializeTrivial(offsetX);
-                ser.serializeTrivial(offsetY);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(fireRate);
-                deser.deserializeTrivial(cooldown);
-                deser.deserializeTrivial(offsetX);
-                deser.deserializeTrivial(offsetY);
-            }
         };
 
         struct ShootCommand : public IComponent {
@@ -332,13 +198,7 @@ namespace RType {
             ShootCommand() = default;
             ShootCommand(bool shoot) : wantsToShoot(shoot) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(wantsToShoot);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(wantsToShoot);
-            }
         };
 
         struct Scrollable : public IComponent {
@@ -347,13 +207,7 @@ namespace RType {
             Scrollable() = default;
             Scrollable(float scrollSpeed) : speed(scrollSpeed) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(speed);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(speed);
-            }
         };
 
         struct Obstacle : public IComponent {
@@ -362,13 +216,7 @@ namespace RType {
             Obstacle() = default;
             Obstacle(bool isBlocking) : blocking(isBlocking) {}
 
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(blocking);
-            }
 
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(blocking);
-            }
         };
 
         struct ColliderBox {
@@ -391,31 +239,6 @@ namespace RType {
 
             void AddBox(float offsetX, float offsetY, float width, float height) {
                 boxes.emplace_back(offsetX, offsetY, width, height);
-            }
-
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(static_cast<uint32_t>(boxes.size()));
-                for (const auto& box : boxes) {
-                    ser.serializeTrivial(box.x);
-                    ser.serializeTrivial(box.y);
-                    ser.serializeTrivial(box.width);
-                    ser.serializeTrivial(box.height);
-                }
-            }
-
-            void deserialize(Engine::Deserializer& deser) {
-                uint32_t count = 0;
-                deser.deserializeTrivial(count);
-                boxes.clear();
-                boxes.reserve(count);
-                for (uint32_t i = 0; i < count; ++i) {
-                    ColliderBox box;
-                    deser.deserializeTrivial(box.x);
-                    deser.deserializeTrivial(box.y);
-                    deser.deserializeTrivial(box.width);
-                    deser.deserializeTrivial(box.height);
-                    boxes.push_back(box);
-                }
             }
         };
     }

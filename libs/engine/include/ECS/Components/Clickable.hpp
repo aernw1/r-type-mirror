@@ -1,8 +1,6 @@
 #pragma once
 
 #include "ECS/Component.hpp"
-#include "Serialization/Serializer.hpp"
-#include "Serialization/Deserializer.hpp"
 #include <functional>
 
 namespace RType {
@@ -25,20 +23,6 @@ namespace RType {
             Clickable() = default;
             Clickable(float w, float h, int action)
                 : width(w), height(h), actionId(action) {}
-
-            void serialize(Engine::Serializer& ser) const {
-                ser.serializeTrivial(width);
-                ser.serializeTrivial(height);
-                ser.serializeTrivial(state);
-                ser.serializeTrivial(actionId);
-            }
-
-            void deserialize(Engine::Deserializer& deser) {
-                deser.deserializeTrivial(width);
-                deser.deserializeTrivial(height);
-                deser.deserializeTrivial(state);
-                deser.deserializeTrivial(actionId);
-            }
         };
 
     }

@@ -3,9 +3,6 @@
 #include "Entity.hpp"
 #include "Component.hpp"
 #include "SparseArray.hpp"
-#include "../ComponentData.hpp"
-#include "../Serialization/Serializer.hpp"
-#include "../Serialization/Deserializer.hpp"
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
@@ -25,8 +22,6 @@ namespace RType {
             virtual ~IComponentPool() = default;
             virtual bool Has(Entity entity) const = 0;
             virtual void Remove(Entity entity) = 0;
-            virtual std::vector<ComponentData> CollectData(size_t componentId) const = 0;
-            virtual void ApplyData(Entity entity, Engine::Deserializer& deser) = 0;
         };
 
         template <typename T>
@@ -38,8 +33,6 @@ namespace RType {
             bool Has(Entity entity) const override;
             void Remove(Entity entity) override;
             std::vector<Entity> GetEntities() const;
-            std::vector<ComponentData> CollectData(size_t componentId) const override;
-            void ApplyData(Entity entity, Engine::Deserializer& deser) override;
         private:
             SparseArray<T> m_components;
         };
@@ -71,12 +64,6 @@ namespace RType {
             template <typename T>
             std::vector<Entity> GetEntitiesWithComponent() const;
             size_t GetEntityCount() const { return m_entityCount; }
-
-            std::vector<ComponentData> CollectData() const;
-            void ApplyData(Entity entity, size_t componentId, Engine::Deserializer& buffer);
-
-            template <typename T>
-            size_t GetComponentId() const;
         private:
             template <typename T>
             ComponentPool<T>* GetOrCreatePool();
@@ -89,8 +76,6 @@ namespace RType {
             size_t m_entityCount;
             std::unordered_set<Entity> m_aliveEntities;
             std::unordered_map<ComponentID, std::unique_ptr<IComponentPool>> m_componentPools;
-            std::unordered_map<ComponentID, size_t> m_componentIds;
-            size_t m_nextComponentId = 0;
         };
 
         template <typename T>
@@ -215,7 +200,6 @@ namespace RType {
                 auto pool = std::make_unique<ComponentPool<T>>();
                 ComponentPool<T>* poolPtr = pool.get();
                 m_componentPools[typeID] = std::move(pool);
-                m_componentIds[typeID] = m_nextComponentId++;
                 return poolPtr;
             }
             return static_cast<ComponentPool<T>*>(it->second.get());
@@ -241,40 +225,6 @@ namespace RType {
             return static_cast<const ComponentPool<T>*>(it->second.get());
         }
 
-        template <typename T>
-        std::vector<ComponentData> ComponentPool<T>::CollectData(size_t componentId) const {
-            std::vector<ComponentData> result;
-            for (size_t i = 0; i < m_components.size(); ++i) {
-                if (m_components[i].has_value()) {
-                    Engine::Serializer ser;
-                    m_components[i].value().serialize(ser);
-                    result.push_back({
-                        static_cast<Entity>(i),
-                        componentId,
-                        ser.finalize()
-                    });
-                }
-            }
-            return result;
-        }
-
-        template <typename T>
-        void ComponentPool<T>::ApplyData(Entity entity, Engine::Deserializer& deser) {
-            if (entity >= m_components.size() || !m_components[entity].has_value()) {
-                m_components.insert_at(entity, T{});
-            }
-            m_components[entity].value().deserialize(deser);
-        }
-
-        template <typename T>
-        size_t Registry::GetComponentId() const {
-            ComponentID typeID = std::type_index(typeid(T));
-            auto it = m_componentIds.find(typeID);
-            if (it == m_componentIds.end()) {
-                throw std::runtime_error("Component type not registered");
-            }
-            return it->second;
-        }
 
     }
 
