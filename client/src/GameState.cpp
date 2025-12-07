@@ -24,7 +24,6 @@ namespace RType {
         void InGameState::Init() {
             std::cout << "[GameState] === Initialisation du jeu ===" << std::endl;
 
-            // Network callback setup
             if (m_context.networkClient) {
                 m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities) { this->OnServerStateUpdate(tick, entities); });
                 std::cout << "[GameState] Network callback registered" << std::endl;
@@ -54,7 +53,6 @@ namespace RType {
         void InGameState::loadTextures() {
             loadMapTextures();
 
-            // Load individual player ship textures (green, blue, red)
             m_playerGreenTexture = m_renderer->LoadTexture("assets/spaceships/player_green.png");
             if (m_playerGreenTexture == Renderer::INVALID_TEXTURE_ID) {
                 m_playerGreenTexture = m_renderer->LoadTexture("../assets/spaceships/player_green.png");
@@ -128,7 +126,6 @@ namespace RType {
             m_bgSprite = m_renderer->CreateSprite(m_bgTexture, {});
             auto bgSize = m_renderer->GetTextureSize(m_bgTexture);
 
-            // Need to see if we use Types.hpp class with Vectors
             float scaleX = 1280.0f / bgSize.x;
             float scaleY = 720.0f / bgSize.y;
 
@@ -213,7 +210,6 @@ namespace RType {
         }
 
         void InGameState::HandleInput() {
-            // LOCKSTEP: Capture inputs and send to server (server will set Velocity)
             m_currentInputs = 0;
 
             if (m_renderer->IsKeyPressed(Renderer::Key::Up)) {
@@ -232,7 +228,6 @@ namespace RType {
                 m_currentInputs |= network::InputFlags::SHOOT;
             }
 
-            // Send inputs to server EVERY frame
             if (m_context.networkClient && m_currentInputs != 0) {
                 auto now = std::chrono::steady_clock::now();
                 auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
@@ -243,7 +238,6 @@ namespace RType {
                 m_context.networkClient->SendInput(m_currentInputs);
             }
 
-            // Escape to return to lobby
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
                 m_escapeKeyPressed = true;
                 std::cout << "[GameState] Returning to lobby..." << std::endl;
@@ -285,23 +279,18 @@ namespace RType {
                 std::cout << "[CLIENT RECV STATE] t=" << ms << " tick=" << tick << " entities=" << entities.size() << std::endl;
             }
 
-            // get scroll offset from server
             if (m_context.networkClient) {
                 m_serverScrollOffset = m_context.networkClient->GetLastScrollOffset();
             }
 
-            // Update/Create player ships from server entities
             for (const auto& entityState : entities) {
-                // Only process PLAYER entities
                 if (static_cast<network::EntityType>(entityState.entityType) != network::EntityType::PLAYER) {
                     continue;
                 }
 
-                // Check if we already have this entity in our registry
                 auto it = m_networkEntityMap.find(entityState.entityId);
 
                 if (it == m_networkEntityMap.end()) {
-                    // CREATE new player entity - choose sprite based on player index (round-robin)
                     Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
                     size_t playerIndex = m_networkEntityMap.size() % 3;
 
@@ -314,19 +303,18 @@ namespace RType {
                     }
 
                     if (playerSprite == Renderer::INVALID_SPRITE_ID) {
-                        continue; // Can't create without sprite
+                        continue;
                     }
 
                     auto newEntity = m_registry.CreateEntity();
                     m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                     m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
-                    auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10)); // Layer 10 = on top
-                    drawable.scale = {0.25f, 0.25f}; // Divide sprite size by 4
+                    auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
+                    drawable.scale = {0.25f, 0.25f};
 
                     m_networkEntityMap[entityState.entityId] = newEntity;
 
-                    // Track if this is the local player (for client-side prediction)
                     if (entityState.ownerHash == m_context.playerHash) {
                         m_localPlayerEntity = newEntity;
                         std::cout << "[GameState] ✓ Local player ready - client-side prediction enabled" << std::endl;
@@ -334,7 +322,6 @@ namespace RType {
 
                     std::cout << "[GameState] Created player entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
                 } else {
-                    // UPDATE existing entity - LOCKSTEP: server is authoritative, apply ALL updates
                     auto ecsEntity = it->second;
 
                     if (m_registry.HasComponent<Position>(ecsEntity)) {
@@ -353,23 +340,19 @@ namespace RType {
         }
 
         void InGameState::Update(float dt) {
-            // LOCKSTEP: Receive server updates FIRST
             if (m_context.networkClient) {
                 m_context.networkClient->ReceivePackets();
             }
 
-            // Then move based on server-authoritative Velocity
             auto entities = m_registry.GetEntitiesWithComponent<Position>();
             for (auto entity : entities) {
                 if (m_registry.HasComponent<Velocity>(entity)) {
                     auto& pos = m_registry.GetComponent<Position>(entity);
                     auto& vel = m_registry.GetComponent<Velocity>(entity);
 
-                    // Apply velocity to position
                     pos.x += vel.dx * dt;
                     pos.y += vel.dy * dt;
 
-                    // Clamp to screen bounds (only for players)
                     if (entity == m_localPlayerEntity) {
                         pos.x = std::max(0.0f, std::min(pos.x, 1280.0f - 66.0f));
                         pos.y = std::max(0.0f, std::min(pos.y, 720.0f - 32.0f));
@@ -389,7 +372,6 @@ namespace RType {
             for (auto& bg : m_backgroundEntities) {
                 if (!m_registry.HasComponent<Position>(bg))
                     continue;
-                // Loop of background
                 auto& pos = m_registry.GetComponent<Position>(bg);
                 if (pos.x <= -1280.0f) {
                     pos.x = pos.x + 3 * 1280.0f;
@@ -399,7 +381,6 @@ namespace RType {
             for (auto& obstacle : m_obstacleEntities) {
                 if (!m_registry.HasComponent<Position>(obstacle))
                     continue;
-                // Loop of obstacles
                 auto& pos = m_registry.GetComponent<Position>(obstacle);
                 if (pos.x <= -obstacleWidth) {
                     pos.x += totalObstacleDistance;

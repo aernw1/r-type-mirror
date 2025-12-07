@@ -342,7 +342,6 @@ namespace RType {
 
                 network::PlayerInfo localPlayer = m_client.getMyInfo();
 
-                // CRITICAL: Store player hash for client-side prediction
                 m_context.playerHash = localPlayer.hash;
                 std::cout << "[LobbyState] Player hash stored: " << m_context.playerHash << std::endl;
 
@@ -351,7 +350,6 @@ namespace RType {
                     m_context.networkClient = gameClient;
                     m_machine.ChangeState(std::make_unique<InGameState>(m_machine, m_context, seed));
                 }
-                // Transition to Game
                 return;
             }
         }
