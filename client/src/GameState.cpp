@@ -24,7 +24,6 @@ namespace RType {
         void InGameState::Init() {
             std::cout << "[GameState] === Initialisation du jeu ===" << std::endl;
 
-            // Network callback setup
             if (m_context.networkClient) {
                 m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities) { this->OnServerStateUpdate(tick, entities); });
                 std::cout << "[GameState] Network callback registered" << std::endl;
@@ -53,6 +52,33 @@ namespace RType {
 
         void InGameState::loadTextures() {
             loadMapTextures();
+
+            m_playerGreenTexture = m_renderer->LoadTexture("assets/spaceships/player_green.png");
+            if (m_playerGreenTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_playerGreenTexture = m_renderer->LoadTexture("../assets/spaceships/player_green.png");
+            }
+            if (m_playerGreenTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_playerGreenSprite = m_renderer->CreateSprite(m_playerGreenTexture, {});
+                std::cout << "[GameState] Green player sprite loaded" << std::endl;
+            }
+
+            m_playerBlueTexture = m_renderer->LoadTexture("assets/spaceships/player_blue.png");
+            if (m_playerBlueTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_playerBlueTexture = m_renderer->LoadTexture("../assets/spaceships/player_blue.png");
+            }
+            if (m_playerBlueTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_playerBlueSprite = m_renderer->CreateSprite(m_playerBlueTexture, {});
+                std::cout << "[GameState] Blue player sprite loaded" << std::endl;
+            }
+
+            m_playerRedTexture = m_renderer->LoadTexture("assets/spaceships/player_red.png");
+            if (m_playerRedTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_playerRedTexture = m_renderer->LoadTexture("../assets/spaceships/player_red.png");
+            }
+            if (m_playerRedTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_playerRedSprite = m_renderer->CreateSprite(m_playerRedTexture, {});
+                std::cout << "[GameState] Red player sprite loaded" << std::endl;
+            }
         }
 
         void InGameState::loadMapTextures() {
@@ -100,7 +126,6 @@ namespace RType {
             m_bgSprite = m_renderer->CreateSprite(m_bgTexture, {});
             auto bgSize = m_renderer->GetTextureSize(m_bgTexture);
 
-            // Need to see if we use Types.hpp class with Vectors
             float scaleX = 1280.0f / bgSize.x;
             float scaleY = 720.0f / bgSize.y;
 
@@ -185,10 +210,8 @@ namespace RType {
         }
 
         void InGameState::HandleInput() {
-            // Reset inputs
             m_currentInputs = 0;
 
-            // Capture movement keys
             if (m_renderer->IsKeyPressed(Renderer::Key::Up)) {
                 m_currentInputs |= network::InputFlags::UP;
             }
@@ -205,7 +228,16 @@ namespace RType {
                 m_currentInputs |= network::InputFlags::SHOOT;
             }
 
-            // Escape to return to lobby
+            if (m_context.networkClient && m_currentInputs != 0) {
+                auto now = std::chrono::steady_clock::now();
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+                static int inputLog = 0;
+                if (inputLog++ % 10 == 0) {
+                    std::cout << "[CLIENT SEND INPUT] t=" << ms << " inputs=" << (int)m_currentInputs << std::endl;
+                }
+                m_context.networkClient->SendInput(m_currentInputs);
+            }
+
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
                 m_escapeKeyPressed = true;
                 std::cout << "[GameState] Returning to lobby..." << std::endl;
@@ -239,32 +271,93 @@ namespace RType {
         }
 
         void InGameState::OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities) {
-            // get scroll offset from server
+            auto now = std::chrono::steady_clock::now();
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
+            static int stateLog = 0;
+            if (stateLog++ % 60 == 0) {
+                std::cout << "[CLIENT RECV STATE] t=" << ms << " tick=" << tick << " entities=" << entities.size() << std::endl;
+            }
+
             if (m_context.networkClient) {
                 m_serverScrollOffset = m_context.networkClient->GetLastScrollOffset();
             }
 
-            // Handle spam
-            if (tick % 60 == 0) {
-                std::cout << "[GameState] Server update - Tick: " << tick
-                          << ", Entities: " << entities.size()
-                          << ", ScrollOffset: " << m_serverScrollOffset << std::endl;
-            }
+            for (const auto& entityState : entities) {
+                if (static_cast<network::EntityType>(entityState.entityType) != network::EntityType::PLAYER) {
+                    continue;
+                }
 
-            // TODO: Sync scroll if difference too large
-            // float diff = m_serverScrollOffset - m_localScrollOffset;
-            // if (abs(diff) > 50.0f) {
-            // m_localScrollOffset = m_serverScrollOffset;
-            // }
+                auto it = m_networkEntityMap.find(entityState.entityId);
+
+                if (it == m_networkEntityMap.end()) {
+                    Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
+                    size_t playerIndex = m_networkEntityMap.size() % 3;
+
+                    if (playerIndex == 0 && m_playerGreenSprite != Renderer::INVALID_SPRITE_ID) {
+                        playerSprite = m_playerGreenSprite;
+                    } else if (playerIndex == 1 && m_playerBlueSprite != Renderer::INVALID_SPRITE_ID) {
+                        playerSprite = m_playerBlueSprite;
+                    } else if (playerIndex == 2 && m_playerRedSprite != Renderer::INVALID_SPRITE_ID) {
+                        playerSprite = m_playerRedSprite;
+                    }
+
+                    if (playerSprite == Renderer::INVALID_SPRITE_ID) {
+                        continue;
+                    }
+
+                    auto newEntity = m_registry.CreateEntity();
+                    m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                    m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+
+                    auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
+                    drawable.scale = {0.25f, 0.25f};
+
+                    m_networkEntityMap[entityState.entityId] = newEntity;
+
+                    if (entityState.ownerHash == m_context.playerHash) {
+                        m_localPlayerEntity = newEntity;
+                        std::cout << "[GameState] ✓ Local player ready - client-side prediction enabled" << std::endl;
+                    }
+
+                    std::cout << "[GameState] Created player entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
+                } else {
+                    auto ecsEntity = it->second;
+
+                    if (m_registry.HasComponent<Position>(ecsEntity)) {
+                        auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                        pos.x = entityState.x;
+                        pos.y = entityState.y;
+                    }
+
+                    if (m_registry.HasComponent<Velocity>(ecsEntity)) {
+                        auto& vel = m_registry.GetComponent<Velocity>(ecsEntity);
+                        vel.dx = entityState.vx;
+                        vel.dy = entityState.vy;
+                    }
+                }
+            }
         }
 
         void InGameState::Update(float dt) {
             if (m_context.networkClient) {
-                m_context.networkClient->SendInput(m_currentInputs);
+                m_context.networkClient->ReceivePackets();
             }
 
-            if (m_context.networkClient) {
-                m_context.networkClient->ReceivePackets();
+            auto entities = m_registry.GetEntitiesWithComponent<Position>();
+            for (auto entity : entities) {
+                if (m_registry.HasComponent<Velocity>(entity)) {
+                    auto& pos = m_registry.GetComponent<Position>(entity);
+                    auto& vel = m_registry.GetComponent<Velocity>(entity);
+
+                    pos.x += vel.dx * dt;
+                    pos.y += vel.dy * dt;
+
+                    if (entity == m_localPlayerEntity) {
+                        pos.x = std::max(0.0f, std::min(pos.x, 1280.0f - 66.0f));
+                        pos.y = std::max(0.0f, std::min(pos.y, 720.0f - 32.0f));
+                    }
+                }
             }
 
             m_scrollingSystem->Update(m_registry, dt);
@@ -279,7 +372,6 @@ namespace RType {
             for (auto& bg : m_backgroundEntities) {
                 if (!m_registry.HasComponent<Position>(bg))
                     continue;
-                // Loop of background
                 auto& pos = m_registry.GetComponent<Position>(bg);
                 if (pos.x <= -1280.0f) {
                     pos.x = pos.x + 3 * 1280.0f;
@@ -289,7 +381,6 @@ namespace RType {
             for (auto& obstacle : m_obstacleEntities) {
                 if (!m_registry.HasComponent<Position>(obstacle))
                     continue;
-                // Loop of obstacles
                 auto& pos = m_registry.GetComponent<Position>(obstacle);
                 if (pos.x <= -obstacleWidth) {
                     pos.x += totalObstacleDistance;

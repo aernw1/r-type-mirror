@@ -55,6 +55,8 @@ target_link_libraries(r-type_client PRIVATE
     rtype_sfml_renderer
 )
 
+# ECS-based multiplayer demo removed (obsolete)
+
 add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network)
 

@@ -110,6 +110,18 @@ namespace RType {
             float m_localScrollOffset = 0.0f;
             float m_serverScrollOffset = 0.0f;
             uint8_t m_currentInputs = 0;
+
+            // Player ships tracking (network entities → ECS entities)
+            std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
+            RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player for prediction
+
+            // Individual player ship sprites
+            Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_playerBlueTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_playerRedTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_playerGreenSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_playerBlueSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_playerRedSprite = Renderer::INVALID_SPRITE_ID;
         };
 
     }

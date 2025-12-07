@@ -15,6 +15,11 @@ namespace network {
 
     GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers)
         : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)), m_expectedPlayers(expectedPlayers), m_lastSpawnTime(std::chrono::steady_clock::now()) {
+
+        // Increase send buffer to handle broadcasting to multiple clients at 60Hz
+        asio::socket_base::send_buffer_size sendOption(1024 * 1024); // 1MB
+        m_socket.set_option(sendOption);
+
         std::cout << "GameServer started on UDP port " << port << std::endl;
         std::cout << "Waiting for " << expectedPlayers.size() << " players..." << std::endl;
     }
@@ -39,10 +44,8 @@ namespace network {
         std::cout << "All players connected! Starting game loop..." << std::endl;
 
         const float TICK_RATE = 1.0f / 60.0f;
-        const float SNAPSHOT_RATE = 1.0f / 20.0f;
 
         auto lastTick = std::chrono::steady_clock::now();
-        float snapshotAccumulator = 0.0f;
 
         while (m_running) {
             auto now = std::chrono::steady_clock::now();
@@ -54,11 +57,8 @@ namespace network {
             UpdateGameLogic(TICK_RATE);
             m_currentTick++;
 
-            snapshotAccumulator += dt;
-            if (snapshotAccumulator >= SNAPSHOT_RATE) {
-                SendStateSnapshots();
-                snapshotAccumulator = 0.0f;
-            }
+            // Send snapshots EVERY tick for instant responsiveness
+            SendStateSnapshots();
 
             auto elapsed = std::chrono::steady_clock::now() - now;
             auto sleepTime = std::chrono::duration<float>(TICK_RATE) - elapsed;
@@ -182,12 +182,21 @@ namespace network {
 
         const InputPacket* input = reinterpret_cast<const InputPacket*>(data.data());
 
+        auto now = std::chrono::steady_clock::now();
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
         auto it = m_connectedPlayers.find(input->playerHash);
         if (it == m_connectedPlayers.end())
             return;
 
+        static int recvLog = 0;
+        if (input->inputs != 0 && recvLog++ % 10 == 0) {
+            std::cout << "[SERVER RECV INPUT] t=" << ms << " from=" << it->second.info.name
+                      << " inputs=" << (int)input->inputs << " seq=" << input->sequence << std::endl;
+        }
+
         it->second.lastInputSequence = input->sequence;
-        it->second.lastPingTime = std::chrono::steady_clock::now();
+        it->second.lastPingTime = now;
 
         auto playerEntity = std::find_if(m_entities.begin(), m_entities.end(),
                                          [hash = input->playerHash](const GameEntity& e) {
@@ -255,9 +264,19 @@ namespace network {
             state.vy = entity.vy;
             state.health = entity.health;
             state.flags = entity.flags;
+            state.ownerHash = entity.ownerHash; // For client-side prediction
 
             std::memcpy(packet.data() + offset, &state, sizeof(EntityState));
             offset += sizeof(EntityState);
+        }
+
+        static int sendCount = 0;
+        if (sendCount++ % 60 == 0) {
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::steady_clock::now().time_since_epoch())
+                          .count();
+            std::cout << "[SERVER SEND] t=" << ms << " tick=" << m_currentTick
+                      << " Broadcasting state to " << m_connectedPlayers.size() << " clients" << std::endl;
         }
 
         Broadcast(packet);
@@ -308,6 +327,7 @@ namespace network {
         player.ownerHash = hash;
 
         m_entities.push_back(player);
+        std::cout << "[Server] Spawned player entity " << player.id << " for playerHash=" << hash << " at (" << x << "," << y << ")" << std::endl;
     }
 
     void GameServer::SpawnEnemy() {

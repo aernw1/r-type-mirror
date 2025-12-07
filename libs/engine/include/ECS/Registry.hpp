@@ -11,6 +11,7 @@
 #include <typeindex>
 #include <sstream>
 #include <string>
+#include <functional>
 
 namespace RType {
 
@@ -223,6 +224,7 @@ namespace RType {
             }
             return static_cast<const ComponentPool<T>*>(it->second.get());
         }
+
 
     }
 

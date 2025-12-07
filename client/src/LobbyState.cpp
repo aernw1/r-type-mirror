@@ -342,12 +342,14 @@ namespace RType {
 
                 network::PlayerInfo localPlayer = m_client.getMyInfo();
 
+                m_context.playerHash = localPlayer.hash;
+                std::cout << "[LobbyState] Player hash stored: " << m_context.playerHash << std::endl;
+
                 auto gameClient = std::make_shared<network::GameClient>(serverIp, udpPort, localPlayer);
                 if (gameClient->ConnectToServer()) {
                     m_context.networkClient = gameClient;
                     m_machine.ChangeState(std::make_unique<InGameState>(m_machine, m_context, seed));
                 }
-                // Transition to Game
                 return;
             }
         }

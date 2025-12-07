@@ -16,6 +16,12 @@ namespace network {
     GameClient::GameClient(const std::string& serverIp, uint16_t serverPort, const PlayerInfo& localPlayer)
         : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0)), m_serverEndpoint(serverIp, serverPort), m_localPlayer(localPlayer) {
         m_socket.non_blocking(true);
+
+        // CRITICAL: Increase socket receive buffer to handle 60 packets/sec
+        // Default kernel buffer (~128KB) can overflow if we don't read fast enough
+        asio::socket_base::receive_buffer_size option(1024 * 1024); // 1MB buffer
+        m_socket.set_option(option);
+
         m_inputGenerator = [this]() { return GenerateRandomInputs(); };
     }
 
@@ -122,21 +128,39 @@ namespace network {
     }
 
     void GameClient::ReceivePackets() {
-        std::vector<uint8_t> buffer(2048);
+        // CRITICAL: Read ALL available packets in the socket buffer
+        // If we only read 1 packet per frame, we'll lag behind the server!
+        int packetsRead = 0;
+        while (packetsRead < 100) { // Safety limit to avoid infinite loop
+            std::vector<uint8_t> buffer(2048);
 
-        try {
-            asio::ip::udp::endpoint rawEndpoint;
-            size_t bytes = m_socket.receive_from(asio::buffer(buffer), rawEndpoint);
+            try {
+                asio::ip::udp::endpoint rawEndpoint;
+                size_t bytes = m_socket.receive_from(asio::buffer(buffer), rawEndpoint);
 
-            if (bytes > 0) {
-                buffer.resize(bytes);
-                HandlePacket(buffer);
-                m_packetsReceived++;
+                if (bytes > 0) {
+                    buffer.resize(bytes);
+                    HandlePacket(buffer);
+                    m_packetsReceived++;
+                    packetsRead++;
+                }
+            } catch (const asio::system_error& e) {
+                if (e.code() == asio::error::would_block) {
+                    // No more packets available - this is expected
+                    break;
+                } else {
+                    std::cerr << "[Client " << m_localPlayer.name << "] Error receiving: " << e.what() << std::endl;
+                    break;
+                }
             }
-        } catch (const asio::system_error& e) {
-            if (e.code() != asio::error::would_block) {
-                std::cerr << "[Client " << m_localPlayer.name << "] Error receiving: " << e.what() << std::endl;
-            }
+        }
+
+        static int frameCount = 0;
+        if (packetsRead > 0 && frameCount++ % 60 == 0) {
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::steady_clock::now().time_since_epoch())
+                          .count();
+            std::cout << "[CLIENT RECV] t=" << ms << " Read " << packetsRead << " packets in one ReceivePackets() call" << std::endl;
         }
     }
 
