@@ -53,6 +53,23 @@ namespace RType {
 
         void InGameState::loadTextures() {
             loadMapTextures();
+
+            // Load player ship sprite from R-Type sprite sheet (space_ships.png)
+            // Each ship in the sprite sheet is 33x16 pixels
+            m_playerShipTexture = m_renderer->LoadTexture("assets/spaceships/space_ships.png");
+            if (m_playerShipTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_playerShipTexture = m_renderer->LoadTexture("../assets/spaceships/space_ships.png");
+            }
+            if (m_playerShipTexture != Renderer::INVALID_TEXTURE_ID) {
+                // Extract first ship from sprite sheet (blue ship at top-left)
+                Math::Rectangle shipRegion;
+                shipRegion.position = {0.0f, 0.0f};
+                shipRegion.size = {33.0f, 16.0f};  // Original R-Type ship size
+                m_playerShipSprite = m_renderer->CreateSprite(m_playerShipTexture, shipRegion);
+                std::cout << "[GameState] Player ship sprite loaded from space_ships.png (33x16)" << std::endl;
+            } else {
+                std::cerr << "[GameState] WARNING: Could not load space_ships.png!" << std::endl;
+            }
         }
 
         void InGameState::loadMapTextures() {
@@ -185,10 +202,9 @@ namespace RType {
         }
 
         void InGameState::HandleInput() {
-            // Reset inputs
+            // LOCKSTEP: Capture inputs and send to server (server will set Velocity)
             m_currentInputs = 0;
 
-            // Capture movement keys
             if (m_renderer->IsKeyPressed(Renderer::Key::Up)) {
                 m_currentInputs |= network::InputFlags::UP;
             }
@@ -203,6 +219,17 @@ namespace RType {
             }
             if (m_renderer->IsKeyPressed(Renderer::Key::Space)) {
                 m_currentInputs |= network::InputFlags::SHOOT;
+            }
+
+            // Send inputs to server EVERY frame
+            if (m_context.networkClient && m_currentInputs != 0) {
+                auto now = std::chrono::steady_clock::now();
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+                static int inputLog = 0;
+                if (inputLog++ % 10 == 0) {
+                    std::cout << "[CLIENT SEND INPUT] t=" << ms << " inputs=" << (int)m_currentInputs << std::endl;
+                }
+                m_context.networkClient->SendInput(m_currentInputs);
             }
 
             // Escape to return to lobby
@@ -239,32 +266,91 @@ namespace RType {
         }
 
         void InGameState::OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities) {
+            auto now = std::chrono::steady_clock::now();
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
+            static int stateLog = 0;
+            if (stateLog++ % 60 == 0) {
+                std::cout << "[CLIENT RECV STATE] t=" << ms << " tick=" << tick << " entities=" << entities.size() << std::endl;
+            }
+
             // get scroll offset from server
             if (m_context.networkClient) {
                 m_serverScrollOffset = m_context.networkClient->GetLastScrollOffset();
             }
 
-            // Handle spam
-            if (tick % 60 == 0) {
-                std::cout << "[GameState] Server update - Tick: " << tick
-                          << ", Entities: " << entities.size()
-                          << ", ScrollOffset: " << m_serverScrollOffset << std::endl;
-            }
+            // Update/Create player ships from server entities
+            for (const auto& entityState : entities) {
+                // Only process PLAYER entities
+                if (static_cast<network::EntityType>(entityState.entityType) != network::EntityType::PLAYER) {
+                    continue;
+                }
 
-            // TODO: Sync scroll if difference too large
-            // float diff = m_serverScrollOffset - m_localScrollOffset;
-            // if (abs(diff) > 50.0f) {
-            // m_localScrollOffset = m_serverScrollOffset;
-            // }
+                // Check if we already have this entity in our registry
+                auto it = m_networkEntityMap.find(entityState.entityId);
+
+                if (it == m_networkEntityMap.end()) {
+                    // CREATE new player entity
+                    if (m_playerShipSprite == Renderer::INVALID_SPRITE_ID) {
+                        continue; // Can't create without sprite
+                    }
+
+                    auto newEntity = m_registry.CreateEntity();
+                    m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                    m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+
+                    auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_playerShipSprite, 10)); // Layer 10 = on top
+                    drawable.scale = {2.0f, 2.0f}; // 33x16 → 66x32 pixels (proper R-Type size)
+
+                    m_networkEntityMap[entityState.entityId] = newEntity;
+
+                    // Track if this is the local player (for client-side prediction)
+                    if (entityState.ownerHash == m_context.playerHash) {
+                        m_localPlayerEntity = newEntity;
+                        std::cout << "[GameState] ✓ Local player ready - client-side prediction enabled" << std::endl;
+                    }
+                } else {
+                    // UPDATE existing entity - LOCKSTEP: server is authoritative, apply ALL updates
+                    auto ecsEntity = it->second;
+
+                    if (m_registry.HasComponent<Position>(ecsEntity)) {
+                        auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                        pos.x = entityState.x;
+                        pos.y = entityState.y;
+                    }
+
+                    if (m_registry.HasComponent<Velocity>(ecsEntity)) {
+                        auto& vel = m_registry.GetComponent<Velocity>(ecsEntity);
+                        vel.dx = entityState.vx;
+                        vel.dy = entityState.vy;
+                    }
+                }
+            }
         }
 
         void InGameState::Update(float dt) {
-            if (m_context.networkClient) {
-                m_context.networkClient->SendInput(m_currentInputs);
-            }
-
+            // LOCKSTEP: Receive server updates FIRST
             if (m_context.networkClient) {
                 m_context.networkClient->ReceivePackets();
+            }
+
+            // Then move based on server-authoritative Velocity
+            auto entities = m_registry.GetEntitiesWithComponent<Position>();
+            for (auto entity : entities) {
+                if (m_registry.HasComponent<Velocity>(entity)) {
+                    auto& pos = m_registry.GetComponent<Position>(entity);
+                    auto& vel = m_registry.GetComponent<Velocity>(entity);
+
+                    // Apply velocity to position
+                    pos.x += vel.dx * dt;
+                    pos.y += vel.dy * dt;
+
+                    // Clamp to screen bounds (only for players)
+                    if (entity == m_localPlayerEntity) {
+                        pos.x = std::max(0.0f, std::min(pos.x, 1280.0f - 66.0f));
+                        pos.y = std::max(0.0f, std::min(pos.y, 720.0f - 32.0f));
+                    }
+                }
             }
 
             m_scrollingSystem->Update(m_registry, dt);

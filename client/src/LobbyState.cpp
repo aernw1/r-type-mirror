@@ -342,6 +342,10 @@ namespace RType {
 
                 network::PlayerInfo localPlayer = m_client.getMyInfo();
 
+                // CRITICAL: Store player hash for client-side prediction
+                m_context.playerHash = localPlayer.hash;
+                std::cout << "[LobbyState] Player hash stored: " << m_context.playerHash << std::endl;
+
                 auto gameClient = std::make_shared<network::GameClient>(serverIp, udpPort, localPlayer);
                 if (gameClient->ConnectToServer()) {
                     m_context.networkClient = gameClient;

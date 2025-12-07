@@ -55,6 +55,18 @@ target_link_libraries(r-type_client PRIVATE
     rtype_sfml_renderer
 )
 
+# ECS-based multiplayer demo (new simplified server/client)
+add_executable(r-type_ecs_server server_ecs/main.cpp)
+target_link_libraries(r-type_ecs_server PRIVATE rtype_network rtype_ecs)
+
+add_executable(r-type_ecs_client client_ecs/main.cpp)
+target_link_libraries(r-type_ecs_client PRIVATE
+    rtype_network
+    rtype_ecs
+    rtype_core
+    rtype_sfml_renderer
+)
+
 add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network)
 

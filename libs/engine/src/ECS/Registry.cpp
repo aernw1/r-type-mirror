@@ -35,6 +35,31 @@ namespace RType {
             return m_aliveEntities.find(entity) != m_aliveEntities.end();
         }
 
+        std::vector<ComponentData> Registry::CollectData() const {
+            std::vector<ComponentData> allData;
+            for (const auto& [typeId, pool] : m_componentPools) {
+                auto it = m_componentIds.find(typeId);
+                if (it != m_componentIds.end()) {
+                    size_t componentId = it->second;
+                    auto poolData = pool->CollectData(componentId);
+                    allData.insert(allData.end(), poolData.begin(), poolData.end());
+                }
+            }
+            return allData;
+        }
+
+        void Registry::ApplyData(Entity entity, size_t componentId, Engine::Deserializer& buffer) {
+            for (const auto& [typeId, id] : m_componentIds) {
+                if (id == componentId) {
+                    auto it = m_componentPools.find(typeId);
+                    if (it != m_componentPools.end()) {
+                        it->second->ApplyData(entity, buffer);
+                        return;
+                    }
+                }
+            }
+        }
+
     }
 
 }

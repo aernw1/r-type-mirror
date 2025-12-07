@@ -7,6 +7,9 @@ add_library(rtype_network
     src/LobbyClient.cpp
     src/GameServer.cpp
     src/GameClient.cpp
+    src/Snapshot.cpp
+    src/SyncServer.cpp
+    src/SyncClient.cpp
 )
 
 target_include_directories(rtype_network PUBLIC
