@@ -14,6 +14,7 @@ set(ECS_SOURCES
     HealthSystem.cpp
     ScoreSystem.cpp
     ShootingSystem.cpp
+    ScrollingSystem.cpp
 )
 
 set(ECS_HEADERS
@@ -38,6 +39,7 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/HealthSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ScoreSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShootingSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ScrollingSystem.hpp
 )
 
 add_library(rtype_ecs STATIC

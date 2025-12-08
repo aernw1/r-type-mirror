@@ -7,6 +7,7 @@
 
 #include "LobbyState.hpp"
 #include <chrono>
+#include <thread>
 #include "ECS/Components/TextLabel.hpp"
 #include <iostream>
 #include <stdexcept>
@@ -327,7 +328,29 @@ namespace RType {
             }
 
             if (m_client.isGameStarted()) {
-                std::cout << "[LobbyState] Game started! Seed: " << m_client.getGameSeed() << std::endl;
+                m_countdownSeconds = 0;
+
+                uint32_t seed = m_client.getGameSeed();
+                std::string serverIp = m_context.serverIp;
+                uint16_t udpPort = m_context.serverPort;
+
+                std::cout << "[LobbyState] Game started! Seed: " << seed << std::endl;
+                std::cout << "[LobbyState] Waiting for server to start UDP..." << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+                std::cout << "[LobbyState] Transitioning to GameState..." << std::endl;
+
+                network::PlayerInfo localPlayer = m_client.getMyInfo();
+
+                m_context.playerHash = localPlayer.hash;
+                std::cout << "[LobbyState] Player hash stored: " << m_context.playerHash << std::endl;
+
+                auto gameClient = std::make_shared<network::GameClient>(serverIp, udpPort, localPlayer);
+                if (gameClient->ConnectToServer()) {
+                    m_context.networkClient = gameClient;
+                    m_machine.ChangeState(std::make_unique<InGameState>(m_machine, m_context, seed));
+                }
+                return;
             }
         }
 

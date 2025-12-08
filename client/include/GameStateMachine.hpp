@@ -11,6 +11,7 @@
 #include <stack>
 #include "Renderer/IRenderer.hpp"
 #include "ECS/Registry.hpp"
+#include "../../libs/network/include/GameClient.hpp"
 
 namespace RType {
     namespace Client {
@@ -26,10 +27,12 @@ namespace RType {
         struct GameContext {
             std::shared_ptr<Renderer::IRenderer> renderer;
             std::shared_ptr<ECS::Registry> registry;
+            std::shared_ptr<network::GameClient> networkClient;
 
             std::string playerName;
             std::string serverIp;
             uint16_t serverPort;
+            uint64_t playerHash; // Unique identifier for the player
         };
 
         class IState {
