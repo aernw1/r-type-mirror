@@ -393,7 +393,7 @@ namespace RType {
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << std::endl;
                     }
-                    else if (type == network::EntityType::PROJECTILE) {
+                    else if (type == network::EntityType::BULLET) {
                          auto newEntity = m_registry.CreateEntity();
                          m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                          m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
