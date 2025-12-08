@@ -660,12 +660,25 @@ namespace RType {
                         auto newEntity = m_registry.CreateEntity();
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+                        m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
 
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
                         drawable.scale = {0.5f, 0.5f};
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
-                        std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << std::endl;
+
+                        if (entityState.ownerHash == m_context.playerHash) {
+                            m_localPlayerEntity = newEntity;
+                            std::cout << "[GameState] ✓ Local player ready - client-side prediction enabled" << std::endl;
+                        }
+
+                        if (playerIndex < MAX_PLAYERS) {
+                            m_playersHUD[playerIndex].active = true;
+                            m_playersHUD[playerIndex].playerEntity = newEntity;
+                            std::cout << "[GameState] Player P" << (playerIndex + 1) << " added to scoreboard" << std::endl;
+                        }
+
+                        std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
                     } else if (type == network::EntityType::BULLET) {
                         // Ignore my own server-side bullets to avoid duplication with local prediction
                         if (entityState.ownerHash == m_context.playerHash) {
@@ -684,29 +697,6 @@ namespace RType {
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         // std::cout << "[GameState] Created PROJECTILE entity " << entityState.entityId << std::endl;
                     }
-
-                    auto newEntity = m_registry.CreateEntity();
-                    m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
-                    m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
-                    m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
-
-                    auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
-                    drawable.scale = {0.25f, 0.25f};
-
-                    m_networkEntityMap[entityState.entityId] = newEntity;
-
-                    if (entityState.ownerHash == m_context.playerHash) {
-                        m_localPlayerEntity = newEntity;
-                        std::cout << "[GameState] ✓ Local player ready - client-side prediction enabled" << std::endl;
-                    }
-
-                    if (playerIndex < MAX_PLAYERS) {
-                        m_playersHUD[playerIndex].active = true;
-                        m_playersHUD[playerIndex].playerEntity = newEntity;
-                        std::cout << "[GameState] Player P" << (playerIndex + 1) << " added to scoreboard" << std::endl;
-                    }
-
-                    std::cout << "[GameState] Created player entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
                 } else {
                     auto ecsEntity = it->second;
 
