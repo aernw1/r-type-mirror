@@ -124,6 +124,7 @@ namespace RType {
             float m_localScrollOffset = 0.0f;
             float m_serverScrollOffset = 0.0f;
             uint8_t m_currentInputs = 0;
+            uint8_t m_previousInputs = 0;
 
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
