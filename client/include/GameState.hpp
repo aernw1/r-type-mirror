@@ -25,9 +25,21 @@
 #include <vector>
 #include <chrono>
 #include <unordered_set>
+#include <array>
 
 namespace RType {
     namespace Client {
+
+        // Player HUD data for multiplayer scoreboard
+        struct PlayerHUDData {
+            bool active = false;
+            uint32_t score = 0;
+            int lives = 3;
+            int health = 100;
+            int maxHealth = 100;
+            RType::ECS::Entity scoreEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity playerEntity = RType::ECS::NULL_ENTITY;
+        };
 
         struct ObstacleData {
             Renderer::SpriteId sprite;
@@ -67,8 +79,10 @@ namespace RType {
             // Ennemy System (Dryss)
             void spawnEnemies();
 
-            // Score UI (Matthieu)
             void initializeUI();
+            void updateHUD();
+            void renderChargeBar();
+            void renderHealthBars();
 
             // ECS systems
             void createSystems();
@@ -125,8 +139,10 @@ namespace RType {
             // Network synchronization
             float m_localScrollOffset = 0.0f;
             float m_serverScrollOffset = 0.0f;
-            int m_currentInputs = 0;
+
             std::chrono::steady_clock::time_point m_lastInputTime;
+            uint8_t m_currentInputs = 0;
+            uint8_t m_previousInputs = 0;
 
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
@@ -139,6 +155,28 @@ namespace RType {
             Renderer::SpriteId m_playerGreenSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_playerBlueSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_playerRedSprite = Renderer::INVALID_SPRITE_ID;
+
+            // HUD fonts
+            Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
+            Renderer::FontId m_hudFontSmall = Renderer::INVALID_FONT_ID;
+
+            // HUD entities - local player info (left side)
+            RType::ECS::Entity m_hudPlayerEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_hudScoreEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_hudLivesEntity = RType::ECS::NULL_ENTITY;
+
+            // HUD entities - all players scoreboard (right side)
+            RType::ECS::Entity m_hudScoreboardTitle = RType::ECS::NULL_ENTITY;
+            std::array<PlayerHUDData, MAX_PLAYERS> m_playersHUD;
+
+            // Local player state for HUD
+            uint32_t m_playerScore = 0;
+            int m_playerLives = 3;
+            float m_scoreAccumulator = 0.0f; // For time-based score testing
+
+            bool m_isCharging = false;
+            float m_chargeTime = 0.0f;
+            static constexpr float MAX_CHARGE_TIME = 2.0f; // 2 seconds for full charge
         };
 
     }

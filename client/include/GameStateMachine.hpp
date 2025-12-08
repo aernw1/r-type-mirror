@@ -32,7 +32,8 @@ namespace RType {
             std::string playerName;
             std::string serverIp;
             uint16_t serverPort;
-            uint64_t playerHash; // Unique identifier for the player
+            uint64_t playerHash;
+            uint8_t playerNumber;
         };
 
         class IState {
