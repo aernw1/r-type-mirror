@@ -376,6 +376,17 @@ namespace network {
     }
 
     void GameServer::UpdateBullets(float /*dt*/) {
+        const float MAX_X = 2000.0f;
+        const float MIN_X = -200.0f;
+        const float MAX_Y = 1000.0f;
+        const float MIN_Y = -200.0f;
+
+        auto bullets = GetEntitiesByType(EntityType::BULLET);
+        for (auto* bullet : bullets) {
+            if (bullet->x > MAX_X || bullet->x < MIN_X || bullet->y > MAX_Y || bullet->y < MIN_Y) {
+                bullet->health = 0;
+            }
+        }
     }
 
     void GameServer::UpdateEnemies(float /*dt*/) {
