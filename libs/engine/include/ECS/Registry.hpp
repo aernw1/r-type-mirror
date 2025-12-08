@@ -76,6 +76,7 @@ namespace RType {
             size_t m_entityCount;
             std::unordered_set<Entity> m_aliveEntities;
             std::unordered_map<ComponentID, std::unique_ptr<IComponentPool>> m_componentPools;
+            std::vector<Entity> m_freeEntityIds;
         };
 
         template <typename T>

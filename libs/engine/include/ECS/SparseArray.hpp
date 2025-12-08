@@ -172,7 +172,7 @@ private:
             return;
         }
 
-        size_type new_capacity = std::max(required_size, _data.capacity() * 2);
+        size_type new_capacity = required_size + (required_size / 2);
         if (new_capacity < 8) {
             new_capacity = 8;
         }
