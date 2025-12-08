@@ -11,6 +11,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <cmath>
 
 using namespace RType::ECS;
 
@@ -345,7 +346,14 @@ namespace RType {
                 m_currentInputs |= network::InputFlags::RIGHT;
             }
             if (m_renderer->IsKeyPressed(Renderer::Key::Space)) {
+                if (!m_isCharging) {
+                    m_isCharging = true;
+                    m_chargeTime = 0.0f;
+                }
+            } else if (m_isCharging) {
                 m_currentInputs |= network::InputFlags::SHOOT;
+                m_isCharging = false;
+                m_chargeTime = 0.0f;
             }
 
             if (m_context.networkClient && m_currentInputs != 0) {
@@ -370,6 +378,58 @@ namespace RType {
         void InGameState::Draw() {
             m_renderingSystem->Update(m_registry, 0.0f);
             m_textSystem->Update(m_registry, 0.0f);
+            renderChargeBar();
+        }
+
+        void InGameState::renderChargeBar() {
+            const float barX = 500.0f;
+            const float barY = 675.0f;
+            const float barWidth = 200.0f;
+            const float barHeight = 20.0f;
+
+            Renderer::Rectangle bgRect;
+            bgRect.position = Renderer::Vector2(barX - 2, barY - 2);
+            bgRect.size = Renderer::Vector2(barWidth + 4, barHeight + 4);
+            m_renderer->DrawRectangle(bgRect, Renderer::Color(0.2f, 0.2f, 0.2f, 0.8f));
+
+            Renderer::Rectangle innerBgRect;
+            innerBgRect.position = Renderer::Vector2(barX, barY);
+            innerBgRect.size = Renderer::Vector2(barWidth, barHeight);
+            m_renderer->DrawRectangle(innerBgRect, Renderer::Color(0.1f, 0.1f, 0.1f, 0.9f));
+
+            float chargePercent = m_chargeTime / MAX_CHARGE_TIME;
+            float filledWidth = barWidth * chargePercent;
+
+            Renderer::Color barColor;
+            if (chargePercent < 0.5f) {
+                float blend = chargePercent * 2.0f;
+                barColor = Renderer::Color(blend, 1.0f, 1.0f - blend, 1.0f);
+            } else {
+                float blend = (chargePercent - 0.5f) * 2.0f;
+                barColor = Renderer::Color(1.0f, 1.0f - blend * 0.5f, 0.0f, 1.0f);
+            }
+
+            if (filledWidth > 0) {
+                Renderer::Rectangle fillRect;
+                fillRect.position = Renderer::Vector2(barX, barY);
+                fillRect.size = Renderer::Vector2(filledWidth, barHeight);
+                m_renderer->DrawRectangle(fillRect, barColor);
+            }
+
+            if (m_isCharging && m_hudFontSmall != Renderer::INVALID_FONT_ID) {
+                Renderer::TextParams textParams;
+                textParams.position = Renderer::Vector2(barX + barWidth + 10, barY + 2);
+                textParams.color = Renderer::Color(0.0f, 1.0f, 1.0f, 1.0f);
+                textParams.scale = 1.0f;
+
+                if (m_chargeTime >= MAX_CHARGE_TIME) {
+                    float pulse = 0.7f + 0.3f * std::sin(m_chargeTime * 10.0f);
+                    textParams.color = Renderer::Color(1.0f, pulse, 0.0f, 1.0f);
+                    m_renderer->DrawText(m_hudFontSmall, "MAX!", textParams);
+                } else {
+                    m_renderer->DrawText(m_hudFontSmall, "BEAM", textParams);
+                }
+            }
         }
 
         void InGameState::Cleanup() {
@@ -485,6 +545,13 @@ namespace RType {
         void InGameState::Update(float dt) {
             if (m_context.networkClient) {
                 m_context.networkClient->ReceivePackets();
+            }
+
+            if (m_isCharging) {
+                m_chargeTime += dt;
+                if (m_chargeTime > MAX_CHARGE_TIME) {
+                    m_chargeTime = MAX_CHARGE_TIME;
+                }
             }
 
             auto entities = m_registry.GetEntitiesWithComponent<Position>();

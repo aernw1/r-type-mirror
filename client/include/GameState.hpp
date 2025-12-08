@@ -71,6 +71,7 @@ namespace RType {
 
             void initializeUI();
             void updateHUD();
+            void renderChargeBar();
 
             // ECS systems
             void createSystems();
@@ -148,6 +149,10 @@ namespace RType {
             // Local player state for HUD
             uint32_t m_playerScore = 0;
             int m_playerLives = 3;
+
+            bool m_isCharging = false;
+            float m_chargeTime = 0.0f;
+            static constexpr float MAX_CHARGE_TIME = 2.0f; // 2 seconds for full charge
         };
 
     }
