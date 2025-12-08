@@ -343,7 +343,7 @@ namespace RType {
                 network::PlayerInfo localPlayer = m_client.getMyInfo();
 
                 m_context.playerHash = localPlayer.hash;
-                std::cout << "[LobbyState] Player hash stored: " << m_context.playerHash << std::endl;
+                m_context.playerNumber = localPlayer.number;
 
                 auto gameClient = std::make_shared<network::GameClient>(serverIp, udpPort, localPlayer);
                 if (gameClient->ConnectToServer()) {

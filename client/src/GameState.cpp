@@ -7,7 +7,10 @@
 
 #include "../include/GameState.hpp"
 
+#include "ECS/Components/TextLabel.hpp"
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 
 using namespace RType::ECS;
 
@@ -45,7 +48,7 @@ namespace RType {
 
             std::cout << "[GameState] Étape 5/5: Player Init and UI" << std::endl;
             // initializePlayers();  // Keane
-            // initializeUI();       // Matthieu
+            initializeUI();
 
             std::cout << "[GameState] === Initialisation terminée! ===" << std::endl;
         }
@@ -209,6 +212,123 @@ namespace RType {
             }
         }
 
+        void InGameState::initializeUI() {
+            m_hudFont = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 16);
+            if (m_hudFont == Renderer::INVALID_FONT_ID) {
+                m_hudFont = m_renderer->LoadFont("../assets/fonts/PressStart2P-Regular.ttf", 16);
+            }
+
+            m_hudFontSmall = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 12);
+            if (m_hudFontSmall == Renderer::INVALID_FONT_ID) {
+                m_hudFontSmall = m_renderer->LoadFont("../assets/fonts/PressStart2P-Regular.ttf", 12);
+            }
+
+            if (m_hudFont == Renderer::INVALID_FONT_ID) {
+                std::cerr << "[GameState] Error: Failed to load HUD font!" << std::endl;
+                return;
+            }
+
+            m_hudPlayerEntity = m_registry.CreateEntity();
+            m_registry.AddComponent<Position>(m_hudPlayerEntity, Position{20.0f, 680.0f});
+            std::string playerText = "P" + std::to_string(m_context.playerNumber);
+            TextLabel playerLabel(playerText, m_hudFont, 16);
+            playerLabel.color = {0.0f, 1.0f, 1.0f, 1.0f};
+            m_registry.AddComponent<TextLabel>(m_hudPlayerEntity, std::move(playerLabel));
+
+            m_hudLivesEntity = m_registry.CreateEntity();
+            m_registry.AddComponent<Position>(m_hudLivesEntity, Position{350.0f, 680.0f});
+            TextLabel livesLabel("LIVES x3", m_hudFontSmall != Renderer::INVALID_FONT_ID ? m_hudFontSmall : m_hudFont, 12);
+            livesLabel.color = {1.0f, 0.8f, 0.0f, 1.0f};
+            m_registry.AddComponent<TextLabel>(m_hudLivesEntity, std::move(livesLabel));
+
+            m_hudScoreboardTitle = m_registry.CreateEntity();
+            m_registry.AddComponent<Position>(m_hudScoreboardTitle, Position{1050.0f, 620.0f});
+            TextLabel titleLabel("SCORES", m_hudFontSmall != Renderer::INVALID_FONT_ID ? m_hudFontSmall : m_hudFont, 12);
+            titleLabel.color = {0.0f, 1.0f, 1.0f, 1.0f};
+            m_registry.AddComponent<TextLabel>(m_hudScoreboardTitle, std::move(titleLabel));
+
+            for (size_t i = 0; i < MAX_PLAYERS; i++) {
+                m_playersHUD[i].active = false;
+                m_playersHUD[i].score = 0;
+                m_playersHUD[i].lives = 3;
+
+                m_playersHUD[i].scoreEntity = m_registry.CreateEntity();
+                float yPos = 645.0f + (i * 20.0f);
+                m_registry.AddComponent<Position>(m_playersHUD[i].scoreEntity, Position{1050.0f, yPos});
+
+                std::string scoreText = "P" + std::to_string(i + 1) + " --------";
+                TextLabel label(scoreText, m_hudFontSmall != Renderer::INVALID_FONT_ID ? m_hudFontSmall : m_hudFont, 12);
+                label.color = {0.4f, 0.4f, 0.4f, 0.6f};
+                m_registry.AddComponent<TextLabel>(m_playersHUD[i].scoreEntity, std::move(label));
+            }
+
+            if (m_context.playerNumber >= 1 && m_context.playerNumber <= MAX_PLAYERS) {
+                m_playersHUD[m_context.playerNumber - 1].active = true;
+            }
+
+            std::cout << "[GameState] HUD initialized for P" << (int)m_context.playerNumber << std::endl;
+        }
+
+        void InGameState::updateHUD() {
+            if (m_hudScoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudScoreEntity)) {
+                auto& scoreLabel = m_registry.GetComponent<TextLabel>(m_hudScoreEntity);
+                std::ostringstream ss;
+                ss << std::setw(8) << std::setfill('0') << m_playerScore;
+                scoreLabel.text = ss.str();
+            }
+
+            if (m_hudLivesEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudLivesEntity)) {
+                auto& livesLabel = m_registry.GetComponent<TextLabel>(m_hudLivesEntity);
+                livesLabel.text = "LIVES x" + std::to_string(m_playerLives);
+
+                if (m_playerLives <= 1) {
+                    livesLabel.color = {1.0f, 0.2f, 0.2f, 1.0f};
+                } else if (m_playerLives <= 2) {
+                    livesLabel.color = {1.0f, 0.6f, 0.0f, 1.0f};
+                } else {
+                    livesLabel.color = {1.0f, 0.8f, 0.0f, 1.0f};
+                }
+            }
+
+            if (m_context.playerNumber >= 1 && m_context.playerNumber <= MAX_PLAYERS) {
+                m_playersHUD[m_context.playerNumber - 1].score = m_playerScore;
+                m_playersHUD[m_context.playerNumber - 1].lives = m_playerLives;
+            }
+
+            const Math::Color playerColors[MAX_PLAYERS] = {
+                {0.2f, 1.0f, 0.2f, 1.0f}, // P1 - green
+                {0.2f, 0.6f, 1.0f, 1.0f}, // P2 - blue
+                {1.0f, 0.3f, 0.3f, 1.0f}, // P3 - Red
+                {1.0f, 1.0f, 0.2f, 1.0f}  // P4 - yellow
+            };
+
+            for (size_t i = 0; i < MAX_PLAYERS; i++) {
+                if (m_playersHUD[i].scoreEntity == NULL_ENTITY ||
+                    !m_registry.IsEntityAlive(m_playersHUD[i].scoreEntity)) {
+                    continue;
+                }
+
+                auto& label = m_registry.GetComponent<TextLabel>(m_playersHUD[i].scoreEntity);
+
+                if (m_playersHUD[i].active) {
+                    // Format: "P1 00000000"
+                    std::ostringstream ss;
+                    ss << "P" << (i + 1) << " " << std::setw(8) << std::setfill('0') << m_playersHUD[i].score;
+                    label.text = ss.str();
+                    label.color = playerColors[i];
+
+                    if (i == static_cast<size_t>(m_context.playerNumber - 1)) {
+                        label.color.a = 1.0f;
+                    } else {
+                        label.color.a = 0.85f;
+                    }
+                } else {
+                    label.text = "P" + std::to_string(i + 1) + " --------";
+                    label.color = {0.4f, 0.4f, 0.4f, 0.5f};
+                }
+            }
+        }
+
         void InGameState::HandleInput() {
             m_currentInputs = 0;
 
@@ -268,6 +388,24 @@ namespace RType {
                 }
             }
             m_obstacleEntities.clear();
+
+            if (m_hudPlayerEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudPlayerEntity)) {
+                m_registry.DestroyEntity(m_hudPlayerEntity);
+            }
+            if (m_hudScoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudScoreEntity)) {
+                m_registry.DestroyEntity(m_hudScoreEntity);
+            }
+            if (m_hudLivesEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudLivesEntity)) {
+                m_registry.DestroyEntity(m_hudLivesEntity);
+            }
+            if (m_hudScoreboardTitle != NULL_ENTITY && m_registry.IsEntityAlive(m_hudScoreboardTitle)) {
+                m_registry.DestroyEntity(m_hudScoreboardTitle);
+            }
+            for (auto& playerHUD : m_playersHUD) {
+                if (playerHUD.scoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.scoreEntity)) {
+                    m_registry.DestroyEntity(playerHUD.scoreEntity);
+                }
+            }
         }
 
         void InGameState::OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities) {
@@ -318,6 +456,11 @@ namespace RType {
                     if (entityState.ownerHash == m_context.playerHash) {
                         m_localPlayerEntity = newEntity;
                         std::cout << "[GameState] ✓ Local player ready - client-side prediction enabled" << std::endl;
+                    }
+
+                    if (playerIndex < MAX_PLAYERS) {
+                        m_playersHUD[playerIndex].active = true;
+                        std::cout << "[GameState] Player P" << (playerIndex + 1) << " added to scoreboard" << std::endl;
                     }
 
                     std::cout << "[GameState] Created player entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
@@ -386,6 +529,7 @@ namespace RType {
                     pos.x += totalObstacleDistance;
                 }
             }
+            updateHUD();
         }
     }
 }

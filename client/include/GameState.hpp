@@ -18,9 +18,18 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <array>
 
 namespace RType {
     namespace Client {
+
+        // Player HUD data for multiplayer scoreboard
+        struct PlayerHUDData {
+            bool active = false;
+            uint32_t score = 0;
+            int lives = 3;
+            RType::ECS::Entity scoreEntity = RType::ECS::NULL_ENTITY;
+        };
 
         struct ObstacleData {
             Renderer::SpriteId sprite;
@@ -60,8 +69,8 @@ namespace RType {
             // Ennemy System (Dryss)
             void spawnEnemies();
 
-            // Score UI (Matthieu)
             void initializeUI();
+            void updateHUD();
 
             // ECS systems
             void createSystems();
@@ -122,6 +131,23 @@ namespace RType {
             Renderer::SpriteId m_playerGreenSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_playerBlueSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_playerRedSprite = Renderer::INVALID_SPRITE_ID;
+
+            // HUD fonts
+            Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
+            Renderer::FontId m_hudFontSmall = Renderer::INVALID_FONT_ID;
+
+            // HUD entities - local player info (left side)
+            RType::ECS::Entity m_hudPlayerEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_hudScoreEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_hudLivesEntity = RType::ECS::NULL_ENTITY;
+
+            // HUD entities - all players scoreboard (right side)
+            RType::ECS::Entity m_hudScoreboardTitle = RType::ECS::NULL_ENTITY;
+            std::array<PlayerHUDData, MAX_PLAYERS> m_playersHUD;
+
+            // Local player state for HUD
+            uint32_t m_playerScore = 0;
+            int m_playerLives = 3;
         };
 
     }
