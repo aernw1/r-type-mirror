@@ -49,7 +49,8 @@ namespace RType {
             initializeObstacles();
 
             std::cout << "[GameState] Étape 5/5: Player Init and UI" << std::endl;
-            // initializePlayers();  // Keane
+
+            initializePlayers();
             initializeUI();
 
             std::cout << "[GameState] === Initialisation terminée! ===" << std::endl;
@@ -83,6 +84,22 @@ namespace RType {
             if (m_playerRedTexture != Renderer::INVALID_TEXTURE_ID) {
                 m_playerRedSprite = m_renderer->CreateSprite(m_playerRedTexture, {});
                 std::cout << "[GameState] Red player sprite loaded" << std::endl;
+            }
+
+            m_bulletTexture = m_renderer->LoadTexture("assets/projectiles/bullet.png");
+            if (m_bulletTexture == Renderer::INVALID_TEXTURE_ID) {
+                 m_bulletTexture = m_renderer->LoadTexture("../assets/projectiles/bullet.png");
+            }
+            
+            if (m_bulletTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_bulletSprite = m_renderer->CreateSprite(m_bulletTexture, {});
+            }
+            
+            std::cout << "[DEBUG] m_bulletTexture = " << m_bulletTexture 
+                      << ", m_bulletSprite = " << m_bulletSprite << std::endl;
+
+            if (m_bulletSprite == Renderer::INVALID_SPRITE_ID) {
+                std::cerr << "[GameState] CRITICAL ERROR: Bullet sprite creation failed!" << std::endl;
             }
         }
 
@@ -120,6 +137,11 @@ namespace RType {
             m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
             m_renderingSystem = std::make_unique<RType::ECS::RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<RType::ECS::TextRenderingSystem>(m_renderer.get());
+            m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(m_bulletSprite);
+            m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
+            m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
+            m_collisionSystem = std::make_unique<RType::ECS::CollisionSystem>();
+            m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
         }
 
         void InGameState::initializeBackground() {
@@ -214,6 +236,29 @@ namespace RType {
             }
         }
 
+        void InGameState::initializePlayers() {
+            std::cout << "[GameState] Initializing local player (ECS)..." << std::endl;
+
+            m_localPlayerEntity = m_registry.CreateEntity();
+            m_registry.AddComponent<Position>(m_localPlayerEntity, Position{100.0f, 360.0f});
+            m_registry.AddComponent<Velocity>(m_localPlayerEntity, Velocity{0.0f, 0.0f});
+            m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{0.2f, 50.0f, 25.0f});
+            m_registry.AddComponent<ShootCommand>(m_localPlayerEntity, ShootCommand{});
+            m_registry.AddComponent<Health>(m_localPlayerEntity, Health{100});
+            Renderer::SpriteId sprite = m_playerBlueSprite;
+            if (sprite != Renderer::INVALID_SPRITE_ID) {
+                auto& d = m_registry.AddComponent<Drawable>(m_localPlayerEntity, Drawable(sprite, 10));
+                d.scale = {0.5f, 0.5f};
+
+                if (m_playerBlueTexture != Renderer::INVALID_TEXTURE_ID) {
+                    auto size = m_renderer->GetTextureSize(m_playerBlueTexture);
+                    if (size.x > 0) {
+                        m_registry.AddComponent<BoxCollider>(m_localPlayerEntity, BoxCollider{size.x * 0.5f, size.y * 0.5f});
+                    }
+                }
+            }
+        }
+      
         void InGameState::initializeUI() {
             m_hudFont = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 16);
             if (m_hudFont == Renderer::INVALID_FONT_ID) {
@@ -369,12 +414,23 @@ namespace RType {
                 m_chargeTime = 0.0f;
             }
 
+            if (m_localPlayerEntity != ECS::NULL_ENTITY && m_registry.HasComponent<ShootCommand>(m_localPlayerEntity)) {
+                auto& shootCmd = m_registry.GetComponent<ShootCommand>(m_localPlayerEntity);
+                shootCmd.wantsToShoot = (m_currentInputs & network::InputFlags::SHOOT);
+            }
             if (m_context.networkClient && m_currentInputs != m_previousInputs) {
                 auto now = std::chrono::steady_clock::now();
-                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-                static int inputLog = 0;
-                if (inputLog++ % 10 == 0) {
-                    std::cout << "[CLIENT SEND INPUT] t=" << ms << " inputs=" << (int)m_currentInputs << std::endl;
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastInputTime).count();
+                
+                if (ms >= 30) {
+                    m_context.networkClient->SendInput(static_cast<uint8_t>(m_currentInputs));
+                    m_lastInputTime = now;
+                    
+                    static int inputLog = 0;
+                    if (inputLog++ % 10 == 0) {
+                         auto epoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+                         std::cout << "[CLIENT SEND INPUT] t=" << epoch << " inputs=" << m_currentInputs << std::endl;
+                    }
                 }
                 m_context.networkClient->SendInput(m_currentInputs);
                 m_previousInputs = m_currentInputs;
@@ -392,6 +448,19 @@ namespace RType {
         void InGameState::Draw() {
             m_renderingSystem->Update(m_registry, 0.0f);
             m_textSystem->Update(m_registry, 0.0f);
+
+            auto colliders = m_registry.GetEntitiesWithComponent<BoxCollider>();
+            for (auto entity : colliders) {
+                if (m_registry.HasComponent<Position>(entity)) {
+                    auto& pos = m_registry.GetComponent<Position>(entity);
+                    auto& box = m_registry.GetComponent<BoxCollider>(entity);
+                    
+                    Renderer::Rectangle rect{{pos.x, pos.y}, {box.width, box.height}};
+                    Renderer::Color color{1.0f, 0.0f, 0.0f, 0.3f}; 
+                    
+                    m_renderer->DrawRectangle(rect, color);
+                }
+            }
             renderChargeBar();
             renderHealthBars();
         }
@@ -557,27 +626,64 @@ namespace RType {
                 m_serverScrollOffset = m_context.networkClient->GetLastScrollOffset();
             }
 
+            std::unordered_set<uint32_t> receivedIds;
+
             for (const auto& entityState : entities) {
-                if (static_cast<network::EntityType>(entityState.entityType) != network::EntityType::PLAYER) {
-                    continue;
-                }
+                receivedIds.insert(entityState.entityId);
 
                 auto it = m_networkEntityMap.find(entityState.entityId);
+                network::EntityType type = static_cast<network::EntityType>(entityState.entityType);
 
                 if (it == m_networkEntityMap.end()) {
-                    Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
-                    size_t playerIndex = m_networkEntityMap.size() % 3;
+                    if (type == network::EntityType::PLAYER) {
+                        if (entityState.ownerHash == m_context.playerHash && m_localPlayerEntity != ECS::NULL_ENTITY) {
+                            m_networkEntityMap[entityState.entityId] = m_localPlayerEntity;
+                            std::cout << "[GameState] Linked Local Player to NetID " << entityState.entityId << std::endl;
+                            continue;
+                        }
 
-                    if (playerIndex == 0 && m_playerGreenSprite != Renderer::INVALID_SPRITE_ID) {
-                        playerSprite = m_playerGreenSprite;
-                    } else if (playerIndex == 1 && m_playerBlueSprite != Renderer::INVALID_SPRITE_ID) {
-                        playerSprite = m_playerBlueSprite;
-                    } else if (playerIndex == 2 && m_playerRedSprite != Renderer::INVALID_SPRITE_ID) {
-                        playerSprite = m_playerRedSprite;
+                        Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
+                        size_t playerIndex = m_networkEntityMap.size() % 3;
+
+                        if (playerIndex == 0 && m_playerGreenSprite != Renderer::INVALID_SPRITE_ID) {
+                            playerSprite = m_playerGreenSprite;
+                        } else if (playerIndex == 1 && m_playerBlueSprite != Renderer::INVALID_SPRITE_ID) {
+                            playerSprite = m_playerBlueSprite;
+                        } else if (playerIndex == 2 && m_playerRedSprite != Renderer::INVALID_SPRITE_ID) {
+                            playerSprite = m_playerRedSprite;
+                        }
+
+                        if (playerSprite == Renderer::INVALID_SPRITE_ID) {
+                            continue;
+                        }
+
+                        auto newEntity = m_registry.CreateEntity();
+                        m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                        m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+
+                        auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
+                        drawable.scale = {0.5f, 0.5f};
+
+                        m_networkEntityMap[entityState.entityId] = newEntity;
+                        std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << std::endl;
                     }
+                    else if (type == network::EntityType::BULLET) {
+                         // Ignore my own server-side bullets to avoid duplication with local prediction
+                         if (entityState.ownerHash == m_context.playerHash) {
+                             m_networkEntityMap[entityState.entityId] = ECS::NULL_ENTITY; // Mark as handled but don't create visual
+                             continue;
+                         }
 
-                    if (playerSprite == Renderer::INVALID_SPRITE_ID) {
-                        continue;
+                         auto newEntity = m_registry.CreateEntity();
+                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+                         
+                         if (m_bulletSprite != Renderer::INVALID_SPRITE_ID) {
+                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_bulletSprite, 12));
+                             d.scale = {0.1f, 0.1f};
+                         }
+                         m_networkEntityMap[entityState.entityId] = newEntity;
+                         // std::cout << "[GameState] Created PROJECTILE entity " << entityState.entityId << std::endl;
                     }
 
                     auto newEntity = m_registry.CreateEntity();
@@ -623,6 +729,17 @@ namespace RType {
                     }
                 }
             }
+
+            for (auto it = m_networkEntityMap.begin(); it != m_networkEntityMap.end(); ) {
+                if (receivedIds.find(it->first) == receivedIds.end()) {
+                    if (m_registry.IsEntityAlive(it->second)) {
+                        m_registry.DestroyEntity(it->second);
+                    }
+                    it = m_networkEntityMap.erase(it);
+                } else {
+                    ++it;
+                }
+            }
         }
 
         void InGameState::Update(float dt) {
@@ -661,6 +778,15 @@ namespace RType {
             }
 
             m_scrollingSystem->Update(m_registry, dt);
+            if (m_shootingSystem) {
+                m_shootingSystem->Update(m_registry, dt);
+            }
+
+            static int entityLog = 0;
+            if (entityLog++ % 60 == 0) {
+                 std::cout << "[CLIENT REGISTRY] Total entities alive: " << m_registry.GetEntityCount() << std::endl;
+            }
+
             m_localScrollOffset += -150.0f * dt;
 
             const float obstacleWidth = 1200.0f;

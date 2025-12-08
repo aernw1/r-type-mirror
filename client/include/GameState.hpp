@@ -12,12 +12,19 @@
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
 #include "ECS/ScrollingSystem.hpp"
+#include "ECS/ShootingSystem.hpp"
+#include "ECS/MovementSystem.hpp"
+#include "ECS/InputSystem.hpp"
+#include "ECS/CollisionSystem.hpp"
+#include "ECS/HealthSystem.hpp"
 #include "ECS/Component.hpp"
 #include "Renderer/IRenderer.hpp"
 
 #include <memory>
 #include <string>
 #include <vector>
+#include <chrono>
+#include <unordered_set>
 #include <array>
 
 namespace RType {
@@ -94,8 +101,17 @@ namespace RType {
             std::unique_ptr<RType::ECS::ScrollingSystem> m_scrollingSystem;
             std::unique_ptr<RType::ECS::RenderingSystem> m_renderingSystem;
             std::unique_ptr<RType::ECS::TextRenderingSystem> m_textSystem;
+            std::unique_ptr<RType::ECS::MovementSystem> m_movementSystem;
+            std::unique_ptr<RType::ECS::InputSystem> m_inputSystem;
+            std::unique_ptr<RType::ECS::CollisionSystem> m_collisionSystem;
+            std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
+            std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
 
             // Textures pour background et obstacles
+            Renderer::FontId m_fontId = Renderer::INVALID_FONT_ID;
+            Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_bulletSprite = Renderer::INVALID_SPRITE_ID;
+
             Renderer::TextureId m_bgTexture = Renderer::INVALID_TEXTURE_ID;
             Renderer::SpriteId m_bgSprite = Renderer::INVALID_SPRITE_ID;
 
@@ -123,6 +139,8 @@ namespace RType {
             // Network synchronization
             float m_localScrollOffset = 0.0f;
             float m_serverScrollOffset = 0.0f;
+
+            std::chrono::steady_clock::time_point m_lastInputTime;
             uint8_t m_currentInputs = 0;
             uint8_t m_previousInputs = 0;
 
