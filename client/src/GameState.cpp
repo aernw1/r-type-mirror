@@ -88,14 +88,14 @@ namespace RType {
 
             m_bulletTexture = m_renderer->LoadTexture("assets/projectiles/bullet.png");
             if (m_bulletTexture == Renderer::INVALID_TEXTURE_ID) {
-                 m_bulletTexture = m_renderer->LoadTexture("../assets/projectiles/bullet.png");
+                m_bulletTexture = m_renderer->LoadTexture("../assets/projectiles/bullet.png");
             }
-            
+
             if (m_bulletTexture != Renderer::INVALID_TEXTURE_ID) {
                 m_bulletSprite = m_renderer->CreateSprite(m_bulletTexture, {});
             }
-            
-            std::cout << "[DEBUG] m_bulletTexture = " << m_bulletTexture 
+
+            std::cout << "[DEBUG] m_bulletTexture = " << m_bulletTexture
                       << ", m_bulletSprite = " << m_bulletSprite << std::endl;
 
             if (m_bulletSprite == Renderer::INVALID_SPRITE_ID) {
@@ -258,7 +258,7 @@ namespace RType {
                 }
             }
         }
-      
+
         void InGameState::initializeUI() {
             m_hudFont = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 16);
             if (m_hudFont == Renderer::INVALID_FONT_ID) {
@@ -421,15 +421,15 @@ namespace RType {
             if (m_context.networkClient && m_currentInputs != m_previousInputs) {
                 auto now = std::chrono::steady_clock::now();
                 auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastInputTime).count();
-                
+
                 if (ms >= 30) {
                     m_context.networkClient->SendInput(static_cast<uint8_t>(m_currentInputs));
                     m_lastInputTime = now;
-                    
+
                     static int inputLog = 0;
                     if (inputLog++ % 10 == 0) {
-                         auto epoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-                         std::cout << "[CLIENT SEND INPUT] t=" << epoch << " inputs=" << m_currentInputs << std::endl;
+                        auto epoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+                        std::cout << "[CLIENT SEND INPUT] t=" << epoch << " inputs=" << m_currentInputs << std::endl;
                     }
                 }
                 m_context.networkClient->SendInput(m_currentInputs);
@@ -454,10 +454,10 @@ namespace RType {
                 if (m_registry.HasComponent<Position>(entity)) {
                     auto& pos = m_registry.GetComponent<Position>(entity);
                     auto& box = m_registry.GetComponent<BoxCollider>(entity);
-                    
+
                     Renderer::Rectangle rect{{pos.x, pos.y}, {box.width, box.height}};
-                    Renderer::Color color{1.0f, 0.0f, 0.0f, 0.3f}; 
-                    
+                    Renderer::Color color{1.0f, 0.0f, 0.0f, 0.3f};
+
                     m_renderer->DrawRectangle(rect, color);
                 }
             }
@@ -666,24 +666,23 @@ namespace RType {
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << std::endl;
-                    }
-                    else if (type == network::EntityType::BULLET) {
-                         // Ignore my own server-side bullets to avoid duplication with local prediction
-                         if (entityState.ownerHash == m_context.playerHash) {
-                             m_networkEntityMap[entityState.entityId] = ECS::NULL_ENTITY; // Mark as handled but don't create visual
-                             continue;
-                         }
+                    } else if (type == network::EntityType::BULLET) {
+                        // Ignore my own server-side bullets to avoid duplication with local prediction
+                        if (entityState.ownerHash == m_context.playerHash) {
+                            m_networkEntityMap[entityState.entityId] = ECS::NULL_ENTITY; // Mark as handled but don't create visual
+                            continue;
+                        }
 
-                         auto newEntity = m_registry.CreateEntity();
-                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
-                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
-                         
-                         if (m_bulletSprite != Renderer::INVALID_SPRITE_ID) {
-                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_bulletSprite, 12));
-                             d.scale = {0.1f, 0.1f};
-                         }
-                         m_networkEntityMap[entityState.entityId] = newEntity;
-                         // std::cout << "[GameState] Created PROJECTILE entity " << entityState.entityId << std::endl;
+                        auto newEntity = m_registry.CreateEntity();
+                        m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                        m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+
+                        if (m_bulletSprite != Renderer::INVALID_SPRITE_ID) {
+                            auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_bulletSprite, 12));
+                            d.scale = {0.1f, 0.1f};
+                        }
+                        m_networkEntityMap[entityState.entityId] = newEntity;
+                        // std::cout << "[GameState] Created PROJECTILE entity " << entityState.entityId << std::endl;
                     }
 
                     auto newEntity = m_registry.CreateEntity();
@@ -730,7 +729,7 @@ namespace RType {
                 }
             }
 
-            for (auto it = m_networkEntityMap.begin(); it != m_networkEntityMap.end(); ) {
+            for (auto it = m_networkEntityMap.begin(); it != m_networkEntityMap.end();) {
                 if (receivedIds.find(it->first) == receivedIds.end()) {
                     if (m_registry.IsEntityAlive(it->second)) {
                         m_registry.DestroyEntity(it->second);
@@ -784,7 +783,7 @@ namespace RType {
 
             static int entityLog = 0;
             if (entityLog++ % 60 == 0) {
-                 std::cout << "[CLIENT REGISTRY] Total entities alive: " << m_registry.GetEntityCount() << std::endl;
+                std::cout << "[CLIENT REGISTRY] Total entities alive: " << m_registry.GetEntityCount() << std::endl;
             }
 
             m_localScrollOffset += -150.0f * dt;

@@ -19,7 +19,7 @@ namespace network {
     class TcpSocket {
     public:
         static constexpr size_t MAX_PACKET_SIZE = 65536; // j'ai tenté d'augmenter la taille du buffer mais ça ne fonctionne pas dsl
-        
+
         TcpSocket(const std::string& address, uint16_t port);
         explicit TcpSocket(asio::ip::tcp::socket socket);
         ~TcpSocket() = default;
