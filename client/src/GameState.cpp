@@ -233,25 +233,17 @@ namespace RType {
         void InGameState::initializePlayers() {
             std::cout << "[GameState] Initializing local player (ECS)..." << std::endl;
 
-            // Create local entity immediately for prediction
             m_localPlayerEntity = m_registry.CreateEntity();
-
-            // Position (center-ish start, corrected by server later)
             m_registry.AddComponent<Position>(m_localPlayerEntity, Position{100.0f, 360.0f});
             m_registry.AddComponent<Velocity>(m_localPlayerEntity, Velocity{0.0f, 0.0f});
-
-            // Logic Components (Shooting, Input, Health)
             m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{0.2f, 50.0f, 25.0f});
             m_registry.AddComponent<ShootCommand>(m_localPlayerEntity, ShootCommand{});
             m_registry.AddComponent<Health>(m_localPlayerEntity, Health{100});
-
-            // Visual Components
-            Renderer::SpriteId sprite = m_playerBlueSprite; // Default local color
+            Renderer::SpriteId sprite = m_playerBlueSprite;
             if (sprite != Renderer::INVALID_SPRITE_ID) {
                 auto& d = m_registry.AddComponent<Drawable>(m_localPlayerEntity, Drawable(sprite, 10));
                 d.scale = {0.5f, 0.5f};
 
-                // Collider based on texture size
                 if (m_playerBlueTexture != Renderer::INVALID_TEXTURE_ID) {
                     auto size = m_renderer->GetTextureSize(m_playerBlueTexture);
                     if (size.x > 0) {
@@ -365,54 +357,54 @@ namespace RType {
             for (const auto& entityState : entities) {
                 receivedIds.insert(entityState.entityId);
 
-                if (static_cast<network::EntityType>(entityState.entityType) != network::EntityType::PLAYER) {
-                    continue;
-                }
-
                 auto it = m_networkEntityMap.find(entityState.entityId);
+                network::EntityType type = static_cast<network::EntityType>(entityState.entityType);
 
                 if (it == m_networkEntityMap.end()) {
-                    if (entityState.ownerHash == m_context.playerHash && m_localPlayerEntity != ECS::NULL_ENTITY) {
-                        m_networkEntityMap[entityState.entityId] = m_localPlayerEntity;
-                        std::cout << "[GameState] Linked Local Player to NetID " << entityState.entityId << std::endl;
-                        continue;
+                    if (type == network::EntityType::PLAYER) {
+                        if (entityState.ownerHash == m_context.playerHash && m_localPlayerEntity != ECS::NULL_ENTITY) {
+                            m_networkEntityMap[entityState.entityId] = m_localPlayerEntity;
+                            std::cout << "[GameState] Linked Local Player to NetID " << entityState.entityId << std::endl;
+                            continue;
+                        }
+
+                        Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
+                        size_t playerIndex = m_networkEntityMap.size() % 3;
+
+                        if (playerIndex == 0 && m_playerGreenSprite != Renderer::INVALID_SPRITE_ID) {
+                            playerSprite = m_playerGreenSprite;
+                        } else if (playerIndex == 1 && m_playerBlueSprite != Renderer::INVALID_SPRITE_ID) {
+                            playerSprite = m_playerBlueSprite;
+                        } else if (playerIndex == 2 && m_playerRedSprite != Renderer::INVALID_SPRITE_ID) {
+                            playerSprite = m_playerRedSprite;
+                        }
+
+                        if (playerSprite == Renderer::INVALID_SPRITE_ID) {
+                            continue;
+                        }
+
+                        auto newEntity = m_registry.CreateEntity();
+                        m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                        m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+
+                        auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
+                        drawable.scale = {0.5f, 0.5f};
+
+                        m_networkEntityMap[entityState.entityId] = newEntity;
+                        std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << std::endl;
                     }
-
-                    Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
-                    size_t playerIndex = m_networkEntityMap.size() % 3;
-
-                    if (playerIndex == 0 && m_playerGreenSprite != Renderer::INVALID_SPRITE_ID) {
-                        playerSprite = m_playerGreenSprite;
-                    } else if (playerIndex == 1 && m_playerBlueSprite != Renderer::INVALID_SPRITE_ID) {
-                        playerSprite = m_playerBlueSprite;
-                    } else if (playerIndex == 2 && m_playerRedSprite != Renderer::INVALID_SPRITE_ID) {
-                        playerSprite = m_playerRedSprite;
+                    else if (type == network::EntityType::PROJECTILE) {
+                         auto newEntity = m_registry.CreateEntity();
+                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+                         
+                         if (m_bulletSprite != Renderer::INVALID_SPRITE_ID) {
+                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_bulletSprite, 12));
+                             d.scale = {0.1f, 0.1f};
+                         }
+                         m_networkEntityMap[entityState.entityId] = newEntity;
+                         // std::cout << "[GameState] Created PROJECTILE entity " << entityState.entityId << std::endl;
                     }
-
-                    if (playerSprite == Renderer::INVALID_SPRITE_ID) {
-                        continue;
-                    }
-
-                    auto newEntity = m_registry.CreateEntity();
-                    m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
-                    m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
-
-                    auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
-                    drawable.scale = {0.5f, 0.5f};
-
-                    m_networkEntityMap[entityState.entityId] = newEntity;
-
-                    /* 
-                    // Old logic: created local player here. Now done in initializePlayers.
-                    if (entityState.ownerHash == m_context.playerHash) {
-                        m_localPlayerEntity = newEntity;
-                        m_registry.AddComponent<Shooter>(newEntity, Shooter{0.2f, 50.0f, 25.0f}); 
-                        m_registry.AddComponent<ShootCommand>(newEntity, ShootCommand{});
-                        std::cout << "[GameState] ✓ Local player ready - client-side prediction enabled" << std::endl;
-                    } 
-                    */
-
-                    std::cout << "[GameState] Created player entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
                 } else {
                     auto ecsEntity = it->second;
 
@@ -467,6 +459,12 @@ namespace RType {
             if (m_shootingSystem) {
                 m_shootingSystem->Update(m_registry, dt);
             }
+
+            static int entityLog = 0;
+            if (entityLog++ % 60 == 0) {
+                 std::cout << "[CLIENT REGISTRY] Total entities alive: " << m_registry.GetEntityCount() << std::endl;
+            }
+
             m_localScrollOffset += -150.0f * dt;
 
             const float obstacleWidth = 1200.0f;
