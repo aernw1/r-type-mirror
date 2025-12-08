@@ -394,6 +394,12 @@ namespace RType {
                         std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << std::endl;
                     }
                     else if (type == network::EntityType::BULLET) {
+                         // Ignore my own server-side bullets to avoid duplication with local prediction
+                         if (entityState.ownerHash == m_context.playerHash) {
+                             m_networkEntityMap[entityState.entityId] = ECS::NULL_ENTITY; // Mark as handled but don't create visual
+                             continue;
+                         }
+
                          auto newEntity = m_registry.CreateEntity();
                          m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                          m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
