@@ -547,6 +547,13 @@ namespace RType {
                 m_context.networkClient->ReceivePackets();
             }
 
+            m_scoreAccumulator += dt * 100.0f;
+            if (m_scoreAccumulator >= 1.0f) {
+                int points = static_cast<int>(m_scoreAccumulator);
+                m_playerScore += points;
+                m_scoreAccumulator -= points;
+            }
+
             if (m_isCharging) {
                 m_chargeTime += dt;
                 if (m_chargeTime > MAX_CHARGE_TIME) {

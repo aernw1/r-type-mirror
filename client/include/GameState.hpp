@@ -149,6 +149,7 @@ namespace RType {
             // Local player state for HUD
             uint32_t m_playerScore = 0;
             int m_playerLives = 3;
+            float m_scoreAccumulator = 0.0f; // For time-based score testing
 
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;
