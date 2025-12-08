@@ -369,7 +369,7 @@ namespace RType {
                 m_chargeTime = 0.0f;
             }
 
-            if (m_context.networkClient && m_currentInputs != 0) {
+            if (m_context.networkClient && m_currentInputs != m_previousInputs) {
                 auto now = std::chrono::steady_clock::now();
                 auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
                 static int inputLog = 0;
@@ -377,6 +377,7 @@ namespace RType {
                     std::cout << "[CLIENT SEND INPUT] t=" << ms << " inputs=" << (int)m_currentInputs << std::endl;
                 }
                 m_context.networkClient->SendInput(m_currentInputs);
+                m_previousInputs = m_currentInputs;
             }
 
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
