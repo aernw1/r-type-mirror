@@ -28,7 +28,10 @@ namespace RType {
             bool active = false;
             uint32_t score = 0;
             int lives = 3;
+            int health = 100;
+            int maxHealth = 100;
             RType::ECS::Entity scoreEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity playerEntity = RType::ECS::NULL_ENTITY;
         };
 
         struct ObstacleData {
@@ -72,6 +75,7 @@ namespace RType {
             void initializeUI();
             void updateHUD();
             void renderChargeBar();
+            void renderHealthBars();
 
             // ECS systems
             void createSystems();

@@ -8,6 +8,7 @@
 #include "../include/GameState.hpp"
 
 #include "ECS/Components/TextLabel.hpp"
+#include "ECS/Component.hpp"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -252,6 +253,9 @@ namespace RType {
                 m_playersHUD[i].active = false;
                 m_playersHUD[i].score = 0;
                 m_playersHUD[i].lives = 3;
+                m_playersHUD[i].health = 100;
+                m_playersHUD[i].maxHealth = 100;
+                m_playersHUD[i].playerEntity = NULL_ENTITY;
 
                 m_playersHUD[i].scoreEntity = m_registry.CreateEntity();
                 float yPos = 645.0f + (i * 20.0f);
@@ -312,6 +316,15 @@ namespace RType {
                 auto& label = m_registry.GetComponent<TextLabel>(m_playersHUD[i].scoreEntity);
 
                 if (m_playersHUD[i].active) {
+                    // Update health from player entity if available
+                    if (m_playersHUD[i].playerEntity != NULL_ENTITY &&
+                        m_registry.IsEntityAlive(m_playersHUD[i].playerEntity) &&
+                        m_registry.HasComponent<Health>(m_playersHUD[i].playerEntity)) {
+                        const auto& health = m_registry.GetComponent<Health>(m_playersHUD[i].playerEntity);
+                        m_playersHUD[i].health = health.current;
+                        m_playersHUD[i].maxHealth = health.max;
+                    }
+
                     // Format: "P1 00000000"
                     std::ostringstream ss;
                     ss << "P" << (i + 1) << " " << std::setw(8) << std::setfill('0') << m_playersHUD[i].score;
@@ -379,6 +392,7 @@ namespace RType {
             m_renderingSystem->Update(m_registry, 0.0f);
             m_textSystem->Update(m_registry, 0.0f);
             renderChargeBar();
+            renderHealthBars();
         }
 
         void InGameState::renderChargeBar() {
@@ -429,6 +443,67 @@ namespace RType {
                 } else {
                     m_renderer->DrawText(m_hudFontSmall, "BEAM", textParams);
                 }
+            }
+        }
+
+        void InGameState::renderHealthBars() {
+            if (m_context.playerNumber < 1 || m_context.playerNumber > MAX_PLAYERS) {
+                return;
+            }
+
+            size_t playerIndex = static_cast<size_t>(m_context.playerNumber - 1);
+            if (!m_playersHUD[playerIndex].active) {
+                return;
+            }
+
+            const float barWidth = 150.0f;
+            const float barHeight = 12.0f;
+            const float barX = 180.0f;
+            const float barY = 680.0f;
+
+            Renderer::Rectangle bgRect;
+            bgRect.position = Renderer::Vector2(barX - 2, barY - 2);
+            bgRect.size = Renderer::Vector2(barWidth + 4, barHeight + 4);
+            m_renderer->DrawRectangle(bgRect, Renderer::Color(0.1f, 0.1f, 0.1f, 0.9f));
+
+            Renderer::Rectangle innerBgRect;
+            innerBgRect.position = Renderer::Vector2(barX, barY);
+            innerBgRect.size = Renderer::Vector2(barWidth, barHeight);
+            m_renderer->DrawRectangle(innerBgRect, Renderer::Color(0.3f, 0.1f, 0.1f, 0.8f));
+
+            Renderer::TextParams textParams;
+            textParams.position = Renderer::Vector2(barX, barY - barHeight - 2);
+            textParams.color = Renderer::Color(0.0f, 1.0f, 1.0f, 1.0f);
+            textParams.scale = 1.0f;
+            m_renderer->DrawText(m_hudFontSmall, "HEALTH", textParams);
+
+            float healthPercent = 0.0f;
+            if (m_playersHUD[playerIndex].maxHealth > 0) {
+                healthPercent = static_cast<float>(m_playersHUD[playerIndex].health) / static_cast<float>(m_playersHUD[playerIndex].maxHealth);
+                healthPercent = std::max(0.0f, std::min(1.0f, healthPercent));
+            }
+
+            float filledWidth = barWidth * healthPercent;
+
+            Renderer::Color healthColor;
+            if (healthPercent <= 0.3f) {
+                healthColor = Renderer::Color(1.0f, 0.2f, 0.2f, 1.0f);
+            } else if (healthPercent <= 0.6f) {
+                float blend = (healthPercent - 0.3f) / 0.3f;
+                healthColor = Renderer::Color(
+                    1.0f,
+                    0.2f + blend * 0.8f,
+                    0.2f,
+                    1.0f);
+            } else {
+                healthColor = Renderer::Color(0.2f, 1.0f, 0.2f, 1.0f);
+            }
+
+            if (filledWidth > 0) {
+                Renderer::Rectangle fillRect;
+                fillRect.position = Renderer::Vector2(barX, barY);
+                fillRect.size = Renderer::Vector2(filledWidth, barHeight);
+                m_renderer->DrawRectangle(fillRect, healthColor);
             }
         }
 
@@ -507,6 +582,7 @@ namespace RType {
                     auto newEntity = m_registry.CreateEntity();
                     m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                     m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+                    m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
 
                     auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
                     drawable.scale = {0.25f, 0.25f};
@@ -520,6 +596,7 @@ namespace RType {
 
                     if (playerIndex < MAX_PLAYERS) {
                         m_playersHUD[playerIndex].active = true;
+                        m_playersHUD[playerIndex].playerEntity = newEntity;
                         std::cout << "[GameState] Player P" << (playerIndex + 1) << " added to scoreboard" << std::endl;
                     }
 
@@ -537,6 +614,11 @@ namespace RType {
                         auto& vel = m_registry.GetComponent<Velocity>(ecsEntity);
                         vel.dx = entityState.vx;
                         vel.dy = entityState.vy;
+                    }
+
+                    if (m_registry.HasComponent<Health>(ecsEntity)) {
+                        auto& health = m_registry.GetComponent<Health>(ecsEntity);
+                        health.current = static_cast<int>(entityState.health);
                     }
                 }
             }
