@@ -16,6 +16,7 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <string>
 
 namespace network {
 
@@ -39,7 +40,8 @@ namespace network {
 
     class GameServer {
     public:
-        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers);
+        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
+                   const std::string& levelPath = "assets/levels/level1.json");
         ~GameServer();
 
         void Run();
@@ -49,6 +51,7 @@ namespace network {
         size_t GetConnectedPlayerCount() const { return m_connectedPlayers.size(); }
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
+        const std::string& GetLevelPath() const { return m_levelPath; }
     private:
         void WaitForAllPlayers();
         void ProcessIncomingPackets();
@@ -94,6 +97,9 @@ namespace network {
 
         std::atomic<uint64_t> m_packetsSent{0};
         std::atomic<uint64_t> m_packetsReceived{0};
+
+        // Level data
+        std::string m_levelPath;
     };
 
 }

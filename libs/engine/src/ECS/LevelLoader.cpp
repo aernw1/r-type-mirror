@@ -1,0 +1,381 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** LevelLoader - JSON-based level loading implementation
+*/
+
+#include "ECS/LevelLoader.hpp"
+#include "ECS/EnemyFactory.hpp"
+#include "Core/Logger.hpp"
+#include <nlohmann/json.hpp>
+#include <fstream>
+#include <stdexcept>
+
+using json = nlohmann::json;
+
+namespace RType {
+
+    namespace ECS {
+
+        LevelData LevelLoader::LoadFromFile(const std::string& path) {
+            std::ifstream file(path);
+            if (!file.is_open()) {
+                std::string altPath = "../" + path;
+                file.open(altPath);
+                if (!file.is_open()) {
+                    throw std::runtime_error("Failed to open level file: " + path);
+                }
+            }
+
+            std::string content((std::istreambuf_iterator<char>(file)),
+                               std::istreambuf_iterator<char>());
+            return LoadFromString(content);
+        }
+
+        LevelData LevelLoader::LoadFromString(const std::string& jsonString) {
+            LevelData level;
+
+            try {
+                json j = json::parse(jsonString);
+
+                if (j.contains("name")) {
+                    level.name = j["name"].get<std::string>();
+                }
+
+                if (j.contains("assets")) {
+                    const auto& assets = j["assets"];
+
+                    if (assets.contains("textures")) {
+                        for (auto& [key, value] : assets["textures"].items()) {
+                            level.textures[key] = value.get<std::string>();
+                        }
+                    }
+
+                    if (assets.contains("fonts")) {
+                        for (auto& [key, value] : assets["fonts"].items()) {
+                            FontDef font;
+                            if (value.is_object()) {
+                                font.path = value.value("path", "");
+                                font.size = value.value("size", 16u);
+                            } else {
+                                font.path = value.get<std::string>();
+                            }
+                            level.fonts[key] = font;
+                        }
+                    }
+                }
+
+                if (j.contains("background")) {
+                    const auto& bg = j["background"];
+                    level.background.texture = bg.value("texture", "");
+                    level.background.scrollSpeed = bg.value("scrollSpeed", -150.0f);
+                    level.background.copies = bg.value("copies", 3);
+                    level.background.layer = bg.value("layer", -100);
+                }
+
+                if (j.contains("obstacles")) {
+                    for (const auto& obs : j["obstacles"]) {
+                        ObstacleDef obstacle;
+                        obstacle.texture = obs.value("texture", "");
+
+                        if (obs.contains("position")) {
+                            obstacle.x = obs["position"].value("x", 0.0f);
+                            obstacle.y = obs["position"].value("y", 0.0f);
+                        } else {
+                            obstacle.x = obs.value("x", 0.0f);
+                            obstacle.y = obs.value("y", 0.0f);
+                        }
+
+                        obstacle.scaleWidth = obs.value("scaleWidth", 1200.0f);
+                        obstacle.scaleHeight = obs.value("scaleHeight", 720.0f);
+                        obstacle.scrollSpeed = obs.value("scrollSpeed", -150.0f);
+                        obstacle.layer = obs.value("layer", 1);
+
+                        if (obs.contains("colliders")) {
+                            for (const auto& col : obs["colliders"]) {
+                                ColliderDef collider;
+                                collider.x = col.value("x", 0.0f);
+                                collider.y = col.value("y", 0.0f);
+                                collider.width = col.value("width", 0.0f);
+                                collider.height = col.value("height", 0.0f);
+                                obstacle.colliders.push_back(collider);
+                            }
+                        }
+
+                        level.obstacles.push_back(obstacle);
+                    }
+                }
+
+                if (j.contains("enemies")) {
+                    for (const auto& en : j["enemies"]) {
+                        EnemyDef enemy;
+                        enemy.type = en.value("type", "BASIC");
+
+                        if (en.contains("position")) {
+                            enemy.x = en["position"].value("x", 0.0f);
+                            enemy.y = en["position"].value("y", 0.0f);
+                        } else {
+                            enemy.x = en.value("x", 0.0f);
+                            enemy.y = en.value("y", 0.0f);
+                        }
+
+                        level.enemies.push_back(enemy);
+                    }
+                }
+
+                if (j.contains("playerSpawns")) {
+                    for (const auto& spawn : j["playerSpawns"]) {
+                        PlayerSpawnDef ps;
+                        ps.x = spawn.value("x", 100.0f);
+                        ps.y = spawn.value("y", 360.0f);
+                        level.playerSpawns.push_back(ps);
+                    }
+                }
+
+                if (level.playerSpawns.empty()) {
+                    level.playerSpawns.push_back({100.0f, 200.0f});
+                    level.playerSpawns.push_back({100.0f, 360.0f});
+                    level.playerSpawns.push_back({100.0f, 520.0f});
+                    level.playerSpawns.push_back({100.0f, 680.0f});
+                }
+
+                Core::Logger::Info("Loaded level '{}' with {} obstacles, {} enemies, {} player spawns",
+                    level.name.empty() ? "unnamed" : level.name,
+                    level.obstacles.size(),
+                    level.enemies.size(),
+                    level.playerSpawns.size());
+
+            } catch (const json::parse_error& e) {
+                throw std::runtime_error("JSON parse error: " + std::string(e.what()));
+            } catch (const json::type_error& e) {
+                throw std::runtime_error("JSON type error: " + std::string(e.what()));
+            }
+
+            return level;
+        }
+
+        LoadedAssets LevelLoader::LoadAssets(
+            const LevelData& level,
+            Renderer::IRenderer* renderer
+        ) {
+            LoadedAssets assets;
+
+            if (!renderer) {
+                return assets;
+            }
+
+            for (const auto& [key, path] : level.textures) {
+                Renderer::TextureId texId = renderer->LoadTexture(path);
+                if (texId == Renderer::INVALID_TEXTURE_ID) {
+                    texId = renderer->LoadTexture("../" + path);
+                }
+
+                if (texId != Renderer::INVALID_TEXTURE_ID) {
+                    assets.textures[key] = texId;
+                    assets.sprites[key] = renderer->CreateSprite(texId, {});
+                    Core::Logger::Debug("Loaded texture '{}' from '{}'", key, path);
+                } else {
+                    Core::Logger::Warning("Failed to load texture '{}' from '{}'", key, path);
+                }
+            }
+
+            for (const auto& [key, fontDef] : level.fonts) {
+                Renderer::FontId fontId = renderer->LoadFont(fontDef.path, fontDef.size);
+                if (fontId == Renderer::INVALID_FONT_ID) {
+                    fontId = renderer->LoadFont("../" + fontDef.path, fontDef.size);
+                }
+
+                if (fontId != Renderer::INVALID_FONT_ID) {
+                    assets.fonts[key] = fontId;
+                    Core::Logger::Debug("Loaded font '{}' from '{}'", key, fontDef.path);
+                } else {
+                    Core::Logger::Warning("Failed to load font '{}' from '{}'", key, fontDef.path);
+                }
+            }
+
+            return assets;
+        }
+
+        CreatedEntities LevelLoader::CreateEntities(
+            Registry& registry,
+            const LevelData& level,
+            const LoadedAssets& assets,
+            Renderer::IRenderer* renderer
+        ) {
+            CreatedEntities entities;
+
+            CreateBackgrounds(registry, level.background, assets, renderer, entities);
+            CreateObstacles(registry, level.obstacles, assets, renderer, entities);
+            CreateEnemies(registry, level.enemies, assets, renderer, entities);
+
+            Core::Logger::Info("Created {} background entities, {} obstacle entities, {} enemy entities",
+                entities.backgrounds.size(),
+                entities.obstacles.size(),
+                entities.enemies.size());
+
+            return entities;
+        }
+
+        CreatedEntities LevelLoader::CreateServerEntities(
+            Registry& registry,
+            const LevelData& level
+        ) {
+            CreatedEntities entities;
+
+            CreateServerObstacles(registry, level.obstacles, entities);
+            CreateServerEnemies(registry, level.enemies, entities);
+
+            Core::Logger::Info("Created server entities: {} obstacles, {} enemies",
+                entities.obstacles.size(),
+                entities.enemies.size());
+
+            return entities;
+        }
+
+        const std::vector<PlayerSpawnDef>& LevelLoader::GetPlayerSpawns(const LevelData& level) {
+            return level.playerSpawns;
+        }
+
+        EnemyType LevelLoader::ParseEnemyType(const std::string& typeStr) {
+            if (typeStr == "BASIC") return EnemyType::BASIC;
+            if (typeStr == "FAST") return EnemyType::FAST;
+            if (typeStr == "TANK") return EnemyType::TANK;
+            if (typeStr == "BOSS") return EnemyType::BOSS;
+            if (typeStr == "FORMATION") return EnemyType::FORMATION;
+
+            Core::Logger::Warning("Unknown enemy type '{}', defaulting to BASIC", typeStr);
+            return EnemyType::BASIC;
+        }
+
+        void LevelLoader::CreateBackgrounds(
+            Registry& registry,
+            const BackgroundDef& background,
+            const LoadedAssets& assets,
+            Renderer::IRenderer* renderer,
+            CreatedEntities& entities
+        ) {
+            if (background.texture.empty()) {
+                return;
+            }
+
+            auto spriteIt = assets.sprites.find(background.texture);
+            auto texIt = assets.textures.find(background.texture);
+
+            if (spriteIt == assets.sprites.end() || texIt == assets.textures.end()) {
+                Core::Logger::Warning("Background texture '{}' not found in loaded assets", background.texture);
+                return;
+            }
+
+            Renderer::SpriteId bgSprite = spriteIt->second;
+            Renderer::TextureId bgTexture = texIt->second;
+
+            Math::Vector2 bgSize = renderer->GetTextureSize(bgTexture);
+            float scaleX = 1280.0f / bgSize.x;
+            float scaleY = 720.0f / bgSize.y;
+
+            for (int i = 0; i < background.copies; i++) {
+                Entity bgEntity = registry.CreateEntity();
+
+                registry.AddComponent<Position>(bgEntity, Position{i * 1280.0f, 0.0f});
+
+                auto& drawable = registry.AddComponent<Drawable>(bgEntity, Drawable(bgSprite, background.layer));
+                drawable.scale = {scaleX, scaleY};
+
+                registry.AddComponent<Scrollable>(bgEntity, Scrollable(background.scrollSpeed));
+
+                entities.backgrounds.push_back(bgEntity);
+            }
+        }
+
+        void LevelLoader::CreateObstacles(
+            Registry& registry,
+            const std::vector<ObstacleDef>& obstacles,
+            const LoadedAssets& assets,
+            Renderer::IRenderer* renderer,
+            CreatedEntities& entities
+        ) {
+            for (const auto& obs : obstacles) {
+                auto spriteIt = assets.sprites.find(obs.texture);
+                auto texIt = assets.textures.find(obs.texture);
+
+                if (spriteIt == assets.sprites.end() || texIt == assets.textures.end()) {
+                    Core::Logger::Warning("Obstacle texture '{}' not found in loaded assets", obs.texture);
+                    continue;
+                }
+
+                Entity obsEntity = registry.CreateEntity();
+
+                registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
+
+                Math::Vector2 obsSize = renderer->GetTextureSize(texIt->second);
+                auto& drawable = registry.AddComponent<Drawable>(obsEntity, Drawable(spriteIt->second, obs.layer));
+                drawable.scale = {obs.scaleWidth / obsSize.x, obs.scaleHeight / obsSize.y};
+
+                if (!obs.colliders.empty()) {
+                    auto& collider = registry.AddComponent<MultiBoxCollider>(obsEntity);
+                    for (const auto& col : obs.colliders) {
+                        collider.AddBox(col.x, col.y, col.width, col.height);
+                    }
+                }
+
+                registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
+                registry.AddComponent<Obstacle>(obsEntity, Obstacle(true));
+
+                entities.obstacles.push_back(obsEntity);
+            }
+        }
+
+        void LevelLoader::CreateEnemies(
+            Registry& registry,
+            const std::vector<EnemyDef>& enemies,
+            const LoadedAssets& assets,
+            Renderer::IRenderer* renderer,
+            CreatedEntities& entities
+        ) {
+            for (const auto& en : enemies) {
+                EnemyType type = ParseEnemyType(en.type);
+                Entity enemy = EnemyFactory::CreateEnemy(registry, type, en.x, en.y, renderer);
+                entities.enemies.push_back(enemy);
+            }
+        }
+
+        void LevelLoader::CreateServerObstacles(
+            Registry& registry,
+            const std::vector<ObstacleDef>& obstacles,
+            CreatedEntities& entities
+        ) {
+            for (const auto& obs : obstacles) {
+                Entity obsEntity = registry.CreateEntity();
+
+                registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
+
+                if (!obs.colliders.empty()) {
+                    auto& collider = registry.AddComponent<MultiBoxCollider>(obsEntity);
+                    for (const auto& col : obs.colliders) {
+                        collider.AddBox(col.x, col.y, col.width, col.height);
+                    }
+                }
+
+                registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
+                registry.AddComponent<Obstacle>(obsEntity, Obstacle(true));
+
+                entities.obstacles.push_back(obsEntity);
+            }
+        }
+
+        void LevelLoader::CreateServerEnemies(
+            Registry& registry,
+            const std::vector<EnemyDef>& enemies,
+            CreatedEntities& entities
+        ) {
+            for (const auto& en : enemies) {
+                EnemyType type = ParseEnemyType(en.type);
+                Entity enemy = EnemyFactory::CreateEnemy(registry, type, en.x, en.y, nullptr);
+                entities.enemies.push_back(enemy);
+            }
+        }
+
+    }
+
+}

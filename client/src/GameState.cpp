@@ -42,11 +42,22 @@ namespace RType {
             std::cout << "[GameState] Étape 2/5: ECS Systems creation" << std::endl;
             createSystems();
 
-            std::cout << "[GameState] Étape 3/5: Background Creation" << std::endl;
-            initializeBackground();
+            if (m_useLevelLoader) {
+                std::cout << "[GameState] Étape 3/5: Loading level from JSON" << std::endl;
+                loadLevel(m_currentLevelPath);
+            }
 
-            std::cout << "[GameState] Étape 4/5: Obstacles Creation" << std::endl;
-            initializeObstacles();
+            // Re-check m_useLevelLoader since loadLevel() may set it to false on failure
+            if (m_useLevelLoader) {
+                std::cout << "[GameState] Étape 4/5: Creating entities from level data" << std::endl;
+                initializeFromLevel();
+            } else {
+                std::cout << "[GameState] Étape 3/5: Background Creation (legacy)" << std::endl;
+                initializeBackground();
+
+                std::cout << "[GameState] Étape 4/5: Obstacles Creation (legacy)" << std::endl;
+                initializeObstacles();
+            }
 
             std::cout << "[GameState] Étape 5/5: Player Init and UI" << std::endl;
 
@@ -54,6 +65,37 @@ namespace RType {
             initializeUI();
 
             std::cout << "[GameState] === Initialisation terminée! ===" << std::endl;
+        }
+
+        void InGameState::loadLevel(const std::string& levelPath) {
+            try {
+                m_levelData = ECS::LevelLoader::LoadFromFile(levelPath);
+                std::cout << "[GameState] Loaded level: " << m_levelData.name << std::endl;
+
+                m_levelAssets = ECS::LevelLoader::LoadAssets(m_levelData, m_renderer.get());
+                std::cout << "[GameState] Loaded " << m_levelAssets.textures.size() << " textures, "
+                          << m_levelAssets.fonts.size() << " fonts" << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "[GameState] Failed to load level: " << e.what() << std::endl;
+                std::cerr << "[GameState] Falling back to legacy initialization" << std::endl;
+                m_useLevelLoader = false;
+            }
+        }
+
+        void InGameState::initializeFromLevel() {
+            m_levelEntities = ECS::LevelLoader::CreateEntities(
+                m_registry,
+                m_levelData,
+                m_levelAssets,
+                m_renderer.get()
+            );
+
+            m_backgroundEntities = m_levelEntities.backgrounds;
+            m_obstacleEntities = m_levelEntities.obstacles;
+
+            std::cout << "[GameState] Created " << m_backgroundEntities.size() << " backgrounds, "
+                      << m_obstacleEntities.size() << " obstacles, "
+                      << m_levelEntities.enemies.size() << " enemies from level data" << std::endl;
         }
 
         void InGameState::loadTextures() {
@@ -449,18 +491,6 @@ namespace RType {
             m_renderingSystem->Update(m_registry, 0.0f);
             m_textSystem->Update(m_registry, 0.0f);
 
-            auto colliders = m_registry.GetEntitiesWithComponent<BoxCollider>();
-            for (auto entity : colliders) {
-                if (m_registry.HasComponent<Position>(entity)) {
-                    auto& pos = m_registry.GetComponent<Position>(entity);
-                    auto& box = m_registry.GetComponent<BoxCollider>(entity);
-
-                    Renderer::Rectangle rect{{pos.x, pos.y}, {box.width, box.height}};
-                    Renderer::Color color{1.0f, 0.0f, 0.0f, 0.3f};
-
-                    m_renderer->DrawRectangle(rect, color);
-                }
-            }
             renderChargeBar();
             renderHealthBars();
         }

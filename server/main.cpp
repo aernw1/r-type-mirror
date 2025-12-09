@@ -3,15 +3,19 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <string>
 
 int main(int argc, char* argv[]) {
     uint16_t port = 4242;
     size_t minPlayers = 2;
+    std::string levelPath = "assets/levels/level1.json";
 
     if (argc > 1)
         port = std::stoi(argv[1]);
     if (argc > 2)
         minPlayers = std::stoi(argv[2]);
+    if (argc > 3)
+        levelPath = argv[3];
 
     std::cout << "Starting lobby server on port " << port << std::endl;
 
@@ -43,8 +47,9 @@ int main(int argc, char* argv[]) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     std::cout << "Starting UDP GameServer on port " << port << " with " << players.size() << " players..." << std::endl;
+    std::cout << "Level: " << levelPath << std::endl;
 
-    network::GameServer gameServer(port, players);
+    network::GameServer gameServer(port, players, levelPath);
     gameServer.Run();
 
     return 0;

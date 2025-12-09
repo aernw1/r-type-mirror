@@ -15,6 +15,7 @@ set(ECS_SOURCES
     ScoreSystem.cpp
     ShootingSystem.cpp
     ScrollingSystem.cpp
+    LevelLoader.cpp
 )
 
 set(ECS_HEADERS
@@ -40,6 +41,7 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ScoreSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShootingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ScrollingSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/LevelLoader.hpp
 )
 
 add_library(rtype_ecs STATIC
@@ -51,6 +53,8 @@ target_include_directories(rtype_ecs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../include>
     $<INSTALL_INTERFACE:include>
 )
+
+target_link_libraries(rtype_ecs PUBLIC nlohmann_json::nlohmann_json)
 
 set_target_properties(rtype_ecs PROPERTIES
     POSITION_INDEPENDENT_CODE ON
