@@ -101,6 +101,33 @@ namespace RType {
             if (m_bulletSprite == Renderer::INVALID_SPRITE_ID) {
                 std::cerr << "[GameState] CRITICAL ERROR: Bullet sprite creation failed!" << std::endl;
             }
+
+            m_enemyGreenTexture = m_renderer->LoadTexture("assets/spaceships/enemy-green.png");
+            if (m_enemyGreenTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_enemyGreenTexture = m_renderer->LoadTexture("../assets/spaceships/enemy-green.png");
+            }
+            if (m_enemyGreenTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_enemyGreenSprite = m_renderer->CreateSprite(m_enemyGreenTexture, {});
+                std::cout << "[GameState] Enemy BASIC (green) sprite loaded" << std::endl;
+            }
+
+            m_enemyRedTexture = m_renderer->LoadTexture("assets/spaceships/enemy-red.png");
+            if (m_enemyRedTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_enemyRedTexture = m_renderer->LoadTexture("../assets/spaceships/enemy-red.png");
+            }
+            if (m_enemyRedTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_enemyRedSprite = m_renderer->CreateSprite(m_enemyRedTexture, {});
+                std::cout << "[GameState] Enemy FAST (red) sprite loaded" << std::endl;
+            }
+
+            m_enemyBlueTexture = m_renderer->LoadTexture("assets/spaceships/enemy-blue.png");
+            if (m_enemyBlueTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_enemyBlueTexture = m_renderer->LoadTexture("../assets/spaceships/enemy-blue.png");
+            }
+            if (m_enemyBlueTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_enemyBlueSprite = m_renderer->CreateSprite(m_enemyBlueTexture, {});
+                std::cout << "[GameState] Enemy TANK (blue) sprite loaded" << std::endl;
+            }
         }
 
         void InGameState::loadMapTextures() {
@@ -679,6 +706,54 @@ namespace RType {
                         }
 
                         std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
+                    } else if (type == network::EntityType::ENEMY) {
+                        uint8_t enemyType = entityState.flags;
+                        Renderer::SpriteId enemySprite = Renderer::INVALID_SPRITE_ID;
+                        Math::Color enemyTint{1.0f, 1.0f, 1.0f, 1.0f};
+
+                        switch (enemyType) {
+                            case 0:
+                                enemySprite = m_enemyGreenSprite;
+                                enemyTint = {1.0f, 1.0f, 1.0f, 1.0f};
+                                break;
+                            case 1:
+                                enemySprite = m_enemyRedSprite;
+                                enemyTint = {1.0f, 1.0f, 1.0f, 1.0f};
+                                break;
+                            case 2:
+                                enemySprite = m_enemyBlueSprite;
+                                enemyTint = {1.0f, 1.0f, 1.0f, 1.0f};
+                                break;
+                            case 3:
+                                enemySprite = m_enemyGreenSprite;
+                                enemyTint = {1.0f, 1.0f, 1.0f, 1.0f};
+                                break;
+                            case 4:
+                                enemySprite = m_enemyGreenSprite;
+                                enemyTint = {1.0f, 1.0f, 1.0f, 1.0f};
+                                break;
+                            default:
+                                enemySprite = m_enemyGreenSprite;
+                                break;
+                        }
+
+                        if (enemySprite == Renderer::INVALID_SPRITE_ID) {
+                            enemySprite = m_enemyGreenSprite;
+                        }
+
+                        auto newEntity = m_registry.CreateEntity();
+                        m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                        m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+                        m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
+
+                        auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(enemySprite, 1));
+                        drawable.scale = {0.5f, 0.5f};
+                        drawable.tint = enemyTint;
+
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{50.0f, 50.0f});
+
+                        m_networkEntityMap[entityState.entityId] = newEntity;
+                        std::cout << "[GameState] Created ENEMY entity " << entityState.entityId << " type " << static_cast<int>(enemyType) << std::endl;
                     } else if (type == network::EntityType::BULLET) {
                         auto newEntity = m_registry.CreateEntity();
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
@@ -686,7 +761,29 @@ namespace RType {
 
                         if (m_bulletSprite != Renderer::INVALID_SPRITE_ID) {
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_bulletSprite, 12));
-                            d.scale = {0.1f, 0.1f};
+
+                            if (entityState.flags >= 10) {
+                                uint8_t enemyType = entityState.flags - 10;
+                                d.scale = {-0.1f, 0.1f};
+
+                                switch (enemyType) {
+                                    case 0:
+                                        d.tint = {0.2f, 1.0f, 0.2f, 1.0f};
+                                        break;
+                                    case 1:
+                                        d.tint = {1.0f, 0.2f, 0.2f, 1.0f};
+                                        break;
+                                    case 2:
+                                        d.tint = {0.2f, 0.3f, 1.0f, 1.0f};
+                                        break;
+                                    default:
+                                        d.tint = {1.0f, 1.0f, 1.0f, 1.0f};
+                                        break;
+                                }
+                            } else {
+                                d.scale = {0.1f, 0.1f};
+                                d.tint = {0.2f, 0.8f, 1.0f, 1.0f};
+                            }
                         }
                         m_networkEntityMap[entityState.entityId] = newEntity;
                     }
