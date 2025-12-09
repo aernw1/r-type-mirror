@@ -19,12 +19,15 @@ namespace RType {
     namespace ECS {
 
         LevelData LevelLoader::LoadFromFile(const std::string& path) {
-            std::ifstream file(path);
+            // Try source directory first (when running from build/)
+            std::string sourcePath = "../" + path;
+            std::ifstream file(sourcePath);
+
             if (!file.is_open()) {
-                std::string altPath = "../" + path;
-                file.open(altPath);
+                // Fallback to current directory (when running from root or installed location)
+                file.open(path);
                 if (!file.is_open()) {
-                    throw std::runtime_error("Failed to open level file: " + path);
+                    throw std::runtime_error("Failed to open level file: " + path + " (tried: " + sourcePath + " and " + path + ")");
                 }
             }
 
@@ -165,9 +168,11 @@ namespace RType {
             }
 
             for (const auto& [key, path] : level.textures) {
-                Renderer::TextureId texId = renderer->LoadTexture(path);
+                // Try source directory first (when running from build/)
+                Renderer::TextureId texId = renderer->LoadTexture("../" + path);
                 if (texId == Renderer::INVALID_TEXTURE_ID) {
-                    texId = renderer->LoadTexture("../" + path);
+                    // Fallback to current directory
+                    texId = renderer->LoadTexture(path);
                 }
 
                 if (texId != Renderer::INVALID_TEXTURE_ID) {
@@ -180,9 +185,9 @@ namespace RType {
             }
 
             for (const auto& [key, fontDef] : level.fonts) {
-                Renderer::FontId fontId = renderer->LoadFont(fontDef.path, fontDef.size);
+                Renderer::FontId fontId = renderer->LoadFont("../" + fontDef.path, fontDef.size);
                 if (fontId == Renderer::INVALID_FONT_ID) {
-                    fontId = renderer->LoadFont("../" + fontDef.path, fontDef.size);
+                    fontId = renderer->LoadFont(fontDef.path, fontDef.size);
                 }
 
                 if (fontId != Renderer::INVALID_FONT_ID) {

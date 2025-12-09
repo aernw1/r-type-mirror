@@ -35,9 +35,8 @@ namespace RType {
                 Core::Logger::Warning("[GameState] No network client available");
             }
 
-            loadTextures();
-            createSystems();
             loadLevel(m_currentLevelPath);
+            createSystems();
             initializeFromLevel();
             initializePlayers();
             initializeUI();
@@ -63,50 +62,19 @@ namespace RType {
             m_obstacleEntities = m_levelEntities.obstacles;
         }
 
-        void InGameState::loadTextures() {
-            m_playerGreenTexture = m_renderer->LoadTexture("assets/spaceships/player_green.png");
-            if (m_playerGreenTexture == Renderer::INVALID_TEXTURE_ID) {
-                m_playerGreenTexture = m_renderer->LoadTexture("../assets/spaceships/player_green.png");
-            }
-            if (m_playerGreenTexture != Renderer::INVALID_TEXTURE_ID) {
-                m_playerGreenSprite = m_renderer->CreateSprite(m_playerGreenTexture, {});
-            }
-
-            m_playerBlueTexture = m_renderer->LoadTexture("assets/spaceships/player_blue.png");
-            if (m_playerBlueTexture == Renderer::INVALID_TEXTURE_ID) {
-                m_playerBlueTexture = m_renderer->LoadTexture("../assets/spaceships/player_blue.png");
-            }
-            if (m_playerBlueTexture != Renderer::INVALID_TEXTURE_ID) {
-                m_playerBlueSprite = m_renderer->CreateSprite(m_playerBlueTexture, {});
-            }
-
-            m_playerRedTexture = m_renderer->LoadTexture("assets/spaceships/player_red.png");
-            if (m_playerRedTexture == Renderer::INVALID_TEXTURE_ID) {
-                m_playerRedTexture = m_renderer->LoadTexture("../assets/spaceships/player_red.png");
-            }
-            if (m_playerRedTexture != Renderer::INVALID_TEXTURE_ID) {
-                m_playerRedSprite = m_renderer->CreateSprite(m_playerRedTexture, {});
-            }
-
-            m_bulletTexture = m_renderer->LoadTexture("assets/projectiles/bullet.png");
-            if (m_bulletTexture == Renderer::INVALID_TEXTURE_ID) {
-                m_bulletTexture = m_renderer->LoadTexture("../assets/projectiles/bullet.png");
-            }
-
-            if (m_bulletTexture != Renderer::INVALID_TEXTURE_ID) {
-                m_bulletSprite = m_renderer->CreateSprite(m_bulletTexture, {});
-            }
-
-            if (m_bulletSprite == Renderer::INVALID_SPRITE_ID) {
-                Core::Logger::Error("[GameState] Bullet sprite creation failed");
-            }
-        }
-
         void InGameState::createSystems() {
+            auto bulletSpriteIt = m_levelAssets.sprites.find("bullet");
+            Renderer::SpriteId bulletSprite = (bulletSpriteIt != m_levelAssets.sprites.end())
+                ? bulletSpriteIt->second
+                : Renderer::INVALID_SPRITE_ID;
+
+            if (bulletSprite == Renderer::INVALID_SPRITE_ID) {
+                Core::Logger::Error("[GameState] Bullet sprite not found in level assets");
+            }
             m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
             m_renderingSystem = std::make_unique<RType::ECS::RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<RType::ECS::TextRenderingSystem>(m_renderer.get());
-            m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(m_bulletSprite);
+            m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(bulletSprite);
             m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
             m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
             m_collisionSystem = std::make_unique<RType::ECS::CollisionSystem>();
@@ -122,16 +90,17 @@ namespace RType {
             m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{0.2f, 50.0f, 25.0f});
             m_registry.AddComponent<ShootCommand>(m_localPlayerEntity, ShootCommand{});
             m_registry.AddComponent<Health>(m_localPlayerEntity, Health{100});
-            Renderer::SpriteId sprite = m_playerBlueSprite;
-            if (sprite != Renderer::INVALID_SPRITE_ID) {
-                auto& d = m_registry.AddComponent<Drawable>(m_localPlayerEntity, Drawable(sprite, 10));
+
+            auto spriteIt = m_levelAssets.sprites.find("player_blue");
+            auto textureIt = m_levelAssets.textures.find("player_blue");
+
+            if (spriteIt != m_levelAssets.sprites.end() && textureIt != m_levelAssets.textures.end()) {
+                auto& d = m_registry.AddComponent<Drawable>(m_localPlayerEntity, Drawable(spriteIt->second, 10));
                 d.scale = {0.5f, 0.5f};
 
-                if (m_playerBlueTexture != Renderer::INVALID_TEXTURE_ID) {
-                    auto size = m_renderer->GetTextureSize(m_playerBlueTexture);
-                    if (size.x > 0) {
-                        m_registry.AddComponent<BoxCollider>(m_localPlayerEntity, BoxCollider{size.x * 0.5f, size.y * 0.5f});
-                    }
+                auto size = m_renderer->GetTextureSize(textureIt->second);
+                if (size.x > 0) {
+                    m_registry.AddComponent<BoxCollider>(m_localPlayerEntity, BoxCollider{size.x * 0.5f, size.y * 0.5f});
                 }
             }
         }
@@ -510,12 +479,10 @@ namespace RType {
                         Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
                         size_t playerIndex = m_networkEntityMap.size() % 3;
 
-                        if (playerIndex == 0 && m_playerGreenSprite != Renderer::INVALID_SPRITE_ID) {
-                            playerSprite = m_playerGreenSprite;
-                        } else if (playerIndex == 1 && m_playerBlueSprite != Renderer::INVALID_SPRITE_ID) {
-                            playerSprite = m_playerBlueSprite;
-                        } else if (playerIndex == 2 && m_playerRedSprite != Renderer::INVALID_SPRITE_ID) {
-                            playerSprite = m_playerRedSprite;
+                        const char* spriteKeys[] = {"player_green", "player_blue", "player_red"};
+                        auto spriteIt = m_levelAssets.sprites.find(spriteKeys[playerIndex]);
+                        if (spriteIt != m_levelAssets.sprites.end()) {
+                            playerSprite = spriteIt->second;
                         }
 
                         if (playerSprite == Renderer::INVALID_SPRITE_ID) {
@@ -549,8 +516,9 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
-                        if (m_bulletSprite != Renderer::INVALID_SPRITE_ID) {
-                            auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_bulletSprite, 12));
+                        auto bulletSpriteIt = m_levelAssets.sprites.find("bullet");
+                        if (bulletSpriteIt != m_levelAssets.sprites.end()) {
+                            auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSpriteIt->second, 12));
                             d.scale = {0.1f, 0.1f};
                         }
                         m_networkEntityMap[entityState.entityId] = newEntity;

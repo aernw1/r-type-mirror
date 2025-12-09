@@ -53,8 +53,6 @@ namespace RType {
             void Update(float dt) override;
             void Draw() override;
         private:
-            void loadTextures();
-
             // Level loading
             void loadLevel(const std::string& levelPath);
             void initializeFromLevel();
@@ -93,11 +91,6 @@ namespace RType {
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
 
-            // Textures
-            Renderer::FontId m_fontId = Renderer::INVALID_FONT_ID;
-            Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::SpriteId m_bulletSprite = Renderer::INVALID_SPRITE_ID;
-
             // Background and obstacles entities
             std::vector<RType::ECS::Entity> m_backgroundEntities;
             std::vector<RType::ECS::Entity> m_obstacleEntities;
@@ -115,14 +108,6 @@ namespace RType {
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
             RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player for prediction
-
-            // Individual player ship sprites
-            Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_playerBlueTexture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_playerRedTexture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::SpriteId m_playerGreenSprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_playerBlueSprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_playerRedSprite = Renderer::INVALID_SPRITE_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
