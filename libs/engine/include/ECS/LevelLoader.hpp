@@ -93,23 +93,19 @@ namespace RType {
 
             static LoadedAssets LoadAssets(
                 const LevelData& level,
-                Renderer::IRenderer* renderer
-            );
+                Renderer::IRenderer* renderer);
 
             static CreatedEntities CreateEntities(
                 Registry& registry,
                 const LevelData& level,
                 const LoadedAssets& assets,
-                Renderer::IRenderer* renderer
-            );
+                Renderer::IRenderer* renderer);
 
             static CreatedEntities CreateServerEntities(
                 Registry& registry,
-                const LevelData& level
-            );
+                const LevelData& level);
 
             static const std::vector<PlayerSpawnDef>& GetPlayerSpawns(const LevelData& level);
-
         private:
             static EnemyType ParseEnemyType(const std::string& typeStr);
 
@@ -118,36 +114,31 @@ namespace RType {
                 const BackgroundDef& background,
                 const LoadedAssets& assets,
                 Renderer::IRenderer* renderer,
-                CreatedEntities& entities
-            );
+                CreatedEntities& entities);
 
             static void CreateObstacles(
                 Registry& registry,
                 const std::vector<ObstacleDef>& obstacles,
                 const LoadedAssets& assets,
                 Renderer::IRenderer* renderer,
-                CreatedEntities& entities
-            );
+                CreatedEntities& entities);
 
             static void CreateEnemies(
                 Registry& registry,
                 const std::vector<EnemyDef>& enemies,
                 const LoadedAssets& assets,
                 Renderer::IRenderer* renderer,
-                CreatedEntities& entities
-            );
+                CreatedEntities& entities);
 
             static void CreateServerObstacles(
                 Registry& registry,
                 const std::vector<ObstacleDef>& obstacles,
-                CreatedEntities& entities
-            );
+                CreatedEntities& entities);
 
             static void CreateServerEnemies(
                 Registry& registry,
                 const std::vector<EnemyDef>& enemies,
-                CreatedEntities& entities
-            );
+                CreatedEntities& entities);
         };
 
     }

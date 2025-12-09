@@ -29,7 +29,7 @@ namespace RType {
             }
 
             std::string content((std::istreambuf_iterator<char>(file)),
-                               std::istreambuf_iterator<char>());
+                                std::istreambuf_iterator<char>());
             return LoadFromString(content);
         }
 
@@ -141,10 +141,10 @@ namespace RType {
                 }
 
                 Core::Logger::Info("Loaded level '{}' with {} obstacles, {} enemies, {} player spawns",
-                    level.name.empty() ? "unnamed" : level.name,
-                    level.obstacles.size(),
-                    level.enemies.size(),
-                    level.playerSpawns.size());
+                                   level.name.empty() ? "unnamed" : level.name,
+                                   level.obstacles.size(),
+                                   level.enemies.size(),
+                                   level.playerSpawns.size());
 
             } catch (const json::parse_error& e) {
                 throw std::runtime_error("JSON parse error: " + std::string(e.what()));
@@ -157,8 +157,7 @@ namespace RType {
 
         LoadedAssets LevelLoader::LoadAssets(
             const LevelData& level,
-            Renderer::IRenderer* renderer
-        ) {
+            Renderer::IRenderer* renderer) {
             LoadedAssets assets;
 
             if (!renderer) {
@@ -201,8 +200,7 @@ namespace RType {
             Registry& registry,
             const LevelData& level,
             const LoadedAssets& assets,
-            Renderer::IRenderer* renderer
-        ) {
+            Renderer::IRenderer* renderer) {
             CreatedEntities entities;
 
             CreateBackgrounds(registry, level.background, assets, renderer, entities);
@@ -210,25 +208,24 @@ namespace RType {
             CreateEnemies(registry, level.enemies, assets, renderer, entities);
 
             Core::Logger::Info("Created {} background entities, {} obstacle entities, {} enemy entities",
-                entities.backgrounds.size(),
-                entities.obstacles.size(),
-                entities.enemies.size());
+                               entities.backgrounds.size(),
+                               entities.obstacles.size(),
+                               entities.enemies.size());
 
             return entities;
         }
 
         CreatedEntities LevelLoader::CreateServerEntities(
             Registry& registry,
-            const LevelData& level
-        ) {
+            const LevelData& level) {
             CreatedEntities entities;
 
             CreateServerObstacles(registry, level.obstacles, entities);
             CreateServerEnemies(registry, level.enemies, entities);
 
             Core::Logger::Info("Created server entities: {} obstacles, {} enemies",
-                entities.obstacles.size(),
-                entities.enemies.size());
+                               entities.obstacles.size(),
+                               entities.enemies.size());
 
             return entities;
         }
@@ -238,11 +235,16 @@ namespace RType {
         }
 
         EnemyType LevelLoader::ParseEnemyType(const std::string& typeStr) {
-            if (typeStr == "BASIC") return EnemyType::BASIC;
-            if (typeStr == "FAST") return EnemyType::FAST;
-            if (typeStr == "TANK") return EnemyType::TANK;
-            if (typeStr == "BOSS") return EnemyType::BOSS;
-            if (typeStr == "FORMATION") return EnemyType::FORMATION;
+            if (typeStr == "BASIC")
+                return EnemyType::BASIC;
+            if (typeStr == "FAST")
+                return EnemyType::FAST;
+            if (typeStr == "TANK")
+                return EnemyType::TANK;
+            if (typeStr == "BOSS")
+                return EnemyType::BOSS;
+            if (typeStr == "FORMATION")
+                return EnemyType::FORMATION;
 
             Core::Logger::Warning("Unknown enemy type '{}', defaulting to BASIC", typeStr);
             return EnemyType::BASIC;
@@ -253,8 +255,7 @@ namespace RType {
             const BackgroundDef& background,
             const LoadedAssets& assets,
             Renderer::IRenderer* renderer,
-            CreatedEntities& entities
-        ) {
+            CreatedEntities& entities) {
             if (background.texture.empty()) {
                 return;
             }
@@ -293,8 +294,7 @@ namespace RType {
             const std::vector<ObstacleDef>& obstacles,
             const LoadedAssets& assets,
             Renderer::IRenderer* renderer,
-            CreatedEntities& entities
-        ) {
+            CreatedEntities& entities) {
             for (const auto& obs : obstacles) {
                 auto spriteIt = assets.sprites.find(obs.texture);
                 auto texIt = assets.textures.find(obs.texture);
@@ -331,8 +331,7 @@ namespace RType {
             const std::vector<EnemyDef>& enemies,
             const LoadedAssets& assets,
             Renderer::IRenderer* renderer,
-            CreatedEntities& entities
-        ) {
+            CreatedEntities& entities) {
             for (const auto& en : enemies) {
                 EnemyType type = ParseEnemyType(en.type);
                 Entity enemy = EnemyFactory::CreateEnemy(registry, type, en.x, en.y, renderer);
@@ -343,8 +342,7 @@ namespace RType {
         void LevelLoader::CreateServerObstacles(
             Registry& registry,
             const std::vector<ObstacleDef>& obstacles,
-            CreatedEntities& entities
-        ) {
+            CreatedEntities& entities) {
             for (const auto& obs : obstacles) {
                 Entity obsEntity = registry.CreateEntity();
 
@@ -367,8 +365,7 @@ namespace RType {
         void LevelLoader::CreateServerEnemies(
             Registry& registry,
             const std::vector<EnemyDef>& enemies,
-            CreatedEntities& entities
-        ) {
+            CreatedEntities& entities) {
             for (const auto& en : enemies) {
                 EnemyType type = ParseEnemyType(en.type);
                 Entity enemy = EnemyFactory::CreateEnemy(registry, type, en.x, en.y, nullptr);

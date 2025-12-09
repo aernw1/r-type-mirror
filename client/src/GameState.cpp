@@ -61,7 +61,7 @@ namespace RType {
                 m_levelData = ECS::LevelLoader::LoadFromFile(levelPath);
                 m_levelAssets = ECS::LevelLoader::LoadAssets(m_levelData, m_renderer.get());
                 Core::Logger::Info("[GameState] Loaded level '{}' with {} textures",
-                    m_levelData.name, m_levelAssets.textures.size());
+                                   m_levelData.name, m_levelAssets.textures.size());
             } catch (const std::exception& e) {
                 Core::Logger::Error("[GameState] Failed to load level: {}", e.what());
                 m_useLevelLoader = false;
@@ -73,8 +73,7 @@ namespace RType {
                 m_registry,
                 m_levelData,
                 m_levelAssets,
-                m_renderer.get()
-            );
+                m_renderer.get());
 
             m_backgroundEntities = m_levelEntities.backgrounds;
             m_obstacleEntities = m_levelEntities.obstacles;
