@@ -439,7 +439,7 @@ namespace network {
 
             if (m_enemyShootCooldowns[enemy->id] <= 0.0f && HasPlayerInSight(*enemy)) {
                 float fireRate = GetEnemyFireRate(type);
-                SpawnEnemyBullet(enemy->id, enemy->x - 30.0f, enemy->y);
+                SpawnEnemyBullet(enemy->id, enemy->x - 30.0f, enemy->y + 45.0f);
                 m_enemyShootCooldowns[enemy->id] = fireRate;
             }
 
