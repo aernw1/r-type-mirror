@@ -6,7 +6,6 @@
 */
 
 #include "../include/GameState.hpp"
-#include "../include/MapResources.hpp"
 
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
@@ -38,19 +37,8 @@ namespace RType {
 
             loadTextures();
             createSystems();
-
-            if (m_useLevelLoader) {
-                loadLevel(m_currentLevelPath);
-            }
-
-            // Re-check m_useLevelLoader since loadLevel() may set it to false on failure
-            if (m_useLevelLoader) {
-                initializeFromLevel();
-            } else {
-                initializeBackground();
-                initializeObstacles();
-            }
-
+            loadLevel(m_currentLevelPath);
+            initializeFromLevel();
             initializePlayers();
             initializeUI();
 
@@ -58,15 +46,10 @@ namespace RType {
         }
 
         void InGameState::loadLevel(const std::string& levelPath) {
-            try {
-                m_levelData = ECS::LevelLoader::LoadFromFile(levelPath);
-                m_levelAssets = ECS::LevelLoader::LoadAssets(m_levelData, m_renderer.get());
-                Core::Logger::Info("[GameState] Loaded level '{}' with {} textures",
-                                   m_levelData.name, m_levelAssets.textures.size());
-            } catch (const std::exception& e) {
-                Core::Logger::Error("[GameState] Failed to load level: {}", e.what());
-                m_useLevelLoader = false;
-            }
+            m_levelData = ECS::LevelLoader::LoadFromFile(levelPath);
+            m_levelAssets = ECS::LevelLoader::LoadAssets(m_levelData, m_renderer.get());
+            Core::Logger::Info("[GameState] Loaded level '{}' with {} textures",
+                               m_levelData.name, m_levelAssets.textures.size());
         }
 
         void InGameState::initializeFromLevel() {
@@ -128,76 +111,6 @@ namespace RType {
             m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
             m_collisionSystem = std::make_unique<RType::ECS::CollisionSystem>();
             m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
-        }
-
-        void InGameState::initializeBackground() {
-            m_bgTexture = m_renderer->LoadTexture(MapResources::LEVEL_1_BACKGROUND);
-            if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
-                m_bgTexture = m_renderer->LoadTexture("../assets/backgrounds/Cave_one.png");
-            }
-
-            if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
-                std::cerr << "[GameState] Error: Background texture not loaded!" << std::endl;
-                return;
-            }
-
-            m_bgSprite = m_renderer->CreateSprite(m_bgTexture, {});
-            auto bgSize = m_renderer->GetTextureSize(m_bgTexture);
-
-            float scaleX = 1280.0f / bgSize.x;
-            float scaleY = 720.0f / bgSize.y;
-
-            for (int i = 0; i < 3; i++) {
-                m_bgGameEntity = m_registry.CreateEntity();
-
-                m_registry.AddComponent<Position>(m_bgGameEntity, Position{i * 1280.0f, 0.0f});
-                auto& bgDrawable = m_registry.AddComponent<Drawable>(m_bgGameEntity, Drawable(m_bgSprite, -100));
-                bgDrawable.scale = {scaleX, scaleY};
-                m_registry.AddComponent<Scrollable>(m_bgGameEntity, Scrollable(-150.0f));
-
-                m_backgroundEntities.push_back(m_bgGameEntity);
-            }
-        }
-
-        void InGameState::initializeObstacles() {
-            std::cout << "[GameState] Loading level with manually placed obstacles..." << std::endl;
-            std::cout << "[GameState] Map size: " << MapResources::LEVEL_1_MAP_WIDTH << "x" << MapResources::LEVEL_1_MAP_HEIGHT << std::endl;
-
-            for (const auto& obstacleDef : MapResources::LEVEL_1_OBSTACLES) {
-                auto texture = m_renderer->LoadTexture(obstacleDef.texturePath);
-                if (texture == Renderer::INVALID_TEXTURE_ID) {
-                    std::string altPath = std::string("../") + obstacleDef.texturePath;
-                    texture = m_renderer->LoadTexture(altPath);
-                }
-
-                if (texture == Renderer::INVALID_TEXTURE_ID) {
-                    std::cerr << "[GameState] Failed to load texture: " << obstacleDef.texturePath << std::endl;
-                    continue;
-                }
-
-                auto sprite = m_renderer->CreateSprite(texture, {});
-                if (sprite == Renderer::INVALID_SPRITE_ID) {
-                    std::cerr << "[GameState] Failed to create sprite for: " << obstacleDef.texturePath << std::endl;
-                    continue;
-                }
-
-                auto entity = m_registry.CreateEntity();
-
-                m_registry.AddComponent<Position>(entity, Position{obstacleDef.x, obstacleDef.y});
-
-                auto& drawable = m_registry.AddComponent<Drawable>(entity, Drawable(sprite, 1));
-                drawable.scale = {obstacleDef.scaleX, obstacleDef.scaleY};
-
-                m_registry.AddComponent<BoxCollider>(entity, BoxCollider{obstacleDef.colliderWidth, obstacleDef.colliderHeight});
-
-                m_registry.AddComponent<Scrollable>(entity, Scrollable(-150.0f));
-
-                m_registry.AddComponent<Obstacle>(entity, Obstacle(true));
-
-                m_obstacleEntities.push_back(entity);
-            }
-
-            std::cout << "[GameState] Level loaded with " << m_obstacleEntities.size() << " manually placed obstacles" << std::endl;
         }
 
         void InGameState::initializePlayers() {
