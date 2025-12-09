@@ -6,6 +6,7 @@
 */
 
 #include "../include/GameState.hpp"
+#include "../include/MapResources.hpp"
 
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
@@ -57,8 +58,6 @@ namespace RType {
         }
 
         void InGameState::loadTextures() {
-            loadMapTextures();
-
             m_playerGreenTexture = m_renderer->LoadTexture("assets/spaceships/player_green.png");
             if (m_playerGreenTexture == Renderer::INVALID_TEXTURE_ID) {
                 m_playerGreenTexture = m_renderer->LoadTexture("../assets/spaceships/player_green.png");
@@ -103,36 +102,6 @@ namespace RType {
             }
         }
 
-        void InGameState::loadMapTextures() {
-            m_obstacle1Texture = m_renderer->LoadTexture("assets/backgrounds/obstacles/obstacle_first.png");
-            if (m_obstacle1Texture == Renderer::INVALID_TEXTURE_ID) {
-                m_obstacle1Texture = m_renderer->LoadTexture("../assets/backgrounds/obstacles/obstacle_first.png");
-            }
-
-            m_obstacle2Texture = m_renderer->LoadTexture("assets/backgrounds/obstacles/obstacle_two.png");
-            if (m_obstacle2Texture == Renderer::INVALID_TEXTURE_ID) {
-                m_obstacle2Texture = m_renderer->LoadTexture("../assets/backgrounds/obstacles/obstacle_two.png");
-            }
-
-            m_obstacle3Texture = m_renderer->LoadTexture("assets/backgrounds/obstacles/obstacle_three.png");
-            if (m_obstacle3Texture == Renderer::INVALID_TEXTURE_ID) {
-                m_obstacle3Texture = m_renderer->LoadTexture("../assets/backgrounds/obstacles/obstacle_three.png");
-            }
-
-            m_obstacle4Texture = m_renderer->LoadTexture("assets/backgrounds/obstacles/obstacle_four.png");
-            if (m_obstacle4Texture == Renderer::INVALID_TEXTURE_ID) {
-                m_obstacle4Texture = m_renderer->LoadTexture("../assets/backgrounds/obstacles/obstacle_four.png");
-            }
-            m_obstacle5Texture = m_renderer->LoadTexture("assets/backgrounds/obstacles/obstacle_five.png");
-            if (m_obstacle5Texture == Renderer::INVALID_TEXTURE_ID) {
-                m_obstacle5Texture = m_renderer->LoadTexture("../assets/backgrounds/obstacles/obstacle_five.png");
-            }
-            m_bgTexture = m_renderer->LoadTexture("assets/backgrounds/Cave_one.png");
-            if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
-                m_bgTexture = m_renderer->LoadTexture("../assets/backgrounds/Cave_one.png");
-            }
-        }
-
         void InGameState::createSystems() {
             m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
             m_renderingSystem = std::make_unique<RType::ECS::RenderingSystem>(m_renderer.get());
@@ -145,6 +114,11 @@ namespace RType {
         }
 
         void InGameState::initializeBackground() {
+            m_bgTexture = m_renderer->LoadTexture(MapResources::LEVEL_1_BACKGROUND);
+            if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_bgTexture = m_renderer->LoadTexture("../assets/backgrounds/Cave_one.png");
+            }
+
             if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
                 std::cerr << "[GameState] Error: Background texture not loaded!" << std::endl;
                 return;
@@ -169,71 +143,44 @@ namespace RType {
         }
 
         void InGameState::initializeObstacles() {
-            if (m_obstacle1Texture == Renderer::INVALID_TEXTURE_ID ||
-                m_obstacle2Texture == Renderer::INVALID_TEXTURE_ID ||
-                m_obstacle3Texture == Renderer::INVALID_TEXTURE_ID ||
-                m_obstacle4Texture == Renderer::INVALID_TEXTURE_ID ||
-                m_obstacle5Texture == Renderer::INVALID_TEXTURE_ID) {
-                std::cerr << "[GameState] Error: One or more obstacle textures not loaded!" << std::endl;
-                return;
+            std::cout << "[GameState] Loading level with manually placed obstacles..." << std::endl;
+            std::cout << "[GameState] Map size: " << MapResources::LEVEL_1_MAP_WIDTH << "x" << MapResources::LEVEL_1_MAP_HEIGHT << std::endl;
+
+            for (const auto& obstacleDef : MapResources::LEVEL_1_OBSTACLES) {
+                auto texture = m_renderer->LoadTexture(obstacleDef.texturePath);
+                if (texture == Renderer::INVALID_TEXTURE_ID) {
+                    std::string altPath = std::string("../") + obstacleDef.texturePath;
+                    texture = m_renderer->LoadTexture(altPath);
+                }
+
+                if (texture == Renderer::INVALID_TEXTURE_ID) {
+                    std::cerr << "[GameState] Failed to load texture: " << obstacleDef.texturePath << std::endl;
+                    continue;
+                }
+
+                auto sprite = m_renderer->CreateSprite(texture, {});
+                if (sprite == Renderer::INVALID_SPRITE_ID) {
+                    std::cerr << "[GameState] Failed to create sprite for: " << obstacleDef.texturePath << std::endl;
+                    continue;
+                }
+
+                auto entity = m_registry.CreateEntity();
+
+                m_registry.AddComponent<Position>(entity, Position{obstacleDef.x, obstacleDef.y});
+
+                auto& drawable = m_registry.AddComponent<Drawable>(entity, Drawable(sprite, 1));
+                drawable.scale = {obstacleDef.scaleX, obstacleDef.scaleY};
+
+                m_registry.AddComponent<BoxCollider>(entity, BoxCollider{obstacleDef.colliderWidth, obstacleDef.colliderHeight});
+
+                m_registry.AddComponent<Scrollable>(entity, Scrollable(-150.0f));
+
+                m_registry.AddComponent<Obstacle>(entity, Obstacle(true));
+
+                m_obstacleEntities.push_back(entity);
             }
 
-            m_obstacle1Sprite = m_renderer->CreateSprite(m_obstacle1Texture, {});
-            m_obstacle2Sprite = m_renderer->CreateSprite(m_obstacle2Texture, {});
-            m_obstacle3Sprite = m_renderer->CreateSprite(m_obstacle3Texture, {});
-            m_obstacle4Sprite = m_renderer->CreateSprite(m_obstacle4Texture, {});
-            m_obstacle5Sprite = m_renderer->CreateSprite(m_obstacle5Texture, {});
-
-            float width = 1200.0f;
-            float height = 720.0f;
-
-            ObstacleData obstacles[5]{
-                {m_obstacle1Sprite, 1500.0f, 0.0f},
-                {m_obstacle2Sprite, 2700.0f, 0.0f},
-                {m_obstacle3Sprite, 3900.0f, 0.0f},
-                {m_obstacle4Sprite, 5100.0f, 0.0f},
-                {m_obstacle5Sprite, 6300.0f, 0.0f}};
-
-            ObstacleTextureData obstacleTextures[5] = {
-                {m_obstacle1Texture},
-                {m_obstacle2Texture},
-                {m_obstacle3Texture},
-                {m_obstacle4Texture},
-                {m_obstacle5Texture}};
-
-            ColliderBoxData obstacleColliders[5] = {
-                // Obstacle 1
-                {0.0f, 80.0f, 180.0f, 280.0f, 220.0f, 120.0f, 210.0f, 240.0f, 480.0f, 60.0f, 240.0f, 300.0f},
-                // Obstacle 2
-                {0.0f, 60.0f, 200.0f, 260.0f, 260.0f, 30.0f, 190.0f, 290.0f, 500.0f, 90.0f, 180.0f, 230.0f},
-                // Obstacle 3
-                {0.0f, 45.0f, 220.0f, 310.0f, 280.0f, 0.0f, 250.0f, 340.0f, 570.0f, 75.0f, 240.0f, 290.0f},
-                // Obstacle 4
-                {0.0f, 110.0f, 210.0f, 270.0f, 260.0f, 65.0f, 240.0f, 315.0f, 550.0f, 125.0f, 210.0f, 255.0f},
-                // Obstacle 5
-                {0.0f, 95.0f, 220.0f, 260.0f, 270.0f, 50.0f, 230.0f, 305.0f, 540.0f, 110.0f, 230.0f, 245.0f}};
-
-            for (int i = 0; i < 5; i++) {
-                m_obstacleGameEntity = m_registry.CreateEntity();
-                m_registry.AddComponent<Position>(m_obstacleGameEntity, Position{obstacles[i].x, obstacles[i].y});
-
-                auto obsSize = m_renderer->GetTextureSize(obstacleTextures[i].texture);
-                auto& obstacleDrawable = m_registry.AddComponent<Drawable>(m_obstacleGameEntity, Drawable(obstacles[i].sprite, 1));
-                obstacleDrawable.scale = {width / obsSize.x, height / obsSize.y};
-
-                auto& collider = m_registry.AddComponent<MultiBoxCollider>(m_obstacleGameEntity);
-                collider.AddBox(obstacleColliders[i].x1, obstacleColliders[i].y1,
-                                obstacleColliders[i].w1, obstacleColliders[i].h1);
-                collider.AddBox(obstacleColliders[i].x2, obstacleColliders[i].y2,
-                                obstacleColliders[i].w2, obstacleColliders[i].h2);
-                collider.AddBox(obstacleColliders[i].x3, obstacleColliders[i].y3,
-                                obstacleColliders[i].w3, obstacleColliders[i].h3);
-
-                m_registry.AddComponent<Scrollable>(m_obstacleGameEntity, Scrollable(-150.0f));
-                m_registry.AddComponent<Obstacle>(m_obstacleGameEntity, Obstacle(true));
-
-                m_obstacleEntities.push_back(m_obstacleGameEntity);
-            }
+            std::cout << "[GameState] Level loaded with " << m_obstacleEntities.size() << " manually placed obstacles" << std::endl;
         }
 
         void InGameState::initializePlayers() {
@@ -762,12 +709,7 @@ namespace RType {
             m_scrollingSystem->Update(m_registry, dt);
             m_localScrollOffset += -150.0f * dt;
 
-            const float obstacleWidth = 1200.0f;
-            const float obstacleSpacing = 1200.0f;
-            const float firstObstacleX = 1500.0f;
-            const float lastObstacleX = 6300.0f;
-            const float totalObstacleDistance = lastObstacleX - firstObstacleX + obstacleSpacing;
-
+            // Background infinite loop
             for (auto& bg : m_backgroundEntities) {
                 if (!m_registry.HasComponent<Position>(bg))
                     continue;
@@ -777,14 +719,6 @@ namespace RType {
                 }
             }
 
-            for (auto& obstacle : m_obstacleEntities) {
-                if (!m_registry.HasComponent<Position>(obstacle))
-                    continue;
-                auto& pos = m_registry.GetComponent<Position>(obstacle);
-                if (pos.x <= -obstacleWidth) {
-                    pos.x += totalObstacleDistance;
-                }
-            }
             updateHUD();
         }
     }
