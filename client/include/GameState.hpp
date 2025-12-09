@@ -156,6 +156,14 @@ namespace RType {
             Renderer::SpriteId m_playerBlueSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_playerRedSprite = Renderer::INVALID_SPRITE_ID;
 
+            // Enemy ship sprites
+            Renderer::TextureId m_enemyGreenTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_enemyRedTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_enemyBlueTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_enemyGreenSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_enemyRedSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_enemyBlueSprite = Renderer::INVALID_SPRITE_ID;
+
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
             Renderer::FontId m_hudFontSmall = Renderer::INVALID_FONT_ID;
