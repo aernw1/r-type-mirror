@@ -25,7 +25,7 @@ namespace RType {
             };
 
             inline const std::vector<ObstacleDefinition> LEVEL_1_OBSTACLES = {
-                // Obstacle 1: violet_square                
+                // Obstacle 1: violet_square
                 {"assets/backgrounds/obstacles/violet_square.png", 500.0f, 100.0f, 64.0f, 64.0f, 1.5f, 1.5f},
 
                 // Obstacle 2: obstacle_yellow
