@@ -19,6 +19,14 @@
 
 namespace network {
 
+    enum class EnemyType : uint8_t {
+        BASIC = 0,
+        FAST = 1,
+        TANK = 2,
+        BOSS = 3,
+        FORMATION = 4
+    };
+
     struct ConnectedPlayer {
         PlayerInfo info;
         Endpoint endpoint;
@@ -64,12 +72,21 @@ namespace network {
         void UpdateGameLogic(float dt);
         void SpawnPlayer(uint64_t hash, float x, float y);
         void SpawnEnemy();
+        void SpawnEnemyBullet(uint32_t enemyId, float x, float y);
         void SpawnBullet(uint64_t ownerHash, float x, float y);
         void UpdateMovement(float dt);
         void UpdateBullets(float dt);
         void UpdateEnemies(float dt);
         void CheckCollisions();
         void CleanupDeadEntities();
+
+        EnemyType GetRandomEnemyType();
+        float GetEnemySpeed(EnemyType type);
+        uint8_t GetEnemyHealth(EnemyType type);
+        uint8_t GetEnemyDamage(EnemyType type);
+        float GetEnemyFireRate(EnemyType type);
+        void ApplyEnemyMovementPattern(GameEntity& enemy, float dt);
+        bool HasPlayerInSight(const GameEntity& enemy);
 
         uint32_t GetNextEntityId() { return m_nextEntityId++; }
         GameEntity* FindEntityById(uint32_t id);
@@ -91,6 +108,8 @@ namespace network {
 
         std::chrono::steady_clock::time_point m_lastSpawnTime;
         float m_enemySpawnInterval = 2.0f;
+
+        std::unordered_map<uint32_t, float> m_enemyShootCooldowns;
 
         std::atomic<uint64_t> m_packetsSent{0};
         std::atomic<uint64_t> m_packetsReceived{0};
