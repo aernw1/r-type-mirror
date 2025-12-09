@@ -18,6 +18,7 @@
 #include "ECS/CollisionSystem.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/Component.hpp"
+#include "ECS/LevelLoader.hpp"
 #include "Renderer/IRenderer.hpp"
 
 #include <memory>
@@ -72,6 +73,10 @@ namespace RType {
             void loadMapTextures();
             void initializeBackground();
             void initializeObstacles();
+
+            // Level loading
+            void loadLevel(const std::string& levelPath);
+            void initializeFromLevel();
 
             // Player System (Keane)
             void initializePlayers();
@@ -177,6 +182,13 @@ namespace RType {
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;
             static constexpr float MAX_CHARGE_TIME = 2.0f; // 2 seconds for full charge
+
+            // Level loader data
+            RType::ECS::LevelData m_levelData;
+            RType::ECS::LoadedAssets m_levelAssets;
+            RType::ECS::CreatedEntities m_levelEntities;
+            std::string m_currentLevelPath = "assets/levels/level1.json";
+            bool m_useLevelLoader = true;
         };
 
     }

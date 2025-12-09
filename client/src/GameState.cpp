@@ -10,7 +10,7 @@
 
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
-#include <iostream>
+#include "Core/Logger.hpp"
 #include <iomanip>
 #include <sstream>
 #include <cmath>
@@ -28,33 +28,56 @@ namespace RType {
         }
 
         void InGameState::Init() {
-            std::cout << "[GameState] === Initialisation du jeu ===" << std::endl;
+            Core::Logger::Info("[GameState] Initializing game");
 
             if (m_context.networkClient) {
                 m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities) { this->OnServerStateUpdate(tick, entities); });
-                std::cout << "[GameState] Network callback registered" << std::endl;
             } else {
-                std::cout << "[GameState] WARNING: No network client available!" << std::endl;
+                Core::Logger::Warning("[GameState] No network client available");
             }
 
-            std::cout << "[GameState] Étape 1/5: Textures Loading" << std::endl;
             loadTextures();
-
-            std::cout << "[GameState] Étape 2/5: ECS Systems creation" << std::endl;
             createSystems();
 
-            std::cout << "[GameState] Étape 3/5: Background Creation" << std::endl;
-            initializeBackground();
+            if (m_useLevelLoader) {
+                loadLevel(m_currentLevelPath);
+            }
 
-            std::cout << "[GameState] Étape 4/5: Obstacles Creation" << std::endl;
-            initializeObstacles();
-
-            std::cout << "[GameState] Étape 5/5: Player Init and UI" << std::endl;
+            // Re-check m_useLevelLoader since loadLevel() may set it to false on failure
+            if (m_useLevelLoader) {
+                initializeFromLevel();
+            } else {
+                initializeBackground();
+                initializeObstacles();
+            }
 
             initializePlayers();
             initializeUI();
 
-            std::cout << "[GameState] === Initialisation terminée! ===" << std::endl;
+            Core::Logger::Info("[GameState] Initialization complete");
+        }
+
+        void InGameState::loadLevel(const std::string& levelPath) {
+            try {
+                m_levelData = ECS::LevelLoader::LoadFromFile(levelPath);
+                m_levelAssets = ECS::LevelLoader::LoadAssets(m_levelData, m_renderer.get());
+                Core::Logger::Info("[GameState] Loaded level '{}' with {} textures",
+                                   m_levelData.name, m_levelAssets.textures.size());
+            } catch (const std::exception& e) {
+                Core::Logger::Error("[GameState] Failed to load level: {}", e.what());
+                m_useLevelLoader = false;
+            }
+        }
+
+        void InGameState::initializeFromLevel() {
+            m_levelEntities = ECS::LevelLoader::CreateEntities(
+                m_registry,
+                m_levelData,
+                m_levelAssets,
+                m_renderer.get());
+
+            m_backgroundEntities = m_levelEntities.backgrounds;
+            m_obstacleEntities = m_levelEntities.obstacles;
         }
 
         void InGameState::loadTextures() {
@@ -64,7 +87,6 @@ namespace RType {
             }
             if (m_playerGreenTexture != Renderer::INVALID_TEXTURE_ID) {
                 m_playerGreenSprite = m_renderer->CreateSprite(m_playerGreenTexture, {});
-                std::cout << "[GameState] Green player sprite loaded" << std::endl;
             }
 
             m_playerBlueTexture = m_renderer->LoadTexture("assets/spaceships/player_blue.png");
@@ -73,7 +95,6 @@ namespace RType {
             }
             if (m_playerBlueTexture != Renderer::INVALID_TEXTURE_ID) {
                 m_playerBlueSprite = m_renderer->CreateSprite(m_playerBlueTexture, {});
-                std::cout << "[GameState] Blue player sprite loaded" << std::endl;
             }
 
             m_playerRedTexture = m_renderer->LoadTexture("assets/spaceships/player_red.png");
@@ -82,7 +103,6 @@ namespace RType {
             }
             if (m_playerRedTexture != Renderer::INVALID_TEXTURE_ID) {
                 m_playerRedSprite = m_renderer->CreateSprite(m_playerRedTexture, {});
-                std::cout << "[GameState] Red player sprite loaded" << std::endl;
             }
 
             m_bulletTexture = m_renderer->LoadTexture("assets/projectiles/bullet.png");
@@ -94,11 +114,8 @@ namespace RType {
                 m_bulletSprite = m_renderer->CreateSprite(m_bulletTexture, {});
             }
 
-            std::cout << "[DEBUG] m_bulletTexture = " << m_bulletTexture
-                      << ", m_bulletSprite = " << m_bulletSprite << std::endl;
-
             if (m_bulletSprite == Renderer::INVALID_SPRITE_ID) {
-                std::cerr << "[GameState] CRITICAL ERROR: Bullet sprite creation failed!" << std::endl;
+                Core::Logger::Error("[GameState] Bullet sprite creation failed");
             }
         }
 
@@ -396,18 +413,6 @@ namespace RType {
             m_renderingSystem->Update(m_registry, 0.0f);
             m_textSystem->Update(m_registry, 0.0f);
 
-            auto colliders = m_registry.GetEntitiesWithComponent<BoxCollider>();
-            for (auto entity : colliders) {
-                if (m_registry.HasComponent<Position>(entity)) {
-                    auto& pos = m_registry.GetComponent<Position>(entity);
-                    auto& box = m_registry.GetComponent<BoxCollider>(entity);
-
-                    Renderer::Rectangle rect{{pos.x, pos.y}, {box.width, box.height}};
-                    Renderer::Color color{1.0f, 0.0f, 0.0f, 0.3f};
-
-                    m_renderer->DrawRectangle(rect, color);
-                }
-            }
             renderChargeBar();
             renderHealthBars();
         }
