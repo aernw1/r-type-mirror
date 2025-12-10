@@ -17,6 +17,10 @@
 #include "ECS/InputSystem.hpp"
 #include "ECS/CollisionSystem.hpp"
 #include "ECS/HealthSystem.hpp"
+#include "ECS/PowerUpSpawnSystem.hpp"
+#include "ECS/PowerUpCollisionSystem.hpp"
+#include "ECS/ForcePodSystem.hpp"
+#include "ECS/ShieldSystem.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "Renderer/IRenderer.hpp"
@@ -90,6 +94,10 @@ namespace RType {
             std::unique_ptr<RType::ECS::CollisionSystem> m_collisionSystem;
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
+            std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
+            std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
+            std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
+            std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
 
             // Background and obstacles entities
             std::vector<RType::ECS::Entity> m_backgroundEntities;

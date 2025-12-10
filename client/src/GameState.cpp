@@ -79,17 +79,57 @@ namespace RType {
             m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
             m_collisionSystem = std::make_unique<RType::ECS::CollisionSystem>();
             m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
+            m_powerUpSpawnSystem = std::make_unique<RType::ECS::PowerUpSpawnSystem>(
+                m_renderer.get(),
+                m_levelData.config.screenWidth,
+                m_levelData.config.screenHeight
+            );
+            m_powerUpSpawnSystem->SetSpawnInterval(m_levelData.config.powerUpSpawnInterval);
+            m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(
+                m_renderer.get()
+            );
+            m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
+            m_shieldSystem = std::make_unique<RType::ECS::ShieldSystem>();
         }
 
         void InGameState::initializePlayers() {
             std::cout << "[GameState] Initializing local player (ECS)..." << std::endl;
 
             m_localPlayerEntity = m_registry.CreateEntity();
-            m_registry.AddComponent<Position>(m_localPlayerEntity, Position{100.0f, 360.0f});
+
+            // Get player spawn position from level data
+            const auto& spawns = ECS::LevelLoader::GetPlayerSpawns(m_levelData);
+            uint8_t playerIndex = m_context.playerNumber - 1;
+
+            Position spawnPos{100.0f, 360.0f}; // Fallback default
+            if (!spawns.empty()) {
+                if (playerIndex < spawns.size()) {
+                    spawnPos = Position{spawns[playerIndex].x, spawns[playerIndex].y};
+                    Core::Logger::Info("[GameState] Player {} spawning at ({}, {}) from level data",
+                                       m_context.playerNumber, spawnPos.x, spawnPos.y);
+                } else {
+                    // Use first spawn as fallback
+                    spawnPos = Position{spawns[0].x, spawns[0].y};
+                    Core::Logger::Warning("[GameState] Player {} index out of range, using first spawn",
+                                          m_context.playerNumber);
+                }
+            } else {
+                Core::Logger::Warning("[GameState] No player spawns in level data, using default position");
+            }
+
+            const auto& playerConfig = m_levelData.config.playerDefaults;
+
+            m_registry.AddComponent<Position>(m_localPlayerEntity, std::move(spawnPos));
             m_registry.AddComponent<Velocity>(m_localPlayerEntity, Velocity{0.0f, 0.0f});
-            m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{0.2f, 50.0f, 25.0f});
+            m_registry.AddComponent<Player>(m_localPlayerEntity, Player{m_context.playerNumber, m_context.playerHash, true});
+            m_registry.AddComponent<Controllable>(m_localPlayerEntity, Controllable{playerConfig.movementSpeed});
+            m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{
+                playerConfig.fireRate,
+                playerConfig.bulletOffsetX,
+                playerConfig.bulletOffsetY
+            });
             m_registry.AddComponent<ShootCommand>(m_localPlayerEntity, ShootCommand{});
-            m_registry.AddComponent<Health>(m_localPlayerEntity, Health{100});
+            m_registry.AddComponent<Health>(m_localPlayerEntity, Health{playerConfig.maxHealth});
 
             auto spriteIt = m_levelAssets.sprites.find("player_blue");
             auto textureIt = m_levelAssets.textures.find("player_blue");
@@ -594,6 +634,23 @@ namespace RType {
 
             m_scrollingSystem->Update(m_registry, dt);
             m_localScrollOffset += -150.0f * dt;
+
+            // Powerup systems
+            m_powerUpSpawnSystem->Update(m_registry, dt);
+            m_forcePodSystem->Update(m_registry, dt);
+            m_shieldSystem->Update(m_registry, dt);
+
+            // Shooting system (disabled in networked games - server creates bullets)
+            if (!m_context.networkClient) {
+                m_shootingSystem->Update(m_registry, dt);
+            }
+            m_movementSystem->Update(m_registry, dt);
+            // Note: InputSystem disabled - HandleInput() handles local player input
+
+            // Collision systems
+            m_powerUpCollisionSystem->Update(m_registry, dt);
+            m_collisionSystem->Update(m_registry, dt);
+            m_healthSystem->Update(m_registry, dt);
 
             // Background infinite loop
             for (auto& bg : m_backgroundEntities) {
