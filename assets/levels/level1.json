@@ -7,7 +7,7 @@
             "player_blue": "assets/spaceships/player_blue.png",
             "player_green": "assets/spaceships/player_green.png",
             "player_red": "assets/spaceships/player_red.png",
-            "bullet": "assets/projectiles/bullet.png"
+            "bullet": "assets/powerups/laser.png"
         },
         "fonts": {
             "main": {
@@ -30,9 +30,9 @@
         {
             "texture": "obstacle1",
             "position": { "x": 800.0, "y": 400.0 },
-            "scaleWidth": 300.0,
-            "scaleHeight": 300.0,
-            "scrollSpeed": 0.0,
+            "scaleWidth": 30.0,
+            "scaleHeight": 30.0,
+            "scrollSpeed": -150.0,
             "layer": 1,
             "colliders": [
                 { "x": 0.0, "y": 80.0, "width": 180.0, "height": 280.0 }
