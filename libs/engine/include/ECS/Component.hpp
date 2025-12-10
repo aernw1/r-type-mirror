@@ -207,6 +207,72 @@ namespace RType {
                 boxes.emplace_back(offsetX, offsetY, width, height);
             }
         };
+
+        // Powerup system components
+        enum class PowerUpType : uint8_t {
+            FIRE_RATE_BOOST = 0,
+            SPREAD_SHOT = 1,
+            LASER_BEAM = 2,
+            FORCE_POD = 3,
+            SPEED_BOOST = 4,
+            SHIELD = 5
+        };
+
+        struct PowerUp : public IComponent {
+            PowerUpType type = PowerUpType::FIRE_RATE_BOOST;
+            uint32_t id = 0;
+
+            PowerUp() = default;
+            PowerUp(PowerUpType powerupType, uint32_t powerupId = 0)
+                : type(powerupType), id(powerupId) {}
+        };
+
+        struct ActivePowerUps : public IComponent {
+            bool hasFireRateBoost = false;
+            bool hasSpreadShot = false;
+            bool hasLaserBeam = false;
+            bool hasShield = false;
+            float speedMultiplier = 1.0f;
+
+            ActivePowerUps() = default;
+        };
+
+        enum class WeaponType : uint8_t {
+            STANDARD = 0,
+            SPREAD = 1,
+            LASER = 2
+        };
+
+        struct WeaponSlot : public IComponent {
+            WeaponType type = WeaponType::STANDARD;
+            float fireRate = 0.2f;
+            float cooldown = 0.0f;
+            int damage = 25;
+            bool enabled = true;
+
+            WeaponSlot() = default;
+            WeaponSlot(WeaponType weaponType, float rate, int dmg)
+                : type(weaponType), fireRate(rate), damage(dmg) {}
+        };
+
+        struct ForcePod : public IComponent {
+            Entity owner = NULL_ENTITY;
+            float offsetX = -60.0f;
+            float offsetY = 0.0f;
+            bool isAttached = true;
+
+            ForcePod() = default;
+            ForcePod(Entity ownerEntity, float oX = -60.0f, float oY = 0.0f)
+                : owner(ownerEntity), offsetX(oX), offsetY(oY) {}
+        };
+
+        struct Shield : public IComponent {
+            float duration = 0.0f; // 0 = permanent (until death)
+            float timeRemaining = 0.0f;
+
+            Shield() = default;
+            Shield(float dur = 0.0f) : duration(dur), timeRemaining(dur) {}
+        };
     }
 
 }
