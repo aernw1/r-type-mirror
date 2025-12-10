@@ -65,8 +65,8 @@ namespace RType {
         void InGameState::createSystems() {
             auto bulletSpriteIt = m_levelAssets.sprites.find("bullet");
             Renderer::SpriteId bulletSprite = (bulletSpriteIt != m_levelAssets.sprites.end())
-                ? bulletSpriteIt->second
-                : Renderer::INVALID_SPRITE_ID;
+                                                  ? bulletSpriteIt->second
+                                                  : Renderer::INVALID_SPRITE_ID;
 
             if (bulletSprite == Renderer::INVALID_SPRITE_ID) {
                 Core::Logger::Error("[GameState] Bullet sprite not found in level assets");
