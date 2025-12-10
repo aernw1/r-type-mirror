@@ -291,10 +291,22 @@ namespace RType {
             }
         }
 
-        void InGameState::Draw() {
+         void InGameState::Draw() {
             m_renderingSystem->Update(m_registry, 0.0f);
             m_textSystem->Update(m_registry, 0.0f);
 
+            auto colliders = m_registry.GetEntitiesWithComponent<BoxCollider>();
+            for (auto entity : colliders) {
+                if (m_registry.HasComponent<Position>(entity)) {
+                    auto& pos = m_registry.GetComponent<Position>(entity);
+                    auto& box = m_registry.GetComponent<BoxCollider>(entity);
+
+                    Renderer::Rectangle rect{{pos.x, pos.y}, {box.width, box.height}};
+                    Renderer::Color color{1.0f, 0.0f, 0.0f, 0.3f};
+
+                    m_renderer->DrawRectangle(rect, color);
+                }
+            }
             renderChargeBar();
             renderHealthBars();
         }

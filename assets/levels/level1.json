@@ -4,6 +4,7 @@
         "textures": {
             "background": "assets/backgrounds/Cave_one.png",
             "obstacle1": "assets/backgrounds/obstacles/middle_obstacle.png",
+            "obstacle2": "assets/backgrounds/obstacles/obstacle_bas.png",
             "player_blue": "assets/spaceships/player_blue.png",
             "player_green": "assets/spaceships/player_green.png",
             "player_red": "assets/spaceships/player_red.png",
@@ -22,20 +23,37 @@
     },
     "background": {
         "texture": "background",
-        "scrollSpeed": -150.0,
+        "scrollSpeed": -100.0,
         "copies": 3,
         "layer": -100
     },
     "obstacles": [
         {
             "texture": "obstacle1",
-            "position": { "x": 800.0, "y": 400.0 },
-            "scaleWidth": 300.0,
-            "scaleHeight": 300.0,
-            "scrollSpeed": 0.0,
+            "position": { "x": 700.0, "y": 300.0 },
+            "scaleWidth": 424.0,
+            "scaleHeight": 128.0,
+            "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 0.0, "y": 80.0, "width": 180.0, "height": 280.0 }
+                { "x": 700.0, "y": 320.0, "width": 318.0, "height": 88.0 },
+                { "x": 1015.0, "y": 300.0, "width": 62.0, "height": 126.0 },
+                { "x": 1072.0, "y": 340.0, "width": 42.0, "height": 52.0 }
+            ]
+        },
+        {
+            "texture": "obstacle2",
+            "position": { "x": 700.0, "y": 650.0 },
+            "scaleWidth": 294.0,
+            "scaleHeight": 80.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 728.0, "y": 686.0, "width": 230.0, "height": 44.0 },
+                { "x": 825.0, "y": 665.0, "width": 60.0, "height": 22.0 },
+                { "x": 836.0, "y": 650.0, "width": 34.0, "height": 14.0 },
+                { "x": 944.0, "y": 708.0, "width": 46.0, "height": 22.0 },
+                { "x": 700.0, "y": 708.0, "width": 46.0, "height": 22.0 }
             ]
         }
     ],
