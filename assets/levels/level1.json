@@ -9,6 +9,8 @@
             "obstacle4" : "assets/backgrounds/obstacles/obstacle_square.png",
             "obstacle5" : "assets/backgrounds/obstacles/obstacle_bas_two.png",
             "obstacle6" : "assets/backgrounds/obstacles/obstacle_haut_two.png",
+            "obstacle7" : "assets/backgrounds/obstacles/obstacle_yellow.png",
+            "obstacle8" : "assets/backgrounds/obstacles/little_obstacle_haut.png",
             "player_blue": "assets/spaceships/player_blue.png",
             "player_green": "assets/spaceships/player_green.png",
             "player_red": "assets/spaceships/player_red.png",
@@ -34,335 +36,1031 @@
     "obstacles": [
         {
             "texture": "obstacle6",
-            "position": { "x": 1000.0, "y": 50.0 },
+            "position": { "x": 1000.0, "y": 0.0 },
             "scaleWidth": 441.0,
-            "scaleHeight": 69.0,
+            "scaleHeight": 100.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 1000.0, "y": 50.0, "width": 441.0, "height": 69.0 }
+                { "x": 1000.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 1441.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 1441.0, "y": 0.0, "width": 650.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle6",
+            "position": { "x": 2091.0, "y": 0.0 },
+            "scaleWidth": 441.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 2091.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 2532.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 2532.0, "y": 0.0, "width": 650.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle6",
+            "position": { "x": 3182.0, "y": 0.0 },
+            "scaleWidth": 441.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 3182.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 3623.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 3623.0, "y": 0.0, "width": 650.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle6",
+            "position": { "x": 4273.0, "y": 0.0 },
+            "scaleWidth": 441.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 4273.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 4714.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 4714.0, "y": 0.0, "width": 650.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle6",
+            "position": { "x": 5364.0, "y": 0.0 },
+            "scaleWidth": 441.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 5364.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 5805.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 5805.0, "y": 0.0, "width": 650.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle6",
+            "position": { "x": 6455.0, "y": 0.0 },
+            "scaleWidth": 441.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 6455.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 6896.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 6896.0, "y": 0.0, "width": 650.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle6",
+            "position": { "x": 7546.0, "y": 0.0 },
+            "scaleWidth": 441.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7546.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 7987.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7987.0, "y": 0.0, "width": 650.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle6",
+            "position": { "x": 8637.0, "y": 0.0 },
+            "scaleWidth": 441.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 8637.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 9078.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 9078.0, "y": 0.0, "width": 650.0, "height": 20.0 }
             ]
         },
         {
             "texture": "obstacle2",
-            "position": { "x": 1000.0, "y": 650.0 },
-            "scaleWidth": 294.0,
-            "scaleHeight": 80.0,
+            "position": { "x": 1000.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 1028.0, "y": 686.0, "width": 230.0, "height": 44.0 },
-                { "x": 1125.0, "y": 665.0, "width": 60.0, "height": 22.0 },
-                { "x": 1136.0, "y": 650.0, "width": 34.0, "height": 14.0 },
-                { "x": 1244.0, "y": 708.0, "width": 46.0, "height": 22.0 },
-                { "x": 1000.0, "y": 708.0, "width": 46.0, "height": 22.0 }
+                { "x": 1040.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 1150.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 1165.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 1340.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 1000.0, "y": 700.0, "width": 60.0, "height": 30.0 }
             ]
         },
         {
             "texture": "obstacle3",
-            "position": { "x": 1294.0, "y": 706.0 },
-            "scaleWidth": 558.0,
-            "scaleHeight": 14.0,
+            "position": { "x": 1400.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 1294.0, "y": 706.0, "width": 558.0, "height": 14.0 }
+                { "x": 1400.0, "y": 700.0, "width": 700.0, "height": 20.0 }
             ]
         },
         {
-            "texture": "obstacle2",
-            "position": { "x": 1852.0, "y": 650.0 },
-            "scaleWidth": 294.0,
-            "scaleHeight": 80.0,
+            "texture": "obstacle5",
+            "position": { "x": 2100.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 1880.0, "y": 686.0, "width": 230.0, "height": 44.0 },
-                { "x": 1977.0, "y": 665.0, "width": 60.0, "height": 22.0 },
-                { "x": 1988.0, "y": 650.0, "width": 34.0, "height": 14.0 },
-                { "x": 2096.0, "y": 708.0, "width": 46.0, "height": 22.0 },
-                { "x": 1852.0, "y": 708.0, "width": 46.0, "height": 22.0 }
-            ]
-        },
-        {
-            "texture": "obstacle3",
-            "position": { "x": 2146.0, "y": 706.0 },
-            "scaleWidth": 558.0,
-            "scaleHeight": 14.0,
-            "scrollSpeed": -75.0,
-            "layer": 1,
-            "colliders": [
-                { "x": 2146.0, "y": 706.0, "width": 558.0, "height": 14.0 }
-            ]
-        },
-        {
-            "texture": "obstacle2",
-            "position": { "x": 2704.0, "y": 650.0 },
-            "scaleWidth": 294.0,
-            "scaleHeight": 80.0,
-            "scrollSpeed": -75.0,
-            "layer": 1,
-            "colliders": [
-                { "x": 2732.0, "y": 686.0, "width": 230.0, "height": 44.0 },
-                { "x": 2829.0, "y": 665.0, "width": 60.0, "height": 22.0 },
-                { "x": 2840.0, "y": 650.0, "width": 34.0, "height": 14.0 },
-                { "x": 2948.0, "y": 708.0, "width": 46.0, "height": 22.0 },
-                { "x": 2704.0, "y": 708.0, "width": 46.0, "height": 22.0 }
+                { "x": 2140.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 2250.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 2265.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 2440.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 2100.0, "y": 700.0, "width": 60.0, "height": 30.0 }
             ]
         },
         {
             "texture": "obstacle3",
-            "position": { "x": 2998.0, "y": 706.0 },
-            "scaleWidth": 558.0,
-            "scaleHeight": 14.0,
+            "position": { "x": 2500.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 2998.0, "y": 706.0, "width": 558.0, "height": 14.0 }
+                { "x": 2500.0, "y": 700.0, "width": 700.0, "height": 20.0 }
             ]
         },
         {
             "texture": "obstacle2",
-            "position": { "x": 3556.0, "y": 650.0 },
-            "scaleWidth": 294.0,
-            "scaleHeight": 80.0,
+            "position": { "x": 3200.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 3584.0, "y": 686.0, "width": 230.0, "height": 44.0 },
-                { "x": 3681.0, "y": 665.0, "width": 60.0, "height": 22.0 },
-                { "x": 3692.0, "y": 650.0, "width": 34.0, "height": 14.0 },
-                { "x": 3800.0, "y": 708.0, "width": 46.0, "height": 22.0 },
-                { "x": 3556.0, "y": 708.0, "width": 46.0, "height": 22.0 }
+                { "x": 3240.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 3350.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 3365.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 3540.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 3200.0, "y": 700.0, "width": 60.0, "height": 30.0 }
             ]
         },
         {
             "texture": "obstacle3",
-            "position": { "x": 3850.0, "y": 706.0 },
-            "scaleWidth": 558.0,
-            "scaleHeight": 14.0,
+            "position": { "x": 3600.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 3850.0, "y": 706.0, "width": 558.0, "height": 14.0 }
+                { "x": 3600.0, "y": 700.0, "width": 700.0, "height": 20.0 }
             ]
         },
         {
-            "texture": "obstacle2",
-            "position": { "x": 4408.0, "y": 650.0 },
-            "scaleWidth": 294.0,
-            "scaleHeight": 80.0,
+            "texture": "obstacle5",
+            "position": { "x": 4300.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 4436.0, "y": 686.0, "width": 230.0, "height": 44.0 },
-                { "x": 4533.0, "y": 665.0, "width": 60.0, "height": 22.0 },
-                { "x": 4544.0, "y": 650.0, "width": 34.0, "height": 14.0 },
-                { "x": 4652.0, "y": 708.0, "width": 46.0, "height": 22.0 },
-                { "x": 4408.0, "y": 708.0, "width": 46.0, "height": 22.0 }
-            ]
-        },
-        {
-            "texture": "obstacle3",
-            "position": { "x": 4702.0, "y": 706.0 },
-            "scaleWidth": 558.0,
-            "scaleHeight": 14.0,
-            "scrollSpeed": -75.0,
-            "layer": 1,
-            "colliders": [
-                { "x": 4702.0, "y": 706.0, "width": 558.0, "height": 14.0 }
-            ]
-        },
-        {
-            "texture": "obstacle2",
-            "position": { "x": 5260.0, "y": 650.0 },
-            "scaleWidth": 294.0,
-            "scaleHeight": 80.0,
-            "scrollSpeed": -75.0,
-            "layer": 1,
-            "colliders": [
-                { "x": 5288.0, "y": 686.0, "width": 230.0, "height": 44.0 },
-                { "x": 5385.0, "y": 665.0, "width": 60.0, "height": 22.0 },
-                { "x": 5396.0, "y": 650.0, "width": 34.0, "height": 14.0 },
-                { "x": 5504.0, "y": 708.0, "width": 46.0, "height": 22.0 },
-                { "x": 5260.0, "y": 708.0, "width": 46.0, "height": 22.0 }
+                { "x": 4340.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 4450.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 4465.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 4640.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 4300.0, "y": 700.0, "width": 60.0, "height": 30.0 }
             ]
         },
         {
             "texture": "obstacle3",
-            "position": { "x": 5554.0, "y": 706.0 },
-            "scaleWidth": 558.0,
-            "scaleHeight": 14.0,
+            "position": { "x": 4700.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 5554.0, "y": 706.0, "width": 558.0, "height": 14.0 }
+                { "x": 4700.0, "y": 700.0, "width": 700.0, "height": 20.0 }
             ]
         },
         {
             "texture": "obstacle2",
-            "position": { "x": 6112.0, "y": 650.0 },
-            "scaleWidth": 294.0,
-            "scaleHeight": 80.0,
+            "position": { "x": 5400.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 6140.0, "y": 686.0, "width": 230.0, "height": 44.0 },
-                { "x": 6237.0, "y": 665.0, "width": 60.0, "height": 22.0 },
-                { "x": 6248.0, "y": 650.0, "width": 34.0, "height": 14.0 },
-                { "x": 6356.0, "y": 708.0, "width": 46.0, "height": 22.0 },
-                { "x": 6112.0, "y": 708.0, "width": 46.0, "height": 22.0 }
+                { "x": 5440.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 5550.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 5565.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 5740.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 5400.0, "y": 700.0, "width": 60.0, "height": 30.0 }
+            ]
+        },
+        {
+            "texture": "obstacle3",
+            "position": { "x": 5800.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 5800.0, "y": 700.0, "width": 700.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle5",
+            "position": { "x": 6500.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 6540.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 6650.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 6665.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 6840.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 6500.0, "y": 700.0, "width": 60.0, "height": 30.0 }
             ]
         },
         {
             "texture": "obstacle4",
-            "position": { "x": 1400.0, "y": 200.0 },
-            "scaleWidth": 148.0,
-            "scaleHeight": 63.0,
+            "position": { "x": 1300.0, "y": 150.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 1400.0, "y": 200.0, "width": 148.0, "height": 63.0 }
+                { "x": 1300.0, "y": 150.0, "width": 100.0, "height": 100.0 }
             ]
         },
         {
             "texture": "obstacle4",
-            "position": { "x": 1450.0, "y": 450.0 },
-            "scaleWidth": 148.0,
-            "scaleHeight": 63.0,
+            "position": { "x": 1300.0, "y": 250.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 1450.0, "y": 450.0, "width": 148.0, "height": 63.0 }
+                { "x": 1300.0, "y": 250.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 1300.0, "y": 350.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 1300.0, "y": 350.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle7",
+            "position": { "x": 1600.0, "y": 250.0 },
+            "scaleWidth": 150.0,
+            "scaleHeight": 150.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 1600.0, "y": 250.0, "width": 150.0, "height": 150.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 1900.0, "y": 450.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 1900.0, "y": 450.0, "width": 100.0, "height": 100.0 }
             ]
         },
         {
             "texture": "obstacle1",
-            "position": { "x": 2000.0, "y": 300.0 },
-            "scaleWidth": 424.0,
-            "scaleHeight": 128.0,
+            "position": { "x": 2200.0, "y": 300.0 },
+            "scaleWidth": 500.0,
+            "scaleHeight": 150.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 2000.0, "y": 320.0, "width": 318.0, "height": 88.0 },
-                { "x": 2315.0, "y": 300.0, "width": 62.0, "height": 126.0 },
-                { "x": 2372.0, "y": 340.0, "width": 42.0, "height": 52.0 }
+                { "x": 2200.0, "y": 320.0, "width": 380.0, "height": 110.0 },
+                { "x": 2580.0, "y": 300.0, "width": 70.0, "height": 150.0 },
+                { "x": 2650.0, "y": 340.0, "width": 50.0, "height": 60.0 }
             ]
         },
         {
             "texture": "obstacle4",
-            "position": { "x": 2500.0, "y": 150.0 },
-            "scaleWidth": 148.0,
-            "scaleHeight": 63.0,
+            "position": { "x": 2800.0, "y": 150.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 2500.0, "y": 150.0, "width": 148.0, "height": 63.0 }
+                { "x": 2800.0, "y": 150.0, "width": 100.0, "height": 100.0 }
             ]
         },
         {
             "texture": "obstacle4",
-            "position": { "x": 2550.0, "y": 500.0 },
-            "scaleWidth": 148.0,
-            "scaleHeight": 63.0,
+            "position": { "x": 2900.0, "y": 150.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 2550.0, "y": 500.0, "width": 148.0, "height": 63.0 }
+                { "x": 2900.0, "y": 150.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 3000.0, "y": 150.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 3000.0, "y": 150.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle7",
+            "position": { "x": 3300.0, "y": 400.0 },
+            "scaleWidth": 150.0,
+            "scaleHeight": 150.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 3300.0, "y": 400.0, "width": 150.0, "height": 150.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 3600.0, "y": 200.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 3600.0, "y": 200.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 3700.0, "y": 200.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 3700.0, "y": 200.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 3800.0, "y": 200.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 3800.0, "y": 200.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 3900.0, "y": 200.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 3900.0, "y": 200.0, "width": 100.0, "height": 100.0 }
             ]
         },
         {
             "texture": "obstacle1",
-            "position": { "x": 3200.0, "y": 400.0 },
-            "scaleWidth": 424.0,
-            "scaleHeight": 128.0,
+            "position": { "x": 4200.0, "y": 350.0 },
+            "scaleWidth": 500.0,
+            "scaleHeight": 150.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 3200.0, "y": 420.0, "width": 318.0, "height": 88.0 },
-                { "x": 3515.0, "y": 400.0, "width": 62.0, "height": 126.0 },
-                { "x": 3572.0, "y": 440.0, "width": 42.0, "height": 52.0 }
+                { "x": 4200.0, "y": 370.0, "width": 380.0, "height": 110.0 },
+                { "x": 4580.0, "y": 350.0, "width": 70.0, "height": 150.0 },
+                { "x": 4650.0, "y": 390.0, "width": 50.0, "height": 60.0 }
             ]
         },
         {
             "texture": "obstacle4",
-            "position": { "x": 3900.0, "y": 250.0 },
-            "scaleWidth": 148.0,
-            "scaleHeight": 63.0,
+            "position": { "x": 4900.0, "y": 150.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 3900.0, "y": 250.0, "width": 148.0, "height": 63.0 }
+                { "x": 4900.0, "y": 150.0, "width": 100.0, "height": 100.0 }
             ]
         },
         {
             "texture": "obstacle4",
-            "position": { "x": 4100.0, "y": 180.0 },
-            "scaleWidth": 148.0,
-            "scaleHeight": 63.0,
+            "position": { "x": 4900.0, "y": 250.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 4100.0, "y": 180.0, "width": 148.0, "height": 63.0 }
+                { "x": 4900.0, "y": 250.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle7",
+            "position": { "x": 5200.0, "y": 300.0 },
+            "scaleWidth": 150.0,
+            "scaleHeight": 150.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 5200.0, "y": 300.0, "width": 150.0, "height": 150.0 }
             ]
         },
         {
             "texture": "obstacle4",
-            "position": { "x": 4300.0, "y": 250.0 },
-            "scaleWidth": 148.0,
-            "scaleHeight": 63.0,
+            "position": { "x": 5500.0, "y": 450.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 4300.0, "y": 250.0, "width": 148.0, "height": 63.0 }
+                { "x": 5500.0, "y": 450.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 5600.0, "y": 450.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 5600.0, "y": 450.0, "width": 100.0, "height": 100.0 }
             ]
         },
         {
             "texture": "obstacle1",
-            "position": { "x": 4800.0, "y": 350.0 },
-            "scaleWidth": 424.0,
-            "scaleHeight": 128.0,
+            "position": { "x": 5900.0, "y": 250.0 },
+            "scaleWidth": 500.0,
+            "scaleHeight": 150.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 4800.0, "y": 370.0, "width": 318.0, "height": 88.0 },
-                { "x": 5115.0, "y": 350.0, "width": 62.0, "height": 126.0 },
-                { "x": 5172.0, "y": 390.0, "width": 42.0, "height": 52.0 }
+                { "x": 5900.0, "y": 270.0, "width": 380.0, "height": 110.0 },
+                { "x": 6280.0, "y": 250.0, "width": 70.0, "height": 150.0 },
+                { "x": 6350.0, "y": 290.0, "width": 50.0, "height": 60.0 }
             ]
         },
         {
             "texture": "obstacle4",
-            "position": { "x": 5500.0, "y": 200.0 },
-            "scaleWidth": 148.0,
-            "scaleHeight": 63.0,
+            "position": { "x": 6600.0, "y": 400.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 5500.0, "y": 200.0, "width": 148.0, "height": 63.0 }
+                { "x": 6600.0, "y": 400.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle7",
+            "position": { "x": 6850.0, "y": 200.0 },
+            "scaleWidth": 150.0,
+            "scaleHeight": 150.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 6850.0, "y": 200.0, "width": 150.0, "height": 150.0 }
+            ]
+        },
+        {
+            "texture": "obstacle3",
+            "position": { "x": 6900.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 6900.0, "y": 700.0, "width": 700.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle2",
+            "position": { "x": 7600.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7640.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 7750.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 7765.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 7940.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 7600.0, "y": 700.0, "width": 60.0, "height": 30.0 }
+            ]
+        },
+        {
+            "texture": "obstacle3",
+            "position": { "x": 8000.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 8000.0, "y": 700.0, "width": 700.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle5",
+            "position": { "x": 8700.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 8740.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 8850.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 8865.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 9040.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 8700.0, "y": 700.0, "width": 60.0, "height": 30.0 }
             ]
         },
         {
             "texture": "obstacle4",
-            "position": { "x": 5550.0, "y": 500.0 },
-            "scaleWidth": 148.0,
-            "scaleHeight": 63.0,
+            "position": { "x": 7200.0, "y": 150.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 5550.0, "y": 500.0, "width": 148.0, "height": 63.0 }
+                { "x": 7200.0, "y": 150.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7200.0, "y": 200.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7200.0, "y": 200.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7200.0, "y": 250.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7200.0, "y": 250.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7200.0, "y": 300.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7200.0, "y": 300.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7200.0, "y": 350.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7200.0, "y": 350.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7200.0, "y": 400.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7200.0, "y": 400.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7200.0, "y": 450.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7200.0, "y": 450.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7200.0, "y": 500.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7200.0, "y": 500.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle7",
+            "position": { "x": 7350.0, "y": 200.0 },
+            "scaleWidth": 80.0,
+            "scaleHeight": 80.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7350.0, "y": 200.0, "width": 80.0, "height": 80.0 }
+            ]
+        },
+        {
+            "texture": "obstacle7",
+            "position": { "x": 7350.0, "y": 450.0 },
+            "scaleWidth": 80.0,
+            "scaleHeight": 80.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7350.0, "y": 450.0, "width": 80.0, "height": 80.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7500.0, "y": 150.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7500.0, "y": 150.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7500.0, "y": 200.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7500.0, "y": 200.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7500.0, "y": 250.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7500.0, "y": 250.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7500.0, "y": 300.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7500.0, "y": 300.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7500.0, "y": 350.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7500.0, "y": 350.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7500.0, "y": 400.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7500.0, "y": 400.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7500.0, "y": 450.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7500.0, "y": 450.0, "width": 60.0, "height": 50.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 7500.0, "y": 500.0 },
+            "scaleWidth": 60.0,
+            "scaleHeight": 50.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 7500.0, "y": 500.0, "width": 60.0, "height": 50.0 }
             ]
         },
         {
             "texture": "obstacle1",
-            "position": { "x": 6000.0, "y": 280.0 },
-            "scaleWidth": 424.0,
-            "scaleHeight": 128.0,
+            "position": { "x": 8200.0, "y": 200.0 },
+            "scaleWidth": 500.0,
+            "scaleHeight": 150.0,
             "scrollSpeed": -75.0,
             "layer": 1,
             "colliders": [
-                { "x": 6000.0, "y": 300.0, "width": 318.0, "height": 88.0 },
-                { "x": 6315.0, "y": 280.0, "width": 62.0, "height": 126.0 },
-                { "x": 6372.0, "y": 320.0, "width": 42.0, "height": 52.0 }
+                { "x": 8200.0, "y": 220.0, "width": 380.0, "height": 110.0 },
+                { "x": 8580.0, "y": 200.0, "width": 70.0, "height": 150.0 },
+                { "x": 8650.0, "y": 240.0, "width": 50.0, "height": 60.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 8900.0, "y": 400.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 8900.0, "y": 400.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 9000.0, "y": 400.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 9000.0, "y": 400.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 9100.0, "y": 400.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 9100.0, "y": 400.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle3",
+            "position": { "x": 9100.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 9100.0, "y": 700.0, "width": 700.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle5",
+            "position": { "x": 9800.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 9840.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 9950.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 9965.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 10140.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 9800.0, "y": 700.0, "width": 60.0, "height": 30.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 9500.0, "y": 360.0 },
+            "scaleWidth": 1600.0,
+            "scaleHeight": 40.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 9500.0, "y": 360.0, "width": 1600.0, "height": 40.0 }
+            ]
+        },
+        {
+            "texture": "obstacle6",
+            "position": { "x": 9728.0, "y": 0.0 },
+            "scaleWidth": 441.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 9728.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 10169.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 10169.0, "y": 0.0, "width": 650.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle6",
+            "position": { "x": 10819.0, "y": 0.0 },
+            "scaleWidth": 441.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 10819.0, "y": 0.0, "width": 441.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle8",
+            "position": { "x": 11260.0, "y": 0.0 },
+            "scaleWidth": 650.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 11260.0, "y": 0.0, "width": 650.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle3",
+            "position": { "x": 10200.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 10200.0, "y": 700.0, "width": 700.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle2",
+            "position": { "x": 10900.0, "y": 620.0 },
+            "scaleWidth": 400.0,
+            "scaleHeight": 110.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 10940.0, "y": 660.0, "width": 320.0, "height": 60.0 },
+                { "x": 11050.0, "y": 635.0, "width": 80.0, "height": 30.0 },
+                { "x": 11065.0, "y": 620.0, "width": 45.0, "height": 20.0 },
+                { "x": 11240.0, "y": 700.0, "width": 60.0, "height": 30.0 },
+                { "x": 10900.0, "y": 700.0, "width": 60.0, "height": 30.0 }
+            ]
+        },
+        {
+            "texture": "obstacle3",
+            "position": { "x": 11300.0, "y": 700.0 },
+            "scaleWidth": 700.0,
+            "scaleHeight": 20.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 11300.0, "y": 700.0, "width": 700.0, "height": 20.0 }
+            ]
+        },
+        {
+            "texture": "obstacle1",
+            "position": { "x": 11600.0, "y": 200.0 },
+            "scaleWidth": 500.0,
+            "scaleHeight": 150.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 11600.0, "y": 220.0, "width": 380.0, "height": 110.0 },
+                { "x": 11980.0, "y": 200.0, "width": 70.0, "height": 150.0 },
+                { "x": 12050.0, "y": 240.0, "width": 50.0, "height": 60.0 }
+            ]
+        },
+        {
+            "texture": "obstacle4",
+            "position": { "x": 11900.0, "y": 400.0 },
+            "scaleWidth": 100.0,
+            "scaleHeight": 100.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 11900.0, "y": 400.0, "width": 100.0, "height": 100.0 }
+            ]
+        },
+        {
+            "texture": "obstacle7",
+            "position": { "x": 12100.0, "y": 250.0 },
+            "scaleWidth": 150.0,
+            "scaleHeight": 150.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 12100.0, "y": 250.0, "width": 150.0, "height": 150.0 }
             ]
         }
     ],
