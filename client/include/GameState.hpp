@@ -112,6 +112,14 @@ namespace RType {
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
             Renderer::SpriteId m_bulletSprite = Renderer::INVALID_SPRITE_ID;
 
+            // Enemy bullet textures and sprites
+            Renderer::TextureId m_enemyBulletGreenTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_enemyBulletYellowTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_enemyBulletPurpleTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_enemyBulletGreenSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_enemyBulletYellowSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_enemyBulletPurpleSprite = Renderer::INVALID_SPRITE_ID;
+
             Renderer::TextureId m_bgTexture = Renderer::INVALID_TEXTURE_ID;
             Renderer::SpriteId m_bgSprite = Renderer::INVALID_SPRITE_ID;
 
