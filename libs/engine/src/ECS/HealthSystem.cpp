@@ -65,6 +65,11 @@ namespace RType {
                     }
 
                     if (CollisionSystem::CheckCollision(registry, enemy, player)) {
+                        if (registry.HasComponent<Shield>(player)) {
+                            registry.DestroyEntity(enemy);
+                            break;
+                        }
+
                         const auto& damageComp = registry.GetComponent<Damage>(enemy);
                         auto& playerHealth = registry.GetComponent<Health>(player);
 
