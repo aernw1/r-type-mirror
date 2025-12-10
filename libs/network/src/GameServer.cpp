@@ -222,7 +222,7 @@ namespace network {
             playerEntity->vx = SPEED;
 
         if (input->inputs & InputFlags::SHOOT) {
-            SpawnBullet(input->playerHash, playerEntity->x + 50.0f, playerEntity->y + 20.0f);
+            SpawnBullet(input->playerHash, playerEntity->x + 70.0f, playerEntity->y + 50.0f);
         }
     }
 
@@ -439,7 +439,27 @@ namespace network {
 
             if (m_enemyShootCooldowns[enemy->id] <= 0.0f && HasPlayerInSight(*enemy)) {
                 float fireRate = GetEnemyFireRate(type);
-                SpawnEnemyBullet(enemy->id, enemy->x - 30.0f, enemy->y + 45.0f);
+                float xOffset = -30.0f;
+                float yOffset = 0.0f;
+                switch (type) {
+                    case EnemyType::FAST:
+                        xOffset = -50.0f;
+                        yOffset = 20.0f;
+                        break;
+                    case EnemyType::BASIC:
+                        xOffset = -50.0f;
+                        yOffset = 25.0f;
+                        break;
+                    case EnemyType::TANK:
+                        xOffset = -30.0f;
+                        yOffset = -20.0f;
+                        break;
+                    default:
+                        xOffset = -30.0f;
+                        yOffset = 45.0f;
+                        break;
+                }
+                SpawnEnemyBullet(enemy->id, enemy->x + xOffset, enemy->y + yOffset);
                 m_enemyShootCooldowns[enemy->id] = fireRate;
             }
 
