@@ -7,7 +7,7 @@
             "player_blue": "assets/spaceships/player_blue.png",
             "player_green": "assets/spaceships/player_green.png",
             "player_red": "assets/spaceships/player_red.png",
-            "bullet": "assets/powerups/laser.png"
+            "bullet": "assets/projectiles/bullet.png"
         },
         "fonts": {
             "main": {
