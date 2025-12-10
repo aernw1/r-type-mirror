@@ -5,6 +5,7 @@
             "background": "assets/backgrounds/Cave_one.png",
             "obstacle1": "assets/backgrounds/obstacles/middle_obstacle.png",
             "obstacle2": "assets/backgrounds/obstacles/obstacle_bas.png",
+            "obstacle3" : "assets/backgrounds/obstacles/little_obstacle.png",
             "player_blue": "assets/spaceships/player_blue.png",
             "player_green": "assets/spaceships/player_green.png",
             "player_red": "assets/spaceships/player_red.png",
@@ -54,6 +55,17 @@
                 { "x": 836.0, "y": 650.0, "width": 34.0, "height": 14.0 },
                 { "x": 944.0, "y": 708.0, "width": 46.0, "height": 22.0 },
                 { "x": 700.0, "y": 708.0, "width": 46.0, "height": 22.0 }
+            ]
+        },
+        {
+            "texture": "obstacle3",
+            "position": { "x": 994.0, "y": 706.0 },
+            "scaleWidth": 558.0,
+            "scaleHeight": 14.0,
+            "scrollSpeed": -75.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 994.0, "y": 706.0, "width": 558.0, "height": 14.0 }
             ]
         }
     ],
