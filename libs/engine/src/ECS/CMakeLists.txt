@@ -16,6 +16,11 @@ set(ECS_SOURCES
     ShootingSystem.cpp
     ScrollingSystem.cpp
     LevelLoader.cpp
+    PowerUpFactory.cpp
+    PowerUpSpawnSystem.cpp
+    PowerUpCollisionSystem.cpp
+    ForcePodSystem.cpp
+    ShieldSystem.cpp
 )
 
 set(ECS_HEADERS
@@ -42,6 +47,11 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShootingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ScrollingSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/LevelLoader.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PowerUpFactory.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PowerUpSpawnSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PowerUpCollisionSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ForcePodSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShieldSystem.hpp
 )
 
 add_library(rtype_ecs STATIC
