@@ -1,0 +1,49 @@
+{
+    "name": "Level 1 - Space Station",
+    "assets": {
+        "textures": {
+            "background": "assets/backgrounds/Cave_one.png",
+            "obstacle1": "assets/backgrounds/obstacles/middle_obstacle.png",
+            "player_blue": "assets/spaceships/player_blue.png",
+            "player_green": "assets/spaceships/player_green.png",
+            "player_red": "assets/spaceships/player_red.png",
+            "bullet": "assets/projectiles/bullet.png"
+        },
+        "fonts": {
+            "main": {
+                "path": "assets/fonts/PressStart2P-Regular.ttf",
+                "size": 16
+            },
+            "small": {
+                "path": "assets/fonts/PressStart2P-Regular.ttf",
+                "size": 12
+            }
+        }
+    },
+    "background": {
+        "texture": "background",
+        "scrollSpeed": -150.0,
+        "copies": 3,
+        "layer": -100
+    },
+    "obstacles": [
+        {
+            "texture": "obstacle1",
+            "position": { "x": 800.0, "y": 400.0 },
+            "scaleWidth": 300.0,
+            "scaleHeight": 300.0,
+            "scrollSpeed": 0.0,
+            "layer": 1,
+            "colliders": [
+                { "x": 0.0, "y": 80.0, "width": 180.0, "height": 280.0 }
+            ]
+        }
+    ],
+    "enemies": [],
+    "playerSpawns": [
+        { "x": 100.0, "y": 200.0 },
+        { "x": 100.0, "y": 360.0 },
+        { "x": 100.0, "y": 520.0 },
+        { "x": 100.0, "y": 680.0 }
+    ]
+}

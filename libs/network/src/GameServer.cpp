@@ -6,15 +6,23 @@
 */
 
 #include "GameServer.hpp"
+#include <nlohmann/json.hpp>
 #include <iostream>
+#include <fstream>
 #include <cstring>
 #include <algorithm>
 #include <random>
 
+using json = nlohmann::json;
+
 namespace network {
 
-    GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers)
-        : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)), m_expectedPlayers(expectedPlayers), m_lastSpawnTime(std::chrono::steady_clock::now()) {
+    GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
+                           const std::string& levelPath)
+        : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)),
+          m_expectedPlayers(expectedPlayers),
+          m_lastSpawnTime(std::chrono::steady_clock::now()),
+          m_levelPath(levelPath) {
 
         // Increase send buffer to handle broadcasting to multiple clients at 60Hz
         asio::socket_base::send_buffer_size sendOption(1024 * 1024); // 1MB
@@ -33,11 +41,13 @@ namespace network {
 
         WaitForAllPlayers();
 
-        float startX = 100.0f;
-        float startY = 300.0f;
+        const float defaultSpawnY[] = {200.0f, 360.0f, 520.0f, 680.0f};
         size_t playerIndex = 0;
         for (const auto& [hash, player] : m_connectedPlayers) {
-            SpawnPlayer(hash, startX + playerIndex * 100.0f, startY);
+            float spawnX = 100.0f;
+            float spawnY = defaultSpawnY[playerIndex % 4];
+
+            SpawnPlayer(hash, spawnX, spawnY);
             playerIndex++;
         }
 
@@ -248,7 +258,7 @@ namespace network {
                 std::chrono::steady_clock::now().time_since_epoch())
                 .count());
         header.entityCount = static_cast<uint16_t>(m_entities.size());
-        header.scrollOffset = m_scrollOffset; // Send scroll position to clients
+        header.scrollOffset = m_scrollOffset;
 
         std::vector<uint8_t> packet(sizeof(StatePacketHeader) + sizeof(EntityState) * m_entities.size());
         std::memcpy(packet.data(), &header, sizeof(StatePacketHeader));
@@ -264,7 +274,7 @@ namespace network {
             state.vy = entity.vy;
             state.health = entity.health;
             state.flags = entity.flags;
-            state.ownerHash = entity.ownerHash; // For client-side prediction
+            state.ownerHash = entity.ownerHash;
 
             std::memcpy(packet.data() + offset, &state, sizeof(EntityState));
             offset += sizeof(EntityState);

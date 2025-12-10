@@ -18,6 +18,7 @@
 #include "ECS/CollisionSystem.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/Component.hpp"
+#include "ECS/LevelLoader.hpp"
 #include "Renderer/IRenderer.hpp"
 
 #include <memory>
@@ -41,22 +42,6 @@ namespace RType {
             RType::ECS::Entity playerEntity = RType::ECS::NULL_ENTITY;
         };
 
-        struct ObstacleData {
-            Renderer::SpriteId sprite;
-            float x;
-            float y;
-        };
-
-        struct ObstacleTextureData {
-            Renderer::TextureId texture;
-        };
-
-        struct ColliderBoxData {
-            float x1, y1, w1, h1;
-            float x2, y2, w2, h2;
-            float x3, y3, w3, h3;
-        };
-
         class InGameState : public IState {
         public:
             InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed);
@@ -68,10 +53,9 @@ namespace RType {
             void Update(float dt) override;
             void Draw() override;
         private:
-            void loadTextures();
-            void loadMapTextures();
-            void initializeBackground();
-            void initializeObstacles();
+            // Level loading
+            void loadLevel(const std::string& levelPath);
+            void initializeFromLevel();
 
             // Player System (Keane)
             void initializePlayers();
@@ -107,29 +91,6 @@ namespace RType {
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
 
-            // Textures pour background et obstacles
-            Renderer::FontId m_fontId = Renderer::INVALID_FONT_ID;
-            Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::SpriteId m_bulletSprite = Renderer::INVALID_SPRITE_ID;
-
-            Renderer::TextureId m_bgTexture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::SpriteId m_bgSprite = Renderer::INVALID_SPRITE_ID;
-
-            Renderer::TextureId m_obstacle1Texture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_obstacle2Texture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_obstacle3Texture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_obstacle4Texture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_obstacle5Texture = Renderer::INVALID_TEXTURE_ID;
-
-            Renderer::SpriteId m_obstacle1Sprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_obstacle2Sprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_obstacle3Sprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_obstacle4Sprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_obstacle5Sprite = Renderer::INVALID_SPRITE_ID;
-
-            RType::ECS::Entity m_bgGameEntity = RType::ECS::NULL_ENTITY;
-            RType::ECS::Entity m_obstacleGameEntity = RType::ECS::NULL_ENTITY;
-
             // Background and obstacles entities
             std::vector<RType::ECS::Entity> m_backgroundEntities;
             std::vector<RType::ECS::Entity> m_obstacleEntities;
@@ -147,14 +108,6 @@ namespace RType {
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
             RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player for prediction
-
-            // Individual player ship sprites
-            Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_playerBlueTexture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::TextureId m_playerRedTexture = Renderer::INVALID_TEXTURE_ID;
-            Renderer::SpriteId m_playerGreenSprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_playerBlueSprite = Renderer::INVALID_SPRITE_ID;
-            Renderer::SpriteId m_playerRedSprite = Renderer::INVALID_SPRITE_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
@@ -177,6 +130,12 @@ namespace RType {
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;
             static constexpr float MAX_CHARGE_TIME = 2.0f; // 2 seconds for full charge
+
+            // Level loader data
+            RType::ECS::LevelData m_levelData;
+            RType::ECS::LoadedAssets m_levelAssets;
+            RType::ECS::CreatedEntities m_levelEntities;
+            std::string m_currentLevelPath = "assets/levels/level1.json";
         };
 
     }
