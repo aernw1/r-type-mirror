@@ -128,6 +128,33 @@ namespace RType {
                 m_enemyBlueSprite = m_renderer->CreateSprite(m_enemyBlueTexture, {});
                 std::cout << "[GameState] Enemy TANK (blue) sprite loaded" << std::endl;
             }
+
+            m_enemyBulletGreenTexture = m_renderer->LoadTexture("assets/projectiles/bullet-green.png");
+            if (m_enemyBulletGreenTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_enemyBulletGreenTexture = m_renderer->LoadTexture("../assets/projectiles/bullet-green.png");
+            }
+            if (m_enemyBulletGreenTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_enemyBulletGreenSprite = m_renderer->CreateSprite(m_enemyBulletGreenTexture, {});
+                std::cout << "[GameState] Enemy bullet green sprite loaded" << std::endl;
+            }
+
+            m_enemyBulletYellowTexture = m_renderer->LoadTexture("assets/projectiles/bullet-yellow.png");
+            if (m_enemyBulletYellowTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_enemyBulletYellowTexture = m_renderer->LoadTexture("../assets/projectiles/bullet-yellow.png");
+            }
+            if (m_enemyBulletYellowTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_enemyBulletYellowSprite = m_renderer->CreateSprite(m_enemyBulletYellowTexture, {});
+                std::cout << "[GameState] Enemy bullet yellow sprite loaded" << std::endl;
+            }
+
+            m_enemyBulletPurpleTexture = m_renderer->LoadTexture("assets/projectiles/bullet-purple.png");
+            if (m_enemyBulletPurpleTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_enemyBulletPurpleTexture = m_renderer->LoadTexture("../assets/projectiles/bullet-purple.png");
+            }
+            if (m_enemyBulletPurpleTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_enemyBulletPurpleSprite = m_renderer->CreateSprite(m_enemyBulletPurpleTexture, {});
+                std::cout << "[GameState] Enemy bullet purple sprite loaded" << std::endl;
+            }
         }
 
         void InGameState::loadMapTextures() {
@@ -759,28 +786,54 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
-                        if (m_bulletSprite != Renderer::INVALID_SPRITE_ID) {
-                            auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_bulletSprite, 12));
+                        if (entityState.flags >= 10) {
+                            uint8_t enemyType = entityState.flags - 10;
+                            Renderer::SpriteId bulletSprite = Renderer::INVALID_SPRITE_ID;
+                            Math::Color bulletTint{1.0f, 1.0f, 1.0f, 1.0f};
 
-                            if (entityState.flags >= 10) {
-                                uint8_t enemyType = entityState.flags - 10;
-                                d.scale = {-0.1f, 0.1f};
+                            switch (enemyType) {
+                                case 0:
+                                    bulletSprite = m_enemyBulletGreenSprite;
+                                    bulletTint = {1.0f, 1.0f, 1.0f, 1.0f};
+                                    break;
+                                case 1:
+                                    bulletSprite = m_enemyBulletYellowSprite;
+                                    bulletTint = {1.0f, 0.2f, 0.2f, 1.0f};
+                                    break;
+                                case 2:
+                                    bulletSprite = m_enemyBulletPurpleSprite;
+                                    bulletTint = {0.8f, 0.3f, 1.0f, 1.0f};
+                                    break;
+                                default:
+                                    bulletSprite = m_enemyBulletGreenSprite;
+                                    break;
+                            }
 
-                                switch (enemyType) {
-                                    case 0:
-                                        d.tint = {0.2f, 1.0f, 0.2f, 1.0f};
-                                        break;
-                                    case 1:
-                                        d.tint = {1.0f, 0.2f, 0.2f, 1.0f};
-                                        break;
-                                    case 2:
-                                        d.tint = {0.2f, 0.3f, 1.0f, 1.0f};
-                                        break;
-                                    default:
-                                        d.tint = {1.0f, 1.0f, 1.0f, 1.0f};
-                                        break;
-                                }
-                            } else {
+                            if (bulletSprite == Renderer::INVALID_SPRITE_ID) {
+                                bulletSprite = m_bulletSprite;
+                            }
+
+                            auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSprite, 12));
+                            float scaleValue = 0.1f;
+                            switch (enemyType) {
+                                case 0:
+                                    scaleValue = 0.14f;
+                                    break;
+                                case 1:
+                                    scaleValue = 0.09f;
+                                    break;
+                                case 2:
+                                    scaleValue = 0.18f;
+                                    break;
+                                default:
+                                    scaleValue = 0.1f;
+                                    break;
+                            }
+                            d.scale = {scaleValue, scaleValue};
+                            d.tint = bulletTint;
+                        } else {
+                            if (m_bulletSprite != Renderer::INVALID_SPRITE_ID) {
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(m_bulletSprite, 12));
                                 d.scale = {0.1f, 0.1f};
                                 d.tint = {0.2f, 0.8f, 1.0f, 1.0f};
                             }
