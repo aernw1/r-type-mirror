@@ -16,6 +16,9 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <functional>
+#include <cmath>
+#include <array>
 
 namespace network {
 
@@ -25,6 +28,21 @@ namespace network {
         TANK = 2,
         BOSS = 3,
         FORMATION = 4
+    };
+
+    struct GameEntity;
+
+    using MovementPatternFunc = void(*)(GameEntity&, float);
+
+    struct EnemyStats {
+        float speed;
+        uint8_t health;
+        uint8_t damage;
+        float fireRate;
+        float bulletXOffset;
+        float bulletYOffset;
+        uint8_t collisionDamageMultiplier;
+        MovementPatternFunc movementPattern;
     };
 
     struct ConnectedPlayer {
@@ -81,11 +99,7 @@ namespace network {
         void CleanupDeadEntities();
 
         EnemyType GetRandomEnemyType();
-        float GetEnemySpeed(EnemyType type);
-        uint8_t GetEnemyHealth(EnemyType type);
-        uint8_t GetEnemyDamage(EnemyType type);
-        float GetEnemyFireRate(EnemyType type);
-        void ApplyEnemyMovementPattern(GameEntity& enemy, float dt);
+        const EnemyStats& GetEnemyStats(EnemyType type) const;
         bool HasPlayerInSight(const GameEntity& enemy);
 
         uint32_t GetNextEntityId() { return m_nextEntityId++; }
@@ -113,6 +127,8 @@ namespace network {
 
         std::atomic<uint64_t> m_packetsSent{0};
         std::atomic<uint64_t> m_packetsReceived{0};
+
+        static const std::array<EnemyStats, 5> s_enemyStats;
     };
 
 }
