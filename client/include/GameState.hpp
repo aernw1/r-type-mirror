@@ -37,6 +37,7 @@ namespace RType {
             int lives = 3;
             int health = 100;
             int maxHealth = 100;
+            bool isDead = false;
             RType::ECS::Entity scoreEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity playerEntity = RType::ECS::NULL_ENTITY;
         };
@@ -89,6 +90,18 @@ namespace RType {
 
             // Server state update handler
             void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
+
+            struct EnemySpriteConfig {
+                Renderer::SpriteId sprite;
+                Math::Color tint;
+            };
+            struct EnemyBulletSpriteConfig {
+                Renderer::SpriteId sprite;
+                Math::Color tint;
+                float scale;
+            };
+            EnemySpriteConfig GetEnemySpriteConfig(uint8_t enemyType) const;
+            EnemyBulletSpriteConfig GetEnemyBulletSpriteConfig(uint8_t enemyType) const;
         private:
             GameStateMachine& m_machine;
             GameContext& m_context;
