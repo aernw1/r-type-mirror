@@ -14,8 +14,90 @@
 
 namespace network {
 
+    namespace {
+        void BasicMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -220.0f;
+            enemy.vy = 0.0f;
+        }
+
+        void FastMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -200.0f;
+            enemy.vy = std::sin(enemy.x * 0.01f) * 50.0f;
+        }
+
+        void TankMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -220.0f;
+            enemy.vy = 0.0f;
+        }
+
+        void BossMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -75.0f;
+            enemy.vy = 0.0f;
+        }
+
+        void FormationMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -100.0f;
+            enemy.vy = 0.0f;
+        }
+    }
+
+    const std::array<EnemyStats, 5> GameServer::s_enemyStats = {{
+        {
+            220.0f,  // speed
+            100,     // health
+            8,       // damage
+            1.0f,    // fireRate
+            -50.0f,  // bulletXOffset
+            25.0f,   // bulletYOffset
+            25,      // collisionDamageMultiplier (2.5x)
+            BasicMovementPattern
+        },
+        {
+            200.0f,
+            50,
+            3,
+            0.5f,
+            -50.0f,
+            20.0f,
+            20,
+            FastMovementPattern
+        },
+        {
+            220.0f,
+            200,
+            18,
+            1.8f,
+            -30.0f,
+            -20.0f,
+            30,
+            TankMovementPattern
+        },
+        {
+            75.0f,
+            255,
+            50,
+            0.5f,
+            -30.0f,
+            45.0f,
+            50,
+            BossMovementPattern
+        },
+        {
+            100.0f,
+            100,
+            10,
+            1.5f,
+            -30.0f,
+            45.0f,
+            25,
+            FormationMovementPattern
+        }
+    }};
+
     GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers)
-        : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)), m_expectedPlayers(expectedPlayers), m_lastSpawnTime(std::chrono::steady_clock::now()) {
+        : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)),
+          m_expectedPlayers(expectedPlayers),
+          m_lastSpawnTime(std::chrono::steady_clock::now()) {
 
         // Increase send buffer to handle broadcasting to multiple clients at 60Hz
         asio::socket_base::send_buffer_size sendOption(1024 * 1024); // 1MB
@@ -335,9 +417,9 @@ namespace network {
         static std::random_device rd;
         static std::mt19937 gen(rd());
         std::uniform_real_distribution<float> yDist(50.0f, 550.0f);
-        std::uniform_int_distribution<int> typeDist(0, 2);
 
         EnemyType enemyType = GetRandomEnemyType();
+        const EnemyStats& stats = GetEnemyStats(enemyType);
         float spawnX = 1920.0f;
         float spawnY = yDist(gen);
 
@@ -346,9 +428,9 @@ namespace network {
         enemy.type = EntityType::ENEMY;
         enemy.x = spawnX;
         enemy.y = spawnY;
-        enemy.vx = -GetEnemySpeed(enemyType);
+        enemy.vx = -stats.speed;
         enemy.vy = 0.0f;
-        enemy.health = GetEnemyHealth(enemyType);
+        enemy.health = stats.health;
         enemy.flags = static_cast<uint8_t>(enemyType);
         enemy.ownerHash = 0;
 
@@ -428,8 +510,9 @@ namespace network {
                 continue;
 
             EnemyType type = static_cast<EnemyType>(enemy->flags);
+            const EnemyStats& stats = GetEnemyStats(type);
 
-            ApplyEnemyMovementPattern(*enemy, dt);
+            stats.movementPattern(*enemy, dt);
 
             if (m_enemyShootCooldowns.find(enemy->id) == m_enemyShootCooldowns.end()) {
                 m_enemyShootCooldowns[enemy->id] = 0.0f;
@@ -438,29 +521,8 @@ namespace network {
             m_enemyShootCooldowns[enemy->id] -= dt;
 
             if (m_enemyShootCooldowns[enemy->id] <= 0.0f && HasPlayerInSight(*enemy)) {
-                float fireRate = GetEnemyFireRate(type);
-                float xOffset = -30.0f;
-                float yOffset = 0.0f;
-                switch (type) {
-                    case EnemyType::FAST:
-                        xOffset = -50.0f;
-                        yOffset = 20.0f;
-                        break;
-                    case EnemyType::BASIC:
-                        xOffset = -50.0f;
-                        yOffset = 25.0f;
-                        break;
-                    case EnemyType::TANK:
-                        xOffset = -30.0f;
-                        yOffset = -20.0f;
-                        break;
-                    default:
-                        xOffset = -30.0f;
-                        yOffset = 45.0f;
-                        break;
-                }
-                SpawnEnemyBullet(enemy->id, enemy->x + xOffset, enemy->y + yOffset);
-                m_enemyShootCooldowns[enemy->id] = fireRate;
+                SpawnEnemyBullet(enemy->id, enemy->x + stats.bulletXOffset, enemy->y + stats.bulletYOffset);
+                m_enemyShootCooldowns[enemy->id] = stats.fireRate;
             }
 
             if (enemy->x < -100.0f) {
@@ -500,12 +562,11 @@ namespace network {
                 float distSq = dx * dx + dy * dy;
 
                 if (distSq < COLLISION_RADIUS_SQ) {
-                    EnemyType enemyType = static_cast<EnemyType>(enemy->flags);
-                    uint8_t damage = 10;
+                    const uint8_t BULLET_DAMAGE = 10;
 
                     bullet->health = 0;
-                    if (enemy->health > damage) {
-                        enemy->health -= damage;
+                    if (enemy->health > BULLET_DAMAGE) {
+                        enemy->health -= BULLET_DAMAGE;
                     } else {
                         enemy->health = 0;
                     }
@@ -528,9 +589,13 @@ namespace network {
                 float distSq = dx * dx + dy * dy;
 
                 if (distSq < COLLISION_RADIUS_SQ) {
+                    uint8_t enemyBulletType = bullet->flags - 10;
+                    EnemyType enemyType = static_cast<EnemyType>(enemyBulletType);
+                    const EnemyStats& stats = GetEnemyStats(enemyType);
+
                     bullet->health = 0;
-                    if (player->health > 5) {
-                        player->health -= 5;
+                    if (player->health > stats.damage) {
+                        player->health -= stats.damage;
                     } else {
                         player->health = 0;
                     }
@@ -552,11 +617,12 @@ namespace network {
 
                 if (distSq < COLLISION_RADIUS_SQ * 1.5f) {
                     EnemyType enemyType = static_cast<EnemyType>(enemy->flags);
-                    uint8_t damage = GetEnemyDamage(enemyType);
+                    const EnemyStats& stats = GetEnemyStats(enemyType);
+                    uint8_t collisionDamage = (stats.damage * stats.collisionDamageMultiplier) / 10;
 
                     enemy->health = 0;
-                    if (player->health > damage) {
-                        player->health -= damage;
+                    if (player->health > collisionDamage) {
+                        player->health -= collisionDamage;
                     } else {
                         player->health = 0;
                     }
@@ -600,109 +666,12 @@ namespace network {
         return static_cast<EnemyType>(dist(gen));
     }
 
-    float GameServer::GetEnemySpeed(EnemyType type) {
-        switch (type) {
-            case EnemyType::BASIC:
-                return 220.0f;
-            case EnemyType::FAST:
-                return 200.0f;
-            case EnemyType::TANK:
-                return 220.0f;
-            case EnemyType::BOSS:
-                return 75.0f;
-            case EnemyType::FORMATION:
-                return 100.0f;
-            default:
-                return 100.0f;
+    const EnemyStats& GameServer::GetEnemyStats(EnemyType type) const {
+        size_t index = static_cast<size_t>(type);
+        if (index >= s_enemyStats.size()) {
+            index = 0;
         }
-    }
-
-    uint8_t GameServer::GetEnemyHealth(EnemyType type) {
-        switch (type) {
-            case EnemyType::BASIC:
-                return 100;
-            case EnemyType::FAST:
-                return 50;
-            case EnemyType::TANK:
-                return 200;
-            case EnemyType::BOSS:
-                return 255;
-            case EnemyType::FORMATION:
-                return 100;
-            default:
-                return 100;
-        }
-    }
-
-    uint8_t GameServer::GetEnemyDamage(EnemyType type) {
-        switch (type) {
-            case EnemyType::BASIC:
-                return 10;
-            case EnemyType::FAST:
-                return 5;
-            case EnemyType::TANK:
-                return 20;
-            case EnemyType::BOSS:
-                return 50;
-            case EnemyType::FORMATION:
-                return 10;
-            default:
-                return 10;
-        }
-    }
-
-    float GameServer::GetEnemyFireRate(EnemyType type) {
-        switch (type) {
-            case EnemyType::BASIC:
-                return 1.5f;
-            case EnemyType::FAST:
-                return 0.8f;
-            case EnemyType::TANK:
-                return 2.5f;
-            case EnemyType::BOSS:
-                return 0.5f;
-            case EnemyType::FORMATION:
-                return 1.5f;
-            default:
-                return 1.5f;
-        }
-    }
-
-    void GameServer::ApplyEnemyMovementPattern(GameEntity& enemy, float dt) {
-        EnemyType type = static_cast<EnemyType>(enemy.flags);
-        float baseSpeed = GetEnemySpeed(type);
-
-        switch (type) {
-            case EnemyType::BASIC:
-                enemy.vx = -baseSpeed;
-                enemy.vy = 0.0f;
-                break;
-
-            case EnemyType::FAST:
-                enemy.vx = -baseSpeed;
-                enemy.vy = std::sin(enemy.x * 0.01f) * 50.0f;
-                break;
-
-            case EnemyType::TANK:
-                enemy.vx = -baseSpeed;
-                enemy.vy = 0.0f;
-                break;
-
-            case EnemyType::BOSS:
-                enemy.vx = -baseSpeed;
-                enemy.vy = 0.0f;
-                break;
-
-            case EnemyType::FORMATION:
-                enemy.vx = -baseSpeed;
-                enemy.vy = 0.0f;
-                break;
-
-            default:
-                enemy.vx = -baseSpeed;
-                enemy.vy = 0.0f;
-                break;
-        }
+        return s_enemyStats[index];
     }
 
     bool GameServer::HasPlayerInSight(const GameEntity& enemy) {
