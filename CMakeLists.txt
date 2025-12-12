@@ -31,6 +31,7 @@ add_custom_target(copy_assets ALL
 )
 
 find_package(asio CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 
 add_subdirectory(libs/engine)
@@ -54,8 +55,6 @@ target_link_libraries(r-type_client PRIVATE
     rtype_core
     rtype_sfml_renderer
 )
-
-# ECS-based multiplayer demo removed (obsolete)
 
 add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network)

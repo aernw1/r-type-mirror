@@ -19,6 +19,7 @@
 #include <functional>
 #include <cmath>
 #include <array>
+#include <string>
 
 namespace network {
 
@@ -65,7 +66,8 @@ namespace network {
 
     class GameServer {
     public:
-        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers);
+        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
+                   const std::string& levelPath = "assets/levels/level1.json");
         ~GameServer();
 
         void Run();
@@ -75,6 +77,7 @@ namespace network {
         size_t GetConnectedPlayerCount() const { return m_connectedPlayers.size(); }
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
+        const std::string& GetLevelPath() const { return m_levelPath; }
     private:
         void WaitForAllPlayers();
         void ProcessIncomingPackets();
@@ -129,6 +132,9 @@ namespace network {
         std::atomic<uint64_t> m_packetsReceived{0};
 
         static const std::array<EnemyStats, 5> s_enemyStats;
+        
+        // Level data
+        std::string m_levelPath;
     };
 
 }
