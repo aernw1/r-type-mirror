@@ -45,58 +45,46 @@ namespace network {
         }
     }
 
-    const std::array<EnemyStats, 5> GameServer::s_enemyStats = {{
-        {
-            220.0f,  // speed
-            100,     // health
-            8,       // damage
-            1.0f,    // fireRate
-            -50.0f,  // bulletXOffset
-            25.0f,   // bulletYOffset
-            25,      // collisionDamageMultiplier (2.5x)
-            BasicMovementPattern
-        },
-        {
-            200.0f,
-            50,
-            3,
-            0.5f,
-            -50.0f,
-            20.0f,
-            20,
-            FastMovementPattern
-        },
-        {
-            220.0f,
-            200,
-            18,
-            1.8f,
-            -30.0f,
-            -20.0f,
-            30,
-            TankMovementPattern
-        },
-        {
-            75.0f,
-            255,
-            50,
-            0.5f,
-            -30.0f,
-            45.0f,
-            50,
-            BossMovementPattern
-        },
-        {
-            100.0f,
-            100,
-            10,
-            1.5f,
-            -30.0f,
-            45.0f,
-            25,
-            FormationMovementPattern
-        }
-    }};
+    const std::array<EnemyStats, 5> GameServer::s_enemyStats = {{{220.0f, // speed
+                                                                  100,    // health
+                                                                  8,      // damage
+                                                                  1.0f,   // fireRate
+                                                                  -50.0f, // bulletXOffset
+                                                                  25.0f,  // bulletYOffset
+                                                                  25,     // collisionDamageMultiplier (2.5x)
+                                                                  BasicMovementPattern},
+                                                                 {200.0f,
+                                                                  50,
+                                                                  3,
+                                                                  0.5f,
+                                                                  -50.0f,
+                                                                  20.0f,
+                                                                  20,
+                                                                  FastMovementPattern},
+                                                                 {220.0f,
+                                                                  200,
+                                                                  18,
+                                                                  1.8f,
+                                                                  -30.0f,
+                                                                  -20.0f,
+                                                                  30,
+                                                                  TankMovementPattern},
+                                                                 {75.0f,
+                                                                  255,
+                                                                  50,
+                                                                  0.5f,
+                                                                  -30.0f,
+                                                                  45.0f,
+                                                                  50,
+                                                                  BossMovementPattern},
+                                                                 {100.0f,
+                                                                  100,
+                                                                  10,
+                                                                  1.5f,
+                                                                  -30.0f,
+                                                                  45.0f,
+                                                                  25,
+                                                                  FormationMovementPattern}}};
 
     GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
                            const std::string& levelPath)

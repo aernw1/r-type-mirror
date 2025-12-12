@@ -33,7 +33,7 @@ namespace network {
 
     struct GameEntity;
 
-    using MovementPatternFunc = void(*)(GameEntity&, float);
+    using MovementPatternFunc = void (*)(GameEntity&, float);
 
     struct EnemyStats {
         float speed;
@@ -132,7 +132,7 @@ namespace network {
         std::atomic<uint64_t> m_packetsReceived{0};
 
         static const std::array<EnemyStats, 5> s_enemyStats;
-        
+
         // Level data
         std::string m_levelPath;
     };

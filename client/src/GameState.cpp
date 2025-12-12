@@ -719,8 +719,10 @@ namespace RType {
                     if (m_registry.HasComponent<Health>(ecsEntity)) {
                         auto& health = m_registry.GetComponent<Health>(ecsEntity);
                         int newHealth = static_cast<int>(entityState.health);
-                        if (newHealth < 0) newHealth = 0;
-                        if (newHealth > 100) newHealth = 100;
+                        if (newHealth < 0)
+                            newHealth = 0;
+                        if (newHealth > 100)
+                            newHealth = 100;
 
                         bool playerIsDead = false;
                         size_t playerIndex = MAX_PLAYERS;
@@ -874,16 +876,14 @@ namespace RType {
                 &m_enemyRedSprite,
                 &m_enemyBlueSprite,
                 &m_enemyGreenSprite,
-                &m_enemyGreenSprite
-            };
+                &m_enemyGreenSprite};
 
             static const Math::Color tints[] = {
                 {1.0f, 1.0f, 1.0f, 1.0f},
                 {1.0f, 1.0f, 1.0f, 1.0f},
                 {1.0f, 1.0f, 1.0f, 1.0f},
                 {1.0f, 1.0f, 1.0f, 1.0f},
-                {1.0f, 1.0f, 1.0f, 1.0f}
-            };
+                {1.0f, 1.0f, 1.0f, 1.0f}};
 
             size_t index = (enemyType < 5) ? enemyType : 0;
             EnemySpriteConfig result;
@@ -896,20 +896,17 @@ namespace RType {
             const Renderer::SpriteId* sprites[] = {
                 &m_enemyBulletGreenSprite,
                 &m_enemyBulletYellowSprite,
-                &m_enemyBulletPurpleSprite
-            };
+                &m_enemyBulletPurpleSprite};
 
             static const Math::Color tints[] = {
                 {1.0f, 1.0f, 1.0f, 1.0f},
                 {1.0f, 0.2f, 0.2f, 1.0f},
-                {0.8f, 0.3f, 1.0f, 1.0f}
-            };
+                {0.8f, 0.3f, 1.0f, 1.0f}};
 
             static const float scales[] = {
                 0.14f,
                 0.09f,
-                0.18f
-            };
+                0.18f};
 
             size_t index = (enemyType < 3) ? enemyType : 0;
             EnemyBulletSpriteConfig result;
