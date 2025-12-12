@@ -285,30 +285,43 @@ namespace network {
         it->second.lastInputSequence = input->sequence;
         it->second.lastPingTime = now;
 
-        auto playerEntity = std::find_if(m_entities.begin(), m_entities.end(),
-                                         [hash = input->playerHash](const GameEntity& e) {
-                                             return e.type == EntityType::PLAYER && e.ownerHash == hash;
-                                         });
+        // Find player entity in ECS Registry by playerHash
+        using namespace RType::ECS;
+        RType::ECS::Entity playerEntity = NULL_ENTITY;
+        auto players = m_registry.GetEntitiesWithComponent<Player>();
+        for (auto entity : players) {
+            if (!m_registry.HasComponent<Player>(entity))
+                continue;
+            const auto& player = m_registry.GetComponent<Player>(entity);
+            if (player.playerHash == input->playerHash) {
+                playerEntity = entity;
+                break;
+            }
+        }
 
-        if (playerEntity == m_entities.end())
+        if (playerEntity == NULL_ENTITY || !m_registry.HasComponent<Velocity>(playerEntity))
             return;
 
         const float SPEED = 300.0f;
 
-        playerEntity->vx = 0.0f;
-        playerEntity->vy = 0.0f;
+        auto& vel = m_registry.GetComponent<Velocity>(playerEntity);
+        vel.dx = 0.0f;
+        vel.dy = 0.0f;
 
         if (input->inputs & InputFlags::UP)
-            playerEntity->vy = -SPEED;
+            vel.dy = -SPEED;
         if (input->inputs & InputFlags::DOWN)
-            playerEntity->vy = SPEED;
+            vel.dy = SPEED;
         if (input->inputs & InputFlags::LEFT)
-            playerEntity->vx = -SPEED;
+            vel.dx = -SPEED;
         if (input->inputs & InputFlags::RIGHT)
-            playerEntity->vx = SPEED;
+            vel.dx = SPEED;
 
         if (input->inputs & InputFlags::SHOOT) {
-            SpawnBullet(input->playerHash, playerEntity->x + 70.0f, playerEntity->y + 50.0f);
+            if (m_registry.HasComponent<Position>(playerEntity)) {
+                const auto& pos = m_registry.GetComponent<Position>(playerEntity);
+                SpawnBullet(input->playerHash, pos.x + 70.0f, pos.y + 50.0f);
+            }
         }
     }
 

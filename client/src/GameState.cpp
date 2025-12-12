@@ -150,6 +150,7 @@ namespace RType {
             m_localPlayerEntity = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(m_localPlayerEntity, Position{100.0f, 360.0f});
             m_registry.AddComponent<Velocity>(m_localPlayerEntity, Velocity{0.0f, 0.0f});
+            m_registry.AddComponent<Controllable>(m_localPlayerEntity, Controllable{300.0f});
             m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{0.2f, 50.0f, 25.0f});
             m_registry.AddComponent<ShootCommand>(m_localPlayerEntity, ShootCommand{});
             m_registry.AddComponent<Health>(m_localPlayerEntity, Health{100, 100});
@@ -376,7 +377,6 @@ namespace RType {
                         std::cout << "[CLIENT SEND INPUT] t=" << epoch << " inputs=" << m_currentInputs << std::endl;
                     }
                 }
-                m_context.networkClient->SendInput(m_currentInputs);
                 m_previousInputs = m_currentInputs;
             }
 
@@ -839,21 +839,13 @@ namespace RType {
                     m_chargeTime = MAX_CHARGE_TIME;
                 }
             }
+            m_inputSystem->Update(m_registry, dt);
+            m_movementSystem->Update(m_registry, dt);
 
-            auto entities = m_registry.GetEntitiesWithComponent<Position>();
-            for (auto entity : entities) {
-                if (m_registry.HasComponent<Velocity>(entity)) {
-                    auto& pos = m_registry.GetComponent<Position>(entity);
-                    auto& vel = m_registry.GetComponent<Velocity>(entity);
-
-                    pos.x += vel.dx * dt;
-                    pos.y += vel.dy * dt;
-
-                    if (entity == m_localPlayerEntity) {
-                        pos.x = std::max(0.0f, std::min(pos.x, 1280.0f - 66.0f));
-                        pos.y = std::max(0.0f, std::min(pos.y, 720.0f - 32.0f));
-                    }
-                }
+            if (m_localPlayerEntity != ECS::NULL_ENTITY && m_registry.HasComponent<Position>(m_localPlayerEntity)) {
+                auto& pos = m_registry.GetComponent<Position>(m_localPlayerEntity);
+                pos.x = std::max(0.0f, std::min(pos.x, 1280.0f - 66.0f));
+                pos.y = std::max(0.0f, std::min(pos.y, 720.0f - 32.0f));
             }
 
             m_collisionDetectionSystem->Update(m_registry, dt);
