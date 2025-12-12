@@ -18,7 +18,6 @@ using json = nlohmann::json;
 
 namespace network {
 
-<<<<<<< HEAD
     namespace {
         void BasicMovementPattern(GameEntity& enemy, float /*dt*/) {
             enemy.vx = -220.0f;
