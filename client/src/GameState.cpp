@@ -136,7 +136,11 @@ namespace RType {
             m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(bulletSprite);
             m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
             m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
-            m_collisionSystem = std::make_unique<RType::ECS::CollisionSystem>();
+
+            m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
+            m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
+            m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
+            m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
             m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
         }
 
@@ -851,6 +855,12 @@ namespace RType {
                     }
                 }
             }
+
+            m_collisionDetectionSystem->Update(m_registry, dt);
+
+            m_bulletResponseSystem->Update(m_registry, dt);
+            m_playerResponseSystem->Update(m_registry, dt);
+            m_obstacleResponseSystem->Update(m_registry, dt);
 
             m_healthSystem->Update(m_registry, dt);
 

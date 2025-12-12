@@ -15,7 +15,10 @@
 #include "ECS/ShootingSystem.hpp"
 #include "ECS/MovementSystem.hpp"
 #include "ECS/InputSystem.hpp"
-#include "ECS/CollisionSystem.hpp"
+#include "ECS/CollisionDetectionSystem.hpp"
+#include "ECS/BulletCollisionResponseSystem.hpp"
+#include "ECS/PlayerCollisionResponseSystem.hpp"
+#include "ECS/ObstacleCollisionResponseSystem.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/LevelLoader.hpp"
@@ -100,7 +103,10 @@ namespace RType {
             std::unique_ptr<RType::ECS::TextRenderingSystem> m_textSystem;
             std::unique_ptr<RType::ECS::MovementSystem> m_movementSystem;
             std::unique_ptr<RType::ECS::InputSystem> m_inputSystem;
-            std::unique_ptr<RType::ECS::CollisionSystem> m_collisionSystem;
+            std::unique_ptr<RType::ECS::CollisionDetectionSystem> m_collisionDetectionSystem;
+            std::unique_ptr<RType::ECS::BulletCollisionResponseSystem> m_bulletResponseSystem;
+            std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
+            std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
 
