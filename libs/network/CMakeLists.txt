@@ -14,7 +14,7 @@ target_include_directories(rtype_network PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libs/engine/include>
 )
 
-target_link_libraries(rtype_network PUBLIC asio Threads::Threads nlohmann_json::nlohmann_json)
+target_link_libraries(rtype_network PUBLIC asio Threads::Threads nlohmann_json::nlohmann_json rtype_ecs)
 
 if(WIN32)
     target_compile_definitions(rtype_network PUBLIC

@@ -7,8 +7,10 @@ set(ECS_SOURCES
     MenuSystem.cpp
     PlayerSystem.cpp
     PlayerFactory.cpp
-    CollisionSystem.cpp
-    BulletCollisionSystem.cpp
+    CollisionDetectionSystem.cpp
+    BulletCollisionResponseSystem.cpp
+    PlayerCollisionResponseSystem.cpp
+    ObstacleCollisionResponseSystem.cpp
     EnemySystem.cpp
     EnemyFactory.cpp
     HealthSystem.cpp
@@ -33,8 +35,10 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MenuSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerFactory.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/CollisionSystem.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BulletCollisionSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/CollisionDetectionSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BulletCollisionResponseSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PlayerCollisionResponseSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ObstacleCollisionResponseSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemySystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EnemyFactory.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/HealthSystem.hpp

@@ -5,10 +5,11 @@
 #include "ECS/Component.hpp"
 #include "ECS/MovementSystem.hpp"
 #include "ECS/RenderingSystem.hpp"
-#include "ECS/CollisionSystem.hpp"
+#include "ECS/CollisionDetectionSystem.hpp"
 #include <memory>
 #include <chrono>
 #include <vector>
+#include <cmath>
 
 int main(int, char*[]) {
     using namespace RType;
@@ -55,7 +56,7 @@ int main(int, char*[]) {
     auto movementSystem = std::make_unique<ECS::MovementSystem>();
     engine->RegisterSystem(std::move(movementSystem));
 
-    auto collisionSystem = std::make_unique<ECS::CollisionSystem>();
+    auto collisionSystem = std::make_unique<ECS::CollisionDetectionSystem>();
     engine->RegisterSystem(std::move(collisionSystem));
 
     auto renderingSystem = std::make_unique<ECS::RenderingSystem>(rendererPtr);
@@ -147,7 +148,19 @@ int main(int, char*[]) {
         for (auto enemy : enemies) {
             if (!registry.IsEntityAlive(enemy)) continue;
 
-            if (ECS::CollisionSystem::CheckCollision(registry, player, enemy)) {
+            // Simple AABB collision check for test purposes
+            auto& playerPos = registry.GetComponent<ECS::Position>(player);
+            auto& enemyPos = registry.GetComponent<ECS::Position>(enemy);
+            bool colliding = false;
+            if (registry.HasComponent<ECS::BoxCollider>(player) && registry.HasComponent<ECS::BoxCollider>(enemy)) {
+                auto& playerBox = registry.GetComponent<ECS::BoxCollider>(player);
+                auto& enemyBox = registry.GetComponent<ECS::BoxCollider>(enemy);
+                float dx = std::abs(playerPos.x - enemyPos.x);
+                float dy = std::abs(playerPos.y - enemyPos.y);
+                colliding = (dx < (playerBox.width + enemyBox.width) / 2.0f &&
+                            dy < (playerBox.height + enemyBox.height) / 2.0f);
+            }
+            if (colliding) {
                 auto& enemyPos = registry.GetComponent<ECS::Position>(enemy);
                 Core::Logger::Warning("COLLISION! Player hit enemy at ({}, {})",
                                      enemyPos.x, enemyPos.y);
