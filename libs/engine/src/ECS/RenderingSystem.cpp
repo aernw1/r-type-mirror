@@ -18,6 +18,9 @@ namespace RType {
 
             std::vector<std::pair<Entity, int>> renderableEntities;
             for (Entity entity : entities) {
+                if (!registry.IsEntityAlive(entity)) {
+                    continue;
+                }
                 if (registry.HasComponent<Position>(entity)) {
                     const auto& drawable = registry.GetComponent<Drawable>(entity);
                     renderableEntities.emplace_back(entity, drawable.layer);

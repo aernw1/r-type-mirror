@@ -12,10 +12,92 @@
 #include <cstring>
 #include <algorithm>
 #include <random>
+#include <cmath>
 
 using json = nlohmann::json;
 
 namespace network {
+
+<<<<<<< HEAD
+    namespace {
+        void BasicMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -220.0f;
+            enemy.vy = 0.0f;
+        }
+
+        void FastMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -200.0f;
+            enemy.vy = std::sin(enemy.x * 0.01f) * 50.0f;
+        }
+
+        void TankMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -220.0f;
+            enemy.vy = 0.0f;
+        }
+
+        void BossMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -75.0f;
+            enemy.vy = 0.0f;
+        }
+
+        void FormationMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -100.0f;
+            enemy.vy = 0.0f;
+        }
+    }
+
+    const std::array<EnemyStats, 5> GameServer::s_enemyStats = {{
+        {
+            220.0f,  // speed
+            100,     // health
+            8,       // damage
+            1.0f,    // fireRate
+            -50.0f,  // bulletXOffset
+            25.0f,   // bulletYOffset
+            25,      // collisionDamageMultiplier (2.5x)
+            BasicMovementPattern
+        },
+        {
+            200.0f,
+            50,
+            3,
+            0.5f,
+            -50.0f,
+            20.0f,
+            20,
+            FastMovementPattern
+        },
+        {
+            220.0f,
+            200,
+            18,
+            1.8f,
+            -30.0f,
+            -20.0f,
+            30,
+            TankMovementPattern
+        },
+        {
+            75.0f,
+            255,
+            50,
+            0.5f,
+            -30.0f,
+            45.0f,
+            50,
+            BossMovementPattern
+        },
+        {
+            100.0f,
+            100,
+            10,
+            1.5f,
+            -30.0f,
+            45.0f,
+            25,
+            FormationMovementPattern
+        }
+    }};
 
     GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
                            const std::string& levelPath)
@@ -231,7 +313,7 @@ namespace network {
             playerEntity->vx = SPEED;
 
         if (input->inputs & InputFlags::SHOOT) {
-            SpawnBullet(input->playerHash, playerEntity->x + 50.0f, playerEntity->y + 20.0f);
+            SpawnBullet(input->playerHash, playerEntity->x + 70.0f, playerEntity->y + 50.0f);
         }
     }
 
@@ -345,18 +427,27 @@ namespace network {
         static std::mt19937 gen(rd());
         std::uniform_real_distribution<float> yDist(50.0f, 550.0f);
 
+        EnemyType enemyType = GetRandomEnemyType();
+        const EnemyStats& stats = GetEnemyStats(enemyType);
+        float spawnX = 1920.0f;
+        float spawnY = yDist(gen);
+
         GameEntity enemy;
         enemy.id = GetNextEntityId();
         enemy.type = EntityType::ENEMY;
-        enemy.x = 1920.0f;
-        enemy.y = yDist(gen);
-        enemy.vx = -100.0f;
+        enemy.x = spawnX;
+        enemy.y = spawnY;
+        enemy.vx = -stats.speed;
         enemy.vy = 0.0f;
-        enemy.health = 50;
-        enemy.flags = 0;
+        enemy.health = stats.health;
+        enemy.flags = static_cast<uint8_t>(enemyType);
         enemy.ownerHash = 0;
 
         m_entities.push_back(enemy);
+        m_enemyShootCooldowns[enemy.id] = 0.0f;
+
+        std::cout << "[Server] Spawned enemy type " << static_cast<int>(enemyType)
+                  << " (id=" << enemy.id << ") at (" << spawnX << "," << spawnY << ")" << std::endl;
     }
 
     void GameServer::SpawnBullet(uint64_t ownerHash, float x, float y) {
@@ -370,6 +461,27 @@ namespace network {
         bullet.health = 1;
         bullet.flags = 0;
         bullet.ownerHash = ownerHash;
+
+        m_entities.push_back(bullet);
+    }
+
+    void GameServer::SpawnEnemyBullet(uint32_t enemyId, float x, float y) {
+        GameEntity* enemy = FindEntityById(enemyId);
+        if (!enemy || enemy->health == 0)
+            return;
+
+        EnemyType enemyType = static_cast<EnemyType>(enemy->flags);
+
+        GameEntity bullet;
+        bullet.id = GetNextEntityId();
+        bullet.type = EntityType::BULLET;
+        bullet.x = x;
+        bullet.y = y;
+        bullet.vx = -400.0f;
+        bullet.vy = 0.0f;
+        bullet.health = 1;
+        bullet.flags = 10 + static_cast<uint8_t>(enemyType);
+        bullet.ownerHash = 0;
 
         m_entities.push_back(bullet);
     }
@@ -399,15 +511,55 @@ namespace network {
         }
     }
 
-    void GameServer::UpdateEnemies(float /*dt*/) {
+    void GameServer::UpdateEnemies(float dt) {
+        auto enemies = GetEntitiesByType(EntityType::ENEMY);
+
+        for (auto* enemy : enemies) {
+            if (enemy->health == 0)
+                continue;
+
+            EnemyType type = static_cast<EnemyType>(enemy->flags);
+            const EnemyStats& stats = GetEnemyStats(type);
+
+            stats.movementPattern(*enemy, dt);
+
+            if (m_enemyShootCooldowns.find(enemy->id) == m_enemyShootCooldowns.end()) {
+                m_enemyShootCooldowns[enemy->id] = 0.0f;
+            }
+
+            m_enemyShootCooldowns[enemy->id] -= dt;
+
+            if (m_enemyShootCooldowns[enemy->id] <= 0.0f && HasPlayerInSight(*enemy)) {
+                SpawnEnemyBullet(enemy->id, enemy->x + stats.bulletXOffset, enemy->y + stats.bulletYOffset);
+                m_enemyShootCooldowns[enemy->id] = stats.fireRate;
+            }
+
+            if (enemy->x < -100.0f) {
+                enemy->health = 0;
+            }
+        }
+
+        for (auto it = m_enemyShootCooldowns.begin(); it != m_enemyShootCooldowns.end();) {
+            if (FindEntityById(it->first) == nullptr || FindEntityById(it->first)->health == 0) {
+                it = m_enemyShootCooldowns.erase(it);
+            } else {
+                ++it;
+            }
+        }
     }
 
     void GameServer::CheckCollisions() {
         auto bullets = GetEntitiesByType(EntityType::BULLET);
         auto enemies = GetEntitiesByType(EntityType::ENEMY);
+        auto players = GetEntitiesByType(EntityType::PLAYER);
+
+        const float COLLISION_RADIUS = 25.0f;
+        const float COLLISION_RADIUS_SQ = COLLISION_RADIUS * COLLISION_RADIUS;
 
         for (auto* bullet : bullets) {
             if (bullet->health == 0)
+                continue;
+            if (bullet->flags != 0)
                 continue;
 
             for (auto* enemy : enemies) {
@@ -418,9 +570,71 @@ namespace network {
                 float dy = bullet->y - enemy->y;
                 float distSq = dx * dx + dy * dy;
 
-                if (distSq < 50.0f * 50.0f) {
+                if (distSq < COLLISION_RADIUS_SQ) {
+                    const uint8_t BULLET_DAMAGE = 10;
+
                     bullet->health = 0;
-                    enemy->health = std::max(0, enemy->health - 10);
+                    if (enemy->health > BULLET_DAMAGE) {
+                        enemy->health -= BULLET_DAMAGE;
+                    } else {
+                        enemy->health = 0;
+                    }
+                }
+            }
+        }
+
+        for (auto* bullet : bullets) {
+            if (bullet->health == 0)
+                continue;
+            if (bullet->flags < 10)
+                continue;
+
+            for (auto* player : players) {
+                if (player->health == 0)
+                    continue;
+
+                float dx = bullet->x - player->x;
+                float dy = bullet->y - player->y;
+                float distSq = dx * dx + dy * dy;
+
+                if (distSq < COLLISION_RADIUS_SQ) {
+                    uint8_t enemyBulletType = bullet->flags - 10;
+                    EnemyType enemyType = static_cast<EnemyType>(enemyBulletType);
+                    const EnemyStats& stats = GetEnemyStats(enemyType);
+
+                    bullet->health = 0;
+                    if (player->health > stats.damage) {
+                        player->health -= stats.damage;
+                    } else {
+                        player->health = 0;
+                    }
+                }
+            }
+        }
+
+        for (auto* enemy : enemies) {
+            if (enemy->health == 0)
+                continue;
+
+            for (auto* player : players) {
+                if (player->health == 0)
+                    continue;
+
+                float dx = enemy->x - player->x;
+                float dy = enemy->y - player->y;
+                float distSq = dx * dx + dy * dy;
+
+                if (distSq < COLLISION_RADIUS_SQ * 1.5f) {
+                    EnemyType enemyType = static_cast<EnemyType>(enemy->flags);
+                    const EnemyStats& stats = GetEnemyStats(enemyType);
+                    uint8_t collisionDamage = (stats.damage * stats.collisionDamageMultiplier) / 10;
+
+                    enemy->health = 0;
+                    if (player->health > collisionDamage) {
+                        player->health -= collisionDamage;
+                    } else {
+                        player->health = 0;
+                    }
                 }
             }
         }
@@ -429,7 +643,12 @@ namespace network {
     void GameServer::CleanupDeadEntities() {
         m_entities.erase(
             std::remove_if(m_entities.begin(), m_entities.end(),
-                           [](const GameEntity& e) { return e.health == 0; }),
+                           [this](const GameEntity& e) {
+                               if (e.health == 0 && e.type == EntityType::ENEMY) {
+                                   m_enemyShootCooldowns.erase(e.id);
+                               }
+                               return e.health == 0;
+                           }),
             m_entities.end());
     }
 
@@ -447,6 +666,43 @@ namespace network {
             }
         }
         return result;
+    }
+
+    EnemyType GameServer::GetRandomEnemyType() {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> dist(0, 2);
+        return static_cast<EnemyType>(dist(gen));
+    }
+
+    const EnemyStats& GameServer::GetEnemyStats(EnemyType type) const {
+        size_t index = static_cast<size_t>(type);
+        if (index >= s_enemyStats.size()) {
+            index = 0;
+        }
+        return s_enemyStats[index];
+    }
+
+    bool GameServer::HasPlayerInSight(const GameEntity& enemy) {
+        auto players = GetEntitiesByType(EntityType::PLAYER);
+        const float SIGHT_RANGE = 800.0f;
+        const float Y_TOLERANCE = 100.0f;
+
+        for (auto* player : players) {
+            if (player->health == 0)
+                continue;
+
+            float dx = player->x - enemy.x;
+            if (dx > 0.0f || dx < -SIGHT_RANGE)
+                continue;
+
+            float dy = std::abs(player->y - enemy.y);
+            if (dy <= Y_TOLERANCE) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }
