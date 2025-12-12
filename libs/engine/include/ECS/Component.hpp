@@ -186,8 +186,8 @@ namespace RType {
         };
 
         struct CollisionLayer : public IComponent {
-            uint16_t layer = 0;      // What layer this entity is on
-            uint16_t mask = 0xFFFF;  // Which layers this entity collides with
+            uint16_t layer = 0;     // What layer this entity is on
+            uint16_t mask = 0xFFFF; // Which layers this entity collides with
 
             CollisionLayer() = default;
             CollisionLayer(uint16_t l, uint16_t m) : layer(l), mask(m) {}
@@ -196,12 +196,12 @@ namespace RType {
         // masks for collision layers
         namespace CollisionLayers {
             constexpr uint16_t NONE = 0;
-            constexpr uint16_t PLAYER = 1 << 0;          // 0x0001
-            constexpr uint16_t ENEMY = 1 << 1;           // 0x0002
-            constexpr uint16_t PLAYER_BULLET = 1 << 2;   // 0x0004
-            constexpr uint16_t ENEMY_BULLET = 1 << 3;    // 0x0008
-            constexpr uint16_t OBSTACLE = 1 << 4;        // 0x0010
-            constexpr uint16_t POWERUP = 1 << 5;         // 0x0020
+            constexpr uint16_t PLAYER = 1 << 0;        // 0x0001
+            constexpr uint16_t ENEMY = 1 << 1;         // 0x0002
+            constexpr uint16_t PLAYER_BULLET = 1 << 2; // 0x0004
+            constexpr uint16_t ENEMY_BULLET = 1 << 3;  // 0x0008
+            constexpr uint16_t OBSTACLE = 1 << 4;      // 0x0010
+            constexpr uint16_t POWERUP = 1 << 5;       // 0x0020
             constexpr uint16_t ALL = 0xFFFF;
         }
 

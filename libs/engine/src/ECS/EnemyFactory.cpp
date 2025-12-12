@@ -60,8 +60,8 @@ namespace RType {
 
             registry.AddComponent<CircleCollider>(enemy, CircleCollider(25.0f));
             registry.AddComponent<CollisionLayer>(enemy,
-                CollisionLayer(CollisionLayers::ENEMY,
-                               CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET | CollisionLayers::OBSTACLE));
+                                                  CollisionLayer(CollisionLayers::ENEMY,
+                                                                 CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET | CollisionLayers::OBSTACLE));
 
             if (renderer) {
                 std::string spritePath(data.spritePath);

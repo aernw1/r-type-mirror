@@ -53,7 +53,6 @@ namespace RType {
                         // TODO: implement player-obstacle collision response logic here
                     }
                 }
-
             }
         }
 

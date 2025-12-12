@@ -28,8 +28,8 @@ namespace RType {
 
             registry.AddComponent<CircleCollider>(player, CircleCollider(25.0f));
             registry.AddComponent<CollisionLayer>(player,
-                CollisionLayer(CollisionLayers::PLAYER,
-                               CollisionLayers::ENEMY | CollisionLayers::ENEMY_BULLET | CollisionLayers::OBSTACLE));
+                                                  CollisionLayer(CollisionLayers::PLAYER,
+                                                                 CollisionLayers::ENEMY | CollisionLayers::ENEMY_BULLET | CollisionLayers::OBSTACLE));
 
             if (renderer) {
                 std::string spritePath = GetPlayerSpritePath(playerNumber);

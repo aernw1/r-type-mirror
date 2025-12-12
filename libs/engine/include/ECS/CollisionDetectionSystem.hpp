@@ -21,7 +21,6 @@ namespace RType {
 
             const char* GetName() const override { return "CollisionDetectionSystem"; }
             void Update(Registry& registry, float deltaTime) override;
-
         private:
             void ClearCollisionEvents(Registry& registry);
             std::vector<Entity> GetCollidableEntities(Registry& registry);
@@ -29,13 +28,13 @@ namespace RType {
             bool CheckCollision(Registry& registry, Entity a, Entity b);
 
             static bool CheckCircleCircle(float x1, float y1, float r1,
-                                         float x2, float y2, float r2);
+                                          float x2, float y2, float r2);
 
             static bool CheckAABB(float x1, float y1, float w1, float h1,
-                                 float x2, float y2, float w2, float h2);
+                                  float x2, float y2, float w2, float h2);
 
             static bool CheckCircleAABB(float cx, float cy, float radius,
-                                       float bx, float by, float bw, float bh);
+                                        float bx, float by, float bw, float bh);
         };
 
     }

@@ -42,7 +42,7 @@ namespace RType {
                         const auto& enemyComp = registry.GetComponent<Enemy>(other);
                         const auto& bulletComp = registry.GetComponent<Bullet>(bullet);
                         registry.AddComponent<EnemyKilled>(other,
-                            EnemyKilled(enemyComp.id, bulletComp.owner));
+                                                           EnemyKilled(enemyComp.id, bulletComp.owner));
                     }
                 }
 

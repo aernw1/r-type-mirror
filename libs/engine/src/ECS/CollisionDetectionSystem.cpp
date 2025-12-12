@@ -90,28 +90,28 @@ namespace RType {
                 const auto& circleA = registry.GetComponent<CircleCollider>(a);
                 const auto& circleB = registry.GetComponent<CircleCollider>(b);
                 return CheckCircleCircle(posA.x, posA.y, circleA.radius,
-                                        posB.x, posB.y, circleB.radius);
+                                         posB.x, posB.y, circleB.radius);
             }
 
             if (aHasBox && bHasBox) {
                 const auto& boxA = registry.GetComponent<BoxCollider>(a);
                 const auto& boxB = registry.GetComponent<BoxCollider>(b);
                 return CheckAABB(posA.x, posA.y, boxA.width, boxA.height,
-                                posB.x, posB.y, boxB.width, boxB.height);
+                                 posB.x, posB.y, boxB.width, boxB.height);
             }
 
             if (aHasCircle && bHasBox) {
                 const auto& circle = registry.GetComponent<CircleCollider>(a);
                 const auto& box = registry.GetComponent<BoxCollider>(b);
                 return CheckCircleAABB(posA.x, posA.y, circle.radius,
-                                      posB.x, posB.y, box.width, box.height);
+                                       posB.x, posB.y, box.width, box.height);
             }
 
             if (aHasBox && bHasCircle) {
                 const auto& box = registry.GetComponent<BoxCollider>(a);
                 const auto& circle = registry.GetComponent<CircleCollider>(b);
                 return CheckCircleAABB(posB.x, posB.y, circle.radius,
-                                      posA.x, posA.y, box.width, box.height);
+                                       posA.x, posA.y, box.width, box.height);
             }
 
             return false;

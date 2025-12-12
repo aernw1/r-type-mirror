@@ -79,8 +79,8 @@ namespace RType {
 
                 registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
                 registry.AddComponent<CollisionLayer>(bulletEntity,
-                    CollisionLayer(CollisionLayers::PLAYER_BULLET,
-                                   CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+                                                      CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                                                     CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
             }
         }
     }

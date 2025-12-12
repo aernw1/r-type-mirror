@@ -467,8 +467,8 @@ namespace network {
         m_registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
         m_registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
         m_registry.AddComponent<CollisionLayer>(bulletEntity,
-            CollisionLayer(CollisionLayers::PLAYER_BULLET,
-                           CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+                                                CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                                               CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
 
         // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
     }
@@ -491,8 +491,8 @@ namespace network {
         m_registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
         m_registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
         m_registry.AddComponent<CollisionLayer>(bulletEntity,
-            CollisionLayer(CollisionLayers::ENEMY_BULLET,
-                           CollisionLayers::PLAYER | CollisionLayers::OBSTACLE));
+                                                CollisionLayer(CollisionLayers::ENEMY_BULLET,
+                                                               CollisionLayers::PLAYER | CollisionLayers::OBSTACLE));
 
         // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
     }

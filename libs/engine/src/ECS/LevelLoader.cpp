@@ -323,7 +323,7 @@ namespace RType {
                     registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
                     registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));
                     registry.AddComponent<CollisionLayer>(colliderEntity,
-                        CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::ALL));
+                                                          CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::ALL));
 
                     entities.obstacles.push_back(colliderEntity);
                 }
@@ -361,7 +361,7 @@ namespace RType {
                     registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
                     registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));
                     registry.AddComponent<CollisionLayer>(colliderEntity,
-                        CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::ALL));
+                                                          CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::ALL));
 
                     entities.obstacles.push_back(colliderEntity);
                 }
