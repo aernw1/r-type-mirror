@@ -89,10 +89,7 @@ int main() {
     auto& obs1Drawable = registry.AddComponent<ECS::Drawable>(obs1, ECS::Drawable(rock1Sprite, 1));
     obs1Drawable.scale = {obs1Width / rock1Size.x, obs1Height / rock1Size.y};
 
-    auto& obs1MultiCollider = registry.AddComponent<ECS::MultiBoxCollider>(obs1, ECS::MultiBoxCollider());
-    obs1MultiCollider.AddBox(0.0f, 80.0f, 180.0f, 280.0f);
-    obs1MultiCollider.AddBox(220.0f, 120.0f, 210.0f, 240.0f);
-    obs1MultiCollider.AddBox(480.0f, 60.0f, 240.0f, 300.0f);
+    auto& obs1MultiCollider = registry.AddComponent<ECS::BoxCollider>(obs1, ECS::BoxCollider());
 
     registry.AddComponent<ECS::Scrollable>(obs1, ECS::Scrollable(-200.0f));
     registry.AddComponent<ECS::Obstacle>(obs1, ECS::Obstacle(true));
@@ -106,10 +103,6 @@ int main() {
     auto& obs2Drawable = registry.AddComponent<ECS::Drawable>(obs2, ECS::Drawable(rock2Sprite, 1));
     obs2Drawable.scale = {obs2Width / rock2Size.x, obs2Height / rock2Size.y};
 
-    auto& obs2MultiCollider = registry.AddComponent<ECS::MultiBoxCollider>(obs2, ECS::MultiBoxCollider());
-    obs2MultiCollider.AddBox(0.0f, 60.0f, 200.0f, 260.0f);
-    obs2MultiCollider.AddBox(260.0f, 30.0f, 190.0f, 290.0f);
-    obs2MultiCollider.AddBox(500.0f, 90.0f, 180.0f, 230.0f);
 
     registry.AddComponent<ECS::Scrollable>(obs2, ECS::Scrollable(-200.0f));
     registry.AddComponent<ECS::Obstacle>(obs2, ECS::Obstacle(true));
@@ -123,11 +116,6 @@ int main() {
     auto& obs3Drawable = registry.AddComponent<ECS::Drawable>(obs3, ECS::Drawable(rock3Sprite, 1));
     obs3Drawable.scale = {obs3Width / rock3Size.x, obs3Height / rock3Size.y};
 
-    auto& obs3MultiCollider = registry.AddComponent<ECS::MultiBoxCollider>(obs3, ECS::MultiBoxCollider());
-    obs3MultiCollider.AddBox(0.0f, 45.0f, 220.0f, 310.0f);
-    obs3MultiCollider.AddBox(280.0f, 0.0f, 250.0f, 340.0f);
-    obs3MultiCollider.AddBox(570.0f, 75.0f, 240.0f, 290.0f);
-
     registry.AddComponent<ECS::Scrollable>(obs3, ECS::Scrollable(-200.0f));
     registry.AddComponent<ECS::Obstacle>(obs3, ECS::Obstacle(true));
 
@@ -140,13 +128,6 @@ int main() {
     auto& obs4Drawable = registry.AddComponent<ECS::Drawable>(obs4, ECS::Drawable(rock4Sprite, 1));
     obs4Drawable.scale = {obs4Width / rock4Size.x, obs4Height / rock4Size.y};
 
-    auto& obs4MultiCollider = registry.AddComponent<ECS::MultiBoxCollider>(obs4, ECS::MultiBoxCollider());
-    obs4MultiCollider.AddBox(0.0f, 110.0f, 210.0f, 270.0f);
-    obs4MultiCollider.AddBox(260.0f, 65.0f, 240.0f, 315.0f);
-    obs4MultiCollider.AddBox(550.0f, 125.0f, 210.0f, 255.0f);
-
-    registry.AddComponent<ECS::Scrollable>(obs4, ECS::Scrollable(-200.0f));
-    registry.AddComponent<ECS::Obstacle>(obs4, ECS::Obstacle(true));
 
     auto obs5 = registry.CreateEntity();
     float obs5Width = 1200.0f;
@@ -157,15 +138,6 @@ int main() {
     auto& obs5Drawable = registry.AddComponent<ECS::Drawable>(obs5, ECS::Drawable(rock5Sprite, 1));
     obs5Drawable.scale = {obs5Width / rock5Size.x, obs5Height / rock5Size.y};
 
-    auto& obs5MultiCollider = registry.AddComponent<ECS::MultiBoxCollider>(obs5, ECS::MultiBoxCollider());
-    obs5MultiCollider.AddBox(0.0f, 95.0f, 220.0f, 260.0f);
-    obs5MultiCollider.AddBox(270.0f, 50.0f, 230.0f, 305.0f);
-    obs5MultiCollider.AddBox(540.0f, 110.0f, 230.0f, 245.0f);
-
-    registry.AddComponent<ECS::Scrollable>(obs5, ECS::Scrollable(-200.0f));
-    registry.AddComponent<ECS::Obstacle>(obs5, ECS::Obstacle(true));
-
-    std::cout << "All entities created! Starting game loop..." << std::endl;
 
     auto lastTime = std::chrono::high_resolution_clock::now();
 

@@ -12,10 +12,79 @@
 #include <cstring>
 #include <algorithm>
 #include <random>
+#include <cmath>
 
 using json = nlohmann::json;
 
 namespace network {
+
+    namespace {
+        void BasicMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -220.0f;
+            enemy.vy = 0.0f;
+        }
+
+        void FastMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -200.0f;
+            enemy.vy = std::sin(enemy.x * 0.01f) * 50.0f;
+        }
+
+        void TankMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -220.0f;
+            enemy.vy = 0.0f;
+        }
+
+        void BossMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -75.0f;
+            enemy.vy = 0.0f;
+        }
+
+        void FormationMovementPattern(GameEntity& enemy, float /*dt*/) {
+            enemy.vx = -100.0f;
+            enemy.vy = 0.0f;
+        }
+    }
+
+    const std::array<EnemyStats, 5> GameServer::s_enemyStats = {{{220.0f, // speed
+                                                                  100,    // health
+                                                                  8,      // damage
+                                                                  1.0f,   // fireRate
+                                                                  -50.0f, // bulletXOffset
+                                                                  25.0f,  // bulletYOffset
+                                                                  25,     // collisionDamageMultiplier (2.5x)
+                                                                  BasicMovementPattern},
+                                                                 {200.0f,
+                                                                  50,
+                                                                  3,
+                                                                  0.5f,
+                                                                  -50.0f,
+                                                                  20.0f,
+                                                                  20,
+                                                                  FastMovementPattern},
+                                                                 {220.0f,
+                                                                  200,
+                                                                  18,
+                                                                  1.8f,
+                                                                  -30.0f,
+                                                                  -20.0f,
+                                                                  30,
+                                                                  TankMovementPattern},
+                                                                 {75.0f,
+                                                                  255,
+                                                                  50,
+                                                                  0.5f,
+                                                                  -30.0f,
+                                                                  45.0f,
+                                                                  50,
+                                                                  BossMovementPattern},
+                                                                 {100.0f,
+                                                                  100,
+                                                                  10,
+                                                                  1.5f,
+                                                                  -30.0f,
+                                                                  45.0f,
+                                                                  25,
+                                                                  FormationMovementPattern}}};
 
     GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
                            const std::string& levelPath)
@@ -28,7 +97,15 @@ namespace network {
         asio::socket_base::send_buffer_size sendOption(1024 * 1024); // 1MB
         m_socket.set_option(sendOption);
 
+        // Initialize ECS systems
+        m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
+        m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
+        m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
+        m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
+        m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
+
         std::cout << "GameServer started on UDP port " << port << std::endl;
+        std::cout << "ECS collision systems initialized" << std::endl;
         std::cout << "Waiting for " << expectedPlayers.size() << " players..." << std::endl;
     }
 
@@ -208,30 +285,43 @@ namespace network {
         it->second.lastInputSequence = input->sequence;
         it->second.lastPingTime = now;
 
-        auto playerEntity = std::find_if(m_entities.begin(), m_entities.end(),
-                                         [hash = input->playerHash](const GameEntity& e) {
-                                             return e.type == EntityType::PLAYER && e.ownerHash == hash;
-                                         });
+        // Find player entity in ECS Registry by playerHash
+        using namespace RType::ECS;
+        RType::ECS::Entity playerEntity = NULL_ENTITY;
+        auto players = m_registry.GetEntitiesWithComponent<Player>();
+        for (auto entity : players) {
+            if (!m_registry.HasComponent<Player>(entity))
+                continue;
+            const auto& player = m_registry.GetComponent<Player>(entity);
+            if (player.playerHash == input->playerHash) {
+                playerEntity = entity;
+                break;
+            }
+        }
 
-        if (playerEntity == m_entities.end())
+        if (playerEntity == NULL_ENTITY || !m_registry.HasComponent<Velocity>(playerEntity))
             return;
 
         const float SPEED = 300.0f;
 
-        playerEntity->vx = 0.0f;
-        playerEntity->vy = 0.0f;
+        auto& vel = m_registry.GetComponent<Velocity>(playerEntity);
+        vel.dx = 0.0f;
+        vel.dy = 0.0f;
 
         if (input->inputs & InputFlags::UP)
-            playerEntity->vy = -SPEED;
+            vel.dy = -SPEED;
         if (input->inputs & InputFlags::DOWN)
-            playerEntity->vy = SPEED;
+            vel.dy = SPEED;
         if (input->inputs & InputFlags::LEFT)
-            playerEntity->vx = -SPEED;
+            vel.dx = -SPEED;
         if (input->inputs & InputFlags::RIGHT)
-            playerEntity->vx = SPEED;
+            vel.dx = SPEED;
 
         if (input->inputs & InputFlags::SHOOT) {
-            SpawnBullet(input->playerHash, playerEntity->x + 50.0f, playerEntity->y + 20.0f);
+            if (m_registry.HasComponent<Position>(playerEntity)) {
+                const auto& pos = m_registry.GetComponent<Position>(playerEntity);
+                SpawnBullet(input->playerHash, pos.x + 70.0f, pos.y + 50.0f);
+            }
         }
     }
 
@@ -310,10 +400,20 @@ namespace network {
     void GameServer::UpdateGameLogic(float dt) {
         m_scrollOffset += SCROLL_SPEED * dt;
 
-        UpdateMovement(dt);
+        m_movementSystem->Update(m_registry, dt);
+
         UpdateBullets(dt);
         UpdateEnemies(dt);
-        CheckCollisions();
+
+        m_collisionDetectionSystem->Update(m_registry, dt);
+        m_bulletResponseSystem->Update(m_registry, dt);
+        m_playerResponseSystem->Update(m_registry, dt);
+        m_healthSystem->Update(m_registry, dt);
+
+        // Legacy: Update GameEntity positions from Registry for network sync
+        UpdateLegacyEntitiesFromRegistry();
+
+        // Legacy cleanup for old GameEntity system (will be removed when fully migrated)
         CleanupDeadEntities();
 
         auto now = std::chrono::steady_clock::now();
@@ -325,19 +425,12 @@ namespace network {
     }
 
     void GameServer::SpawnPlayer(uint64_t hash, float x, float y) {
-        GameEntity player;
-        player.id = GetNextEntityId();
-        player.type = EntityType::PLAYER;
-        player.x = x;
-        player.y = y;
-        player.vx = 0.0f;
-        player.vy = 0.0f;
-        player.health = 100;
-        player.flags = 0;
-        player.ownerHash = hash;
+        uint8_t playerNumber = static_cast<uint8_t>(m_connectedPlayers.size());
+        RType::ECS::Entity playerEntity = RType::ECS::PlayerFactory::CreatePlayer(
+            m_registry, playerNumber, hash, x, y, nullptr); // No renderer on server
 
-        m_entities.push_back(player);
-        std::cout << "[Server] Spawned player entity " << player.id << " for playerHash=" << hash << " at (" << x << "," << y << ")" << std::endl;
+        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
+        std::cout << "[Server] Spawned ECS player entity for playerHash=" << hash << " at (" << x << "," << y << ")" << std::endl;
     }
 
     void GameServer::SpawnEnemy() {
@@ -345,83 +438,144 @@ namespace network {
         static std::mt19937 gen(rd());
         std::uniform_real_distribution<float> yDist(50.0f, 550.0f);
 
-        GameEntity enemy;
-        enemy.id = GetNextEntityId();
-        enemy.type = EntityType::ENEMY;
-        enemy.x = 1920.0f;
-        enemy.y = yDist(gen);
-        enemy.vx = -100.0f;
-        enemy.vy = 0.0f;
-        enemy.health = 50;
-        enemy.flags = 0;
-        enemy.ownerHash = 0;
+        EnemyType enemyType = GetRandomEnemyType();
+        const EnemyStats& stats = GetEnemyStats(enemyType);
+        float spawnX = 1920.0f;
+        float spawnY = yDist(gen);
 
-        m_entities.push_back(enemy);
+        RType::ECS::EnemyType ecsEnemyType = static_cast<RType::ECS::EnemyType>(static_cast<uint8_t>(enemyType));
+
+        RType::ECS::Entity enemyEntity = RType::ECS::EnemyFactory::CreateEnemy(
+            m_registry, ecsEnemyType, spawnX, spawnY, nullptr);
+
+        // Initialize shooting cooldown for enemy entity
+        uint32_t enemyId = static_cast<uint32_t>(enemyEntity);
+        m_enemyShootCooldowns[enemyId] = 0.0f;
+
+        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
+        std::cout << "[Server] Spawned ECS enemy type " << static_cast<int>(enemyType)
+                  << " (entity=" << enemyId << ") at (" << spawnX << "," << spawnY << ")" << std::endl;
     }
 
     void GameServer::SpawnBullet(uint64_t ownerHash, float x, float y) {
-        GameEntity bullet;
-        bullet.id = GetNextEntityId();
-        bullet.type = EntityType::BULLET;
-        bullet.x = x;
-        bullet.y = y;
-        bullet.vx = 500.0f;
-        bullet.vy = 0.0f;
-        bullet.health = 1;
-        bullet.flags = 0;
-        bullet.ownerHash = ownerHash;
+        using namespace RType::ECS;
+        Entity bulletEntity = m_registry.CreateEntity();
+        m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
+        m_registry.AddComponent<Velocity>(bulletEntity, Velocity(500.0f, 0.0f));
+        m_registry.AddComponent<Bullet>(bulletEntity, Bullet(NULL_ENTITY)); // Owner tracking
+        m_registry.AddComponent<Damage>(bulletEntity, Damage(25));
+        m_registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
+        m_registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
+        m_registry.AddComponent<CollisionLayer>(bulletEntity,
+                                                CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                                               CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
 
-        m_entities.push_back(bullet);
+        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
     }
 
-    void GameServer::UpdateMovement(float dt) {
-        for (auto& entity : m_entities) {
-            entity.x += entity.vx * dt;
-            entity.y += entity.vy * dt;
+    void GameServer::SpawnEnemyBullet(uint32_t enemyId, float x, float y) {
+        using namespace RType::ECS;
 
-            if (entity.x < -100.0f || entity.x > 2020.0f || entity.y < -100.0f || entity.y > 700.0f) {
-                entity.health = 0;
-            }
+        Entity enemyEntity = static_cast<Entity>(enemyId);
+
+        if (!m_registry.IsEntityAlive(enemyEntity) || !m_registry.HasComponent<Enemy>(enemyEntity)) {
+            return;
         }
+
+        // Create ECS enemy bullet with server-authoritative collision components
+        Entity bulletEntity = m_registry.CreateEntity();
+        m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
+        m_registry.AddComponent<Velocity>(bulletEntity, Velocity(-400.0f, 0.0f));
+        m_registry.AddComponent<Bullet>(bulletEntity, Bullet(NULL_ENTITY));
+        m_registry.AddComponent<Damage>(bulletEntity, Damage(10)); // Enemy bullet damage
+        m_registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
+        m_registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
+        m_registry.AddComponent<CollisionLayer>(bulletEntity,
+                                                CollisionLayer(CollisionLayers::ENEMY_BULLET,
+                                                               CollisionLayers::PLAYER | CollisionLayers::OBSTACLE));
+
+        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
     }
+
 
     void GameServer::UpdateBullets(float /*dt*/) {
+        using namespace RType::ECS;
+
         const float MAX_X = 2000.0f;
         const float MIN_X = -200.0f;
         const float MAX_Y = 1000.0f;
         const float MIN_Y = -200.0f;
 
-        auto bullets = GetEntitiesByType(EntityType::BULLET);
-        for (auto* bullet : bullets) {
-            if (bullet->x > MAX_X || bullet->x < MIN_X || bullet->y > MAX_Y || bullet->y < MIN_Y) {
-                bullet->health = 0;
+        // Use ECS to find bullets out of bounds and destroy them
+        auto bullets = m_registry.GetEntitiesWithComponent<Bullet>();
+        std::vector<Entity> bulletsToDestroy;
+
+        for (auto bullet : bullets) {
+            if (!m_registry.IsEntityAlive(bullet) || !m_registry.HasComponent<Position>(bullet)) {
+                continue;
             }
+
+            const auto& pos = m_registry.GetComponent<Position>(bullet);
+            if (pos.x > MAX_X || pos.x < MIN_X || pos.y > MAX_Y || pos.y < MIN_Y) {
+                bulletsToDestroy.push_back(bullet);
+            }
+        }
+
+        for (auto bullet : bulletsToDestroy) {
+            m_registry.DestroyEntity(bullet);
         }
     }
 
-    void GameServer::UpdateEnemies(float /*dt*/) {
-    }
+    void GameServer::UpdateEnemies(float dt) {
+        using namespace RType::ECS;
 
-    void GameServer::CheckCollisions() {
-        auto bullets = GetEntitiesByType(EntityType::BULLET);
-        auto enemies = GetEntitiesByType(EntityType::ENEMY);
+        auto enemies = m_registry.GetEntitiesWithComponent<Enemy>();
 
-        for (auto* bullet : bullets) {
-            if (bullet->health == 0)
+        for (auto enemy : enemies) {
+            if (!m_registry.IsEntityAlive(enemy)) {
                 continue;
+            }
 
-            for (auto* enemy : enemies) {
-                if (enemy->health == 0)
-                    continue;
+            // Apply movement patterns (updates Velocity component)
+            EnemySystem::ApplyMovementPattern(m_registry, enemy, dt);
 
-                float dx = bullet->x - enemy->x;
-                float dy = bullet->y - enemy->y;
-                float distSq = dx * dx + dy * dy;
+            // Handle enemy shooting logic
+            if (!m_registry.HasComponent<Enemy>(enemy) || !m_registry.HasComponent<Position>(enemy)) {
+                continue;
+            }
 
-                if (distSq < 50.0f * 50.0f) {
-                    bullet->health = 0;
-                    enemy->health = std::max(0, enemy->health - 10);
-                }
+            const auto& enemyComp = m_registry.GetComponent<Enemy>(enemy);
+            const auto& pos = m_registry.GetComponent<Position>(enemy);
+
+            // Use entity ID as key for cooldowns
+            uint32_t enemyId = static_cast<uint32_t>(enemy);
+
+            if (m_enemyShootCooldowns.find(enemyId) == m_enemyShootCooldowns.end()) {
+                m_enemyShootCooldowns[enemyId] = 0.0f;
+            }
+
+            m_enemyShootCooldowns[enemyId] -= dt;
+
+            // TODO: Implement HasPlayerInSight using ECS
+            // For now, always allow shooting if cooldown is ready
+            if (m_enemyShootCooldowns[enemyId] <= 0.0f) {
+                EnemyType type = static_cast<EnemyType>(static_cast<uint8_t>(enemyComp.type));
+                const EnemyStats& stats = GetEnemyStats(type);
+                SpawnEnemyBullet(enemyId, pos.x + stats.bulletXOffset, pos.y + stats.bulletYOffset);
+                m_enemyShootCooldowns[enemyId] = stats.fireRate;
+            }
+        }
+
+        // Destroy enemies that went off screen
+        EnemySystem::DestroyEnemiesOffScreen(m_registry, 1280.0f);
+
+        // Clean up cooldowns for destroyed enemies
+        for (auto it = m_enemyShootCooldowns.begin(); it != m_enemyShootCooldowns.end();) {
+            Entity enemyEntity = static_cast<Entity>(it->first);
+            if (!m_registry.IsEntityAlive(enemyEntity) || !m_registry.HasComponent<Enemy>(enemyEntity)) {
+                it = m_enemyShootCooldowns.erase(it);
+            } else {
+                ++it;
             }
         }
     }
@@ -429,24 +583,127 @@ namespace network {
     void GameServer::CleanupDeadEntities() {
         m_entities.erase(
             std::remove_if(m_entities.begin(), m_entities.end(),
-                           [](const GameEntity& e) { return e.health == 0; }),
+                           [this](const GameEntity& e) {
+                               if (e.health == 0 && e.type == EntityType::ENEMY) {
+                                   m_enemyShootCooldowns.erase(e.id);
+                               }
+                               return e.health == 0;
+                           }),
             m_entities.end());
     }
 
-    GameEntity* GameServer::FindEntityById(uint32_t id) {
-        auto it = std::find_if(m_entities.begin(), m_entities.end(),
-                               [id](const GameEntity& e) { return e.id == id; });
-        return it != m_entities.end() ? &(*it) : nullptr;
+    void GameServer::UpdateLegacyEntitiesFromRegistry() {
+        using namespace RType::ECS;
+
+        // Clear and rebuild GameEntity vector from ECS Registry for network serialization
+        // This is a temporary solution until network serialization is migrated to use Registry directly
+        m_entities.clear();
+
+        // Sync players
+        auto players = m_registry.GetEntitiesWithComponent<Player>();
+        for (auto playerEntity : players) {
+            if (!m_registry.IsEntityAlive(playerEntity) ||
+                !m_registry.HasComponent<Position>(playerEntity) ||
+                !m_registry.HasComponent<Velocity>(playerEntity) ||
+                !m_registry.HasComponent<Health>(playerEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(playerEntity);
+            const auto& vel = m_registry.GetComponent<Velocity>(playerEntity);
+            const auto& health = m_registry.GetComponent<Health>(playerEntity);
+            const auto& player = m_registry.GetComponent<Player>(playerEntity);
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(playerEntity);
+            entity.type = EntityType::PLAYER;
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = vel.dx;
+            entity.vy = vel.dy;
+            entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
+            entity.flags = player.playerNumber;
+            entity.ownerHash = player.playerHash;
+            m_entities.push_back(entity);
+        }
+
+        // Sync enemies
+        auto enemies = m_registry.GetEntitiesWithComponent<Enemy>();
+        for (auto enemyEntity : enemies) {
+            if (!m_registry.IsEntityAlive(enemyEntity) ||
+                !m_registry.HasComponent<Position>(enemyEntity) ||
+                !m_registry.HasComponent<Velocity>(enemyEntity) ||
+                !m_registry.HasComponent<Health>(enemyEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(enemyEntity);
+            const auto& vel = m_registry.GetComponent<Velocity>(enemyEntity);
+            const auto& health = m_registry.GetComponent<Health>(enemyEntity);
+            const auto& enemy = m_registry.GetComponent<Enemy>(enemyEntity);
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(enemyEntity);
+            entity.type = EntityType::ENEMY;
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = vel.dx;
+            entity.vy = vel.dy;
+            entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
+            entity.flags = static_cast<uint8_t>(enemy.type);
+            entity.ownerHash = 0;
+            m_entities.push_back(entity);
+        }
+
+        // Sync bullets
+        auto bullets = m_registry.GetEntitiesWithComponent<Bullet>();
+        for (auto bulletEntity : bullets) {
+            if (!m_registry.IsEntityAlive(bulletEntity) ||
+                !m_registry.HasComponent<Position>(bulletEntity) ||
+                !m_registry.HasComponent<Velocity>(bulletEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(bulletEntity);
+            const auto& vel = m_registry.GetComponent<Velocity>(bulletEntity);
+            const auto& bullet = m_registry.GetComponent<Bullet>(bulletEntity);
+
+            // Determine bullet type based on collision layer
+            uint8_t flags = 0; // Default to player bullet
+            if (m_registry.HasComponent<CollisionLayer>(bulletEntity)) {
+                const auto& collLayer = m_registry.GetComponent<CollisionLayer>(bulletEntity);
+                if (collLayer.layer == CollisionLayers::ENEMY_BULLET) {
+                    flags = 10; // Enemy bullet marker (10+)
+                }
+            }
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(bulletEntity);
+            entity.type = EntityType::BULLET;
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = vel.dx;
+            entity.vy = vel.dy;
+            entity.health = 1;
+            entity.flags = flags;
+            entity.ownerHash = 0;
+            m_entities.push_back(entity);
+        }
     }
 
-    std::vector<GameEntity*> GameServer::GetEntitiesByType(EntityType type) {
-        std::vector<GameEntity*> result;
-        for (auto& entity : m_entities) {
-            if (entity.type == type) {
-                result.push_back(&entity);
-            }
+    EnemyType GameServer::GetRandomEnemyType() {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> dist(0, 2);
+        return static_cast<EnemyType>(dist(gen));
+    }
+
+    const EnemyStats& GameServer::GetEnemyStats(EnemyType type) const {
+        size_t index = static_cast<size_t>(type);
+        if (index >= s_enemyStats.size()) {
+            index = 0;
         }
-        return result;
+        return s_enemyStats[index];
     }
 
 }

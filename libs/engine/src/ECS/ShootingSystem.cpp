@@ -1,4 +1,3 @@
-#include "../../include/ECS/BulletCollisionSystem.hpp"
 #include "../../include/ECS/ScoreSystem.hpp"
 #include "../../include/ECS/Component.hpp"
 #include "../../include/ECS/ShootingSystem.hpp"
@@ -16,7 +15,6 @@ namespace RType {
             auto bullets = registry.GetEntitiesWithComponent<Bullet>();
             std::vector<Entity> bulletsToDestroy;
 
-            // Cleanup
             for (auto bulletEntity : bullets) {
                 if (registry.IsEntityAlive(bulletEntity) && registry.HasComponent<Position>(bulletEntity)) {
                     auto& pos = registry.GetComponent<Position>(bulletEntity);
@@ -79,6 +77,11 @@ namespace RType {
 
                 registry.AddComponent<Damage>(bulletEntity, Damage(25));
                 registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
+
+                registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
+                registry.AddComponent<CollisionLayer>(bulletEntity,
+                                                      CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                                                     CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
             }
 
             // Handle WeaponSlot components (spread shot, laser, etc.)

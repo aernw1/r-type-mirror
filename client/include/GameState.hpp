@@ -15,7 +15,10 @@
 #include "ECS/ShootingSystem.hpp"
 #include "ECS/MovementSystem.hpp"
 #include "ECS/InputSystem.hpp"
-#include "ECS/CollisionSystem.hpp"
+#include "ECS/CollisionDetectionSystem.hpp"
+#include "ECS/BulletCollisionResponseSystem.hpp"
+#include "ECS/PlayerCollisionResponseSystem.hpp"
+#include "ECS/ObstacleCollisionResponseSystem.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/PowerUpSpawnSystem.hpp"
 #include "ECS/PowerUpCollisionSystem.hpp"
@@ -42,6 +45,7 @@ namespace RType {
             int lives = 3;
             int health = 100;
             int maxHealth = 100;
+            bool isDead = false;
             RType::ECS::Entity scoreEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity playerEntity = RType::ECS::NULL_ENTITY;
         };
@@ -77,6 +81,18 @@ namespace RType {
 
             // Server state update handler
             void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
+
+            struct EnemySpriteConfig {
+                Renderer::SpriteId sprite;
+                Math::Color tint;
+            };
+            struct EnemyBulletSpriteConfig {
+                Renderer::SpriteId sprite;
+                Math::Color tint;
+                float scale;
+            };
+            EnemySpriteConfig GetEnemySpriteConfig(uint8_t enemyType) const;
+            EnemyBulletSpriteConfig GetEnemyBulletSpriteConfig(uint8_t enemyType) const;
         private:
             GameStateMachine& m_machine;
             GameContext& m_context;
@@ -91,13 +107,28 @@ namespace RType {
             std::unique_ptr<RType::ECS::TextRenderingSystem> m_textSystem;
             std::unique_ptr<RType::ECS::MovementSystem> m_movementSystem;
             std::unique_ptr<RType::ECS::InputSystem> m_inputSystem;
-            std::unique_ptr<RType::ECS::CollisionSystem> m_collisionSystem;
+            std::unique_ptr<RType::ECS::CollisionDetectionSystem> m_collisionDetectionSystem;
+            std::unique_ptr<RType::ECS::BulletCollisionResponseSystem> m_bulletResponseSystem;
+            std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
+            std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
             std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
             std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
             std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
             std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
+
+            // Bullet textures and sprites
+            Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_bulletSprite = Renderer::INVALID_SPRITE_ID;
+
+            // Enemy bullet textures and sprites
+            Renderer::TextureId m_enemyBulletGreenTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_enemyBulletYellowTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_enemyBulletPurpleTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_enemyBulletGreenSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_enemyBulletYellowSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_enemyBulletPurpleSprite = Renderer::INVALID_SPRITE_ID;
 
             // Background and obstacles entities
             std::vector<RType::ECS::Entity> m_backgroundEntities;
@@ -116,6 +147,22 @@ namespace RType {
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
             RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player for prediction
+
+            // Individual player ship sprites
+            Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_playerBlueTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_playerRedTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_playerGreenSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_playerBlueSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_playerRedSprite = Renderer::INVALID_SPRITE_ID;
+
+            // Enemy ship sprites
+            Renderer::TextureId m_enemyGreenTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_enemyRedTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::TextureId m_enemyBlueTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_enemyGreenSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_enemyRedSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_enemyBlueSprite = Renderer::INVALID_SPRITE_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;

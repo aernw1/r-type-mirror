@@ -58,6 +58,11 @@ namespace RType {
             registry.AddComponent<ScoreValue>(enemy, ScoreValue(data.score));
             registry.AddComponent<BoxCollider>(enemy, BoxCollider(50.0f, 50.0f));
 
+            registry.AddComponent<CircleCollider>(enemy, CircleCollider(25.0f));
+            registry.AddComponent<CollisionLayer>(enemy,
+                                                  CollisionLayer(CollisionLayers::ENEMY,
+                                                                 CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET | CollisionLayers::OBSTACLE));
+
             if (renderer) {
                 std::string spritePath(data.spritePath);
                 Renderer::TextureId textureId = renderer->LoadTexture(spritePath);

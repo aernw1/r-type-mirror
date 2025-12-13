@@ -9,6 +9,16 @@
 
 #include "Protocol.hpp"
 #include "Endpoint.hpp"
+#include "ECS/Registry.hpp"
+#include "ECS/Component.hpp"
+#include "ECS/MovementSystem.hpp"
+#include "ECS/EnemySystem.hpp"
+#include "ECS/CollisionDetectionSystem.hpp"
+#include "ECS/BulletCollisionResponseSystem.hpp"
+#include "ECS/PlayerCollisionResponseSystem.hpp"
+#include "ECS/HealthSystem.hpp"
+#include "ECS/PlayerFactory.hpp"
+#include "ECS/EnemyFactory.hpp"
 #include <asio.hpp>
 #include <vector>
 #include <unordered_map>
@@ -16,9 +26,35 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <functional>
+#include <cmath>
+#include <array>
 #include <string>
 
 namespace network {
+
+    enum class EnemyType : uint8_t {
+        BASIC = 0,
+        FAST = 1,
+        TANK = 2,
+        BOSS = 3,
+        FORMATION = 4
+    };
+
+    struct GameEntity;
+
+    using MovementPatternFunc = void (*)(GameEntity&, float);
+
+    struct EnemyStats {
+        float speed;
+        uint8_t health;
+        uint8_t damage;
+        float fireRate;
+        float bulletXOffset;
+        float bulletYOffset;
+        uint8_t collisionDamageMultiplier;
+        MovementPatternFunc movementPattern;
+    };
 
     struct ConnectedPlayer {
         PlayerInfo info;
@@ -67,22 +103,31 @@ namespace network {
         void UpdateGameLogic(float dt);
         void SpawnPlayer(uint64_t hash, float x, float y);
         void SpawnEnemy();
+        void SpawnEnemyBullet(uint32_t enemyId, float x, float y);
         void SpawnBullet(uint64_t ownerHash, float x, float y);
-        void UpdateMovement(float dt);
         void UpdateBullets(float dt);
         void UpdateEnemies(float dt);
-        void CheckCollisions();
         void CleanupDeadEntities();
+        void UpdateLegacyEntitiesFromRegistry();
+
+        EnemyType GetRandomEnemyType();
+        const EnemyStats& GetEnemyStats(EnemyType type) const;
 
         uint32_t GetNextEntityId() { return m_nextEntityId++; }
-        GameEntity* FindEntityById(uint32_t id);
-        std::vector<GameEntity*> GetEntitiesByType(EntityType type);
 
         asio::io_context m_ioContext;
         asio::ip::udp::socket m_socket;
         std::vector<PlayerInfo> m_expectedPlayers;
         std::unordered_map<uint64_t, ConnectedPlayer> m_connectedPlayers;
 
+        RType::ECS::Registry m_registry;
+        std::unique_ptr<RType::ECS::MovementSystem> m_movementSystem;
+        std::unique_ptr<RType::ECS::CollisionDetectionSystem> m_collisionDetectionSystem;
+        std::unique_ptr<RType::ECS::BulletCollisionResponseSystem> m_bulletResponseSystem;
+        std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
+        std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
+
+        // Legacy: Will be migrated to ECS
         std::vector<GameEntity> m_entities;
         uint32_t m_currentTick = 0;
         uint32_t m_nextEntityId = 1;
@@ -95,8 +140,12 @@ namespace network {
         std::chrono::steady_clock::time_point m_lastSpawnTime;
         float m_enemySpawnInterval = 2.0f;
 
+        std::unordered_map<uint32_t, float> m_enemyShootCooldowns;
+
         std::atomic<uint64_t> m_packetsSent{0};
         std::atomic<uint64_t> m_packetsReceived{0};
+
+        static const std::array<EnemyStats, 5> s_enemyStats;
 
         // Level data
         std::string m_levelPath;

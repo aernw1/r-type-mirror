@@ -1,6 +1,5 @@
 #include "ECS/HealthSystem.hpp"
 #include "ECS/Component.hpp"
-#include "ECS/CollisionSystem.hpp"
 #include "Core/Logger.hpp"
 
 namespace RType {
@@ -10,7 +9,6 @@ namespace RType {
         void HealthSystem::Update(Registry& registry, float deltaTime) {
             (void)deltaTime;
 
-            handleEnemyPlayerCollisions(registry);
             checkAndDestroyDeadEntities(registry);
         }
 

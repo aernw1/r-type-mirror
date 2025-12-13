@@ -19,12 +19,10 @@ namespace RType {
     namespace ECS {
 
         LevelData LevelLoader::LoadFromFile(const std::string& path) {
-            // Try source directory first (when running from build/)
             std::string sourcePath = "../" + path;
             std::ifstream file(sourcePath);
 
             if (!file.is_open()) {
-                // Fallback to current directory (when running from root or installed location)
                 file.open(path);
                 if (!file.is_open()) {
                     throw std::runtime_error("Failed to open level file: " + path + " (tried: " + sourcePath + " and " + path + ")");
@@ -168,10 +166,8 @@ namespace RType {
             }
 
             for (const auto& [key, path] : level.textures) {
-                // Try source directory first (when running from build/)
                 Renderer::TextureId texId = renderer->LoadTexture("../" + path);
                 if (texId == Renderer::INVALID_TEXTURE_ID) {
-                    // Fallback to current directory
                     texId = renderer->LoadTexture(path);
                 }
 
@@ -317,17 +313,20 @@ namespace RType {
                 auto& drawable = registry.AddComponent<Drawable>(obsEntity, Drawable(spriteIt->second, obs.layer));
                 drawable.scale = {obs.scaleWidth / obsSize.x, obs.scaleHeight / obsSize.y};
 
-                if (!obs.colliders.empty()) {
-                    auto& collider = registry.AddComponent<MultiBoxCollider>(obsEntity);
-                    for (const auto& col : obs.colliders) {
-                        collider.AddBox(col.x, col.y, col.width, col.height);
-                    }
-                }
-
                 registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
-                registry.AddComponent<Obstacle>(obsEntity, Obstacle(true));
-
                 entities.obstacles.push_back(obsEntity);
+
+                for (const auto& col : obs.colliders) {
+                    Entity colliderEntity = registry.CreateEntity();
+                    registry.AddComponent<Position>(colliderEntity, Position{col.x, col.y});
+                    registry.AddComponent<BoxCollider>(colliderEntity, BoxCollider{col.width, col.height});
+                    registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
+                    registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));
+                    registry.AddComponent<CollisionLayer>(colliderEntity,
+                                                          CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::ALL));
+
+                    entities.obstacles.push_back(colliderEntity);
+                }
             }
         }
 
@@ -352,18 +351,20 @@ namespace RType {
                 Entity obsEntity = registry.CreateEntity();
 
                 registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
-
-                if (!obs.colliders.empty()) {
-                    auto& collider = registry.AddComponent<MultiBoxCollider>(obsEntity);
-                    for (const auto& col : obs.colliders) {
-                        collider.AddBox(col.x, col.y, col.width, col.height);
-                    }
-                }
-
                 registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
-                registry.AddComponent<Obstacle>(obsEntity, Obstacle(true));
-
                 entities.obstacles.push_back(obsEntity);
+
+                for (const auto& col : obs.colliders) {
+                    Entity colliderEntity = registry.CreateEntity();
+                    registry.AddComponent<Position>(colliderEntity, Position{col.x, col.y});
+                    registry.AddComponent<BoxCollider>(colliderEntity, BoxCollider{col.width, col.height});
+                    registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
+                    registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));
+                    registry.AddComponent<CollisionLayer>(colliderEntity,
+                                                          CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::ALL));
+
+                    entities.obstacles.push_back(colliderEntity);
+                }
             }
         }
 
