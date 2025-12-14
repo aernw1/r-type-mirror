@@ -82,7 +82,8 @@ namespace RType {
 
         struct CreatedEntities {
             std::vector<Entity> backgrounds;
-            std::vector<Entity> obstacles;
+            std::vector<Entity> obstacleVisuals;
+            std::vector<Entity> obstacleColliders;
             std::vector<Entity> enemies;
         };
 
@@ -121,7 +122,8 @@ namespace RType {
                 const std::vector<ObstacleDef>& obstacles,
                 const LoadedAssets& assets,
                 Renderer::IRenderer* renderer,
-                CreatedEntities& entities);
+                CreatedEntities& entities,
+                uint32_t& obstacleIdCounter);
 
             static void CreateEnemies(
                 Registry& registry,
@@ -133,7 +135,8 @@ namespace RType {
             static void CreateServerObstacles(
                 Registry& registry,
                 const std::vector<ObstacleDef>& obstacles,
-                CreatedEntities& entities);
+                CreatedEntities& entities,
+                uint32_t& obstacleIdCounter);
 
             static void CreateServerEnemies(
                 Registry& registry,

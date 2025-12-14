@@ -203,14 +203,16 @@ namespace RType {
             const LoadedAssets& assets,
             Renderer::IRenderer* renderer) {
             CreatedEntities entities;
+            uint32_t obstacleIdCounter = 1;
 
             CreateBackgrounds(registry, level.background, assets, renderer, entities);
-            CreateObstacles(registry, level.obstacles, assets, renderer, entities);
+            CreateObstacles(registry, level.obstacles, assets, renderer, entities, obstacleIdCounter);
             CreateEnemies(registry, level.enemies, assets, renderer, entities);
 
-            Core::Logger::Info("Created {} background entities, {} obstacle entities, {} enemy entities",
+            Core::Logger::Info("Created {} backgrounds, {} obstacle visuals, {} obstacle colliders, {} enemy entities",
                                entities.backgrounds.size(),
-                               entities.obstacles.size(),
+                               entities.obstacleVisuals.size(),
+                               entities.obstacleColliders.size(),
                                entities.enemies.size());
 
             return entities;
@@ -220,12 +222,14 @@ namespace RType {
             Registry& registry,
             const LevelData& level) {
             CreatedEntities entities;
+            uint32_t obstacleIdCounter = 1;
 
-            CreateServerObstacles(registry, level.obstacles, entities);
+            CreateServerObstacles(registry, level.obstacles, entities, obstacleIdCounter);
             CreateServerEnemies(registry, level.enemies, entities);
 
-            Core::Logger::Info("Created server entities: {} obstacles, {} enemies",
-                               entities.obstacles.size(),
+            Core::Logger::Info("Created server entities: {} obstacle visuals, {} obstacle colliders, {} enemies",
+                               entities.obstacleVisuals.size(),
+                               entities.obstacleColliders.size(),
                                entities.enemies.size());
 
             return entities;
@@ -295,7 +299,8 @@ namespace RType {
             const std::vector<ObstacleDef>& obstacles,
             const LoadedAssets& assets,
             Renderer::IRenderer* renderer,
-            CreatedEntities& entities) {
+            CreatedEntities& entities,
+            uint32_t& obstacleIdCounter) {
             for (const auto& obs : obstacles) {
                 auto spriteIt = assets.sprites.find(obs.texture);
                 auto texIt = assets.textures.find(obs.texture);
@@ -312,9 +317,10 @@ namespace RType {
                 Math::Vector2 obsSize = renderer->GetTextureSize(texIt->second);
                 auto& drawable = registry.AddComponent<Drawable>(obsEntity, Drawable(spriteIt->second, obs.layer));
                 drawable.scale = {obs.scaleWidth / obsSize.x, obs.scaleHeight / obsSize.y};
+                drawable.origin = {0.0f, 0.0f};
 
                 registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
-                entities.obstacles.push_back(obsEntity);
+                entities.obstacleVisuals.push_back(obsEntity);
 
                 for (const auto& col : obs.colliders) {
                     Entity colliderEntity = registry.CreateEntity();
@@ -322,10 +328,12 @@ namespace RType {
                     registry.AddComponent<BoxCollider>(colliderEntity, BoxCollider{col.width, col.height});
                     registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
                     registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));
+                    registry.AddComponent<ObstacleMetadata>(colliderEntity,
+                                                            ObstacleMetadata(obstacleIdCounter++, obsEntity, col.x - obs.x, col.y - obs.y));
                     registry.AddComponent<CollisionLayer>(colliderEntity,
                                                           CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::ALL));
 
-                    entities.obstacles.push_back(colliderEntity);
+                    entities.obstacleColliders.push_back(colliderEntity);
                 }
             }
         }
@@ -346,24 +354,29 @@ namespace RType {
         void LevelLoader::CreateServerObstacles(
             Registry& registry,
             const std::vector<ObstacleDef>& obstacles,
-            CreatedEntities& entities) {
+            CreatedEntities& entities,
+            uint32_t& obstacleIdCounter) {
             for (const auto& obs : obstacles) {
                 Entity obsEntity = registry.CreateEntity();
 
                 registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
                 registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
-                entities.obstacles.push_back(obsEntity);
+                entities.obstacleVisuals.push_back(obsEntity);
 
                 for (const auto& col : obs.colliders) {
                     Entity colliderEntity = registry.CreateEntity();
-                    registry.AddComponent<Position>(colliderEntity, Position{col.x, col.y});
+                    float colliderX = obs.x + (col.x - obs.x);
+                    float colliderY = obs.y + (col.y - obs.y);
+                    registry.AddComponent<Position>(colliderEntity, Position{colliderX, colliderY});
                     registry.AddComponent<BoxCollider>(colliderEntity, BoxCollider{col.width, col.height});
                     registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
                     registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));
+                    registry.AddComponent<ObstacleMetadata>(colliderEntity,
+                                                            ObstacleMetadata(obstacleIdCounter++, obsEntity, col.x - obs.x, col.y - obs.y));
                     registry.AddComponent<CollisionLayer>(colliderEntity,
                                                           CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::ALL));
 
-                    entities.obstacles.push_back(colliderEntity);
+                    entities.obstacleColliders.push_back(colliderEntity);
                 }
             }
         }
