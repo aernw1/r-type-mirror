@@ -29,6 +29,7 @@
 #include <vector>
 #include <chrono>
 #include <unordered_set>
+#include <unordered_map>
 #include <array>
 
 namespace RType {
@@ -79,9 +80,11 @@ namespace RType {
             void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
 
             struct EnemySpriteConfig {
-                Renderer::SpriteId sprite;
-                Math::Color tint;
+                Renderer::SpriteId sprite = Renderer::INVALID_SPRITE_ID;
+                Math::Color tint{1.0f, 1.0f, 1.0f, 1.0f};
+                float rotation = 0.0f;
             };
+
             struct EnemyBulletSpriteConfig {
                 Renderer::SpriteId sprite;
                 Math::Color tint;
@@ -124,7 +127,8 @@ namespace RType {
 
             // Background and obstacles entities
             std::vector<RType::ECS::Entity> m_backgroundEntities;
-            std::vector<RType::ECS::Entity> m_obstacleEntities;
+            std::vector<RType::ECS::Entity> m_obstacleSpriteEntities;
+            std::vector<RType::ECS::Entity> m_obstacleColliderEntities;
 
             bool m_escapeKeyPressed = false;
 
@@ -138,7 +142,7 @@ namespace RType {
 
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
-            RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player for prediction
+            RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player entity mirrored from server
 
             // Individual player ship sprites
             Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;
@@ -177,6 +181,9 @@ namespace RType {
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;
             static constexpr float MAX_CHARGE_TIME = 2.0f; // 2 seconds for full charge
+
+            bool m_isNetworkSession = false;
+            std::unordered_map<uint64_t, RType::ECS::Entity> m_obstacleIdToCollider;
 
             // Level loader data
             RType::ECS::LevelData m_levelData;
