@@ -477,18 +477,6 @@ namespace RType {
             m_renderingSystem->Update(m_registry, 0.0f);
             m_textSystem->Update(m_registry, 0.0f);
 
-            auto colliders = m_registry.GetEntitiesWithComponent<BoxCollider>();
-            for (auto entity : colliders) {
-                if (m_registry.HasComponent<Position>(entity)) {
-                    auto& pos = m_registry.GetComponent<Position>(entity);
-                    auto& box = m_registry.GetComponent<BoxCollider>(entity);
-
-                    Renderer::Rectangle rect{{pos.x, pos.y}, {box.width, box.height}};
-                    Renderer::Color color{1.0f, 0.0f, 0.0f, 0.3f};
-
-                    m_renderer->DrawRectangle(rect, color);
-                }
-            }
             renderChargeBar();
             renderHealthBars();
         }
@@ -706,6 +694,7 @@ namespace RType {
 
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
                         drawable.scale = {0.5f, 0.5f};
+                        drawable.origin = Math::Vector2(128.0f, 128.0f);
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
 
@@ -747,6 +736,7 @@ namespace RType {
                         m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(enemySprite, 1));
                         drawable.scale = {0.5f, 0.5f};
+                        drawable.origin = Math::Vector2(128.0f, 128.0f);
                         drawable.rotation = config.rotation;
                         drawable.tint = enemyTint;
 
@@ -774,6 +764,7 @@ namespace RType {
 
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSprite, 12));
                             d.scale = {scaleValue, scaleValue};
+                            d.origin = Math::Vector2(128.0f, 128.0f);
                             d.tint = bulletTint;
                         } else {
                             // Player bullet
@@ -781,6 +772,7 @@ namespace RType {
                             if (bulletSpriteIt != m_levelAssets.sprites.end()) {
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSpriteIt->second, 12));
                                 d.scale = {0.1f, 0.1f};
+                                d.origin = Math::Vector2(128.0f, 128.0f);
                                 d.tint = {0.2f, 0.8f, 1.0f, 1.0f};
                             }
                         }

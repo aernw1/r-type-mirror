@@ -45,6 +45,7 @@ namespace RType {
                     auto& drawable = registry.AddComponent<Drawable>(player, Drawable(spriteId, 2));
                     drawable.tint = GetPlayerColor(playerNumber);
                     drawable.scale = Math::Vector2(0.5f, 0.5f);
+                    drawable.origin = Math::Vector2(128.0f, 128.0f);
                 } else {
                     Core::Logger::Error("Failed to load any player texture for player {}", playerNumber);
                 }

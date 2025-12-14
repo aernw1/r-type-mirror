@@ -13,6 +13,7 @@ namespace RType {
     namespace ECS {
 
         void CollisionDetectionSystem::Update(Registry& registry, float deltaTime) {
+            (void)deltaTime;
             ClearCollisionEvents(registry);
 
             auto entities = GetCollidableEntities(registry);
@@ -125,16 +126,16 @@ namespace RType {
             float distanceSquared = dx * dx + dy * dy;
             float radiusSumSquared = radiusSum * radiusSum;
 
-            return distanceSquared < radiusSumSquared;
+            return distanceSquared <= radiusSumSquared;
         }
 
         bool CollisionDetectionSystem::CheckAABB(float x1, float y1, float w1, float h1,
                                                  float x2, float y2, float w2, float h2) {
             bool separated =
-                (x1 + w1 < x2) ||
-                (x1 > x2 + w2) ||
-                (y1 + h1 < y2) ||
-                (y1 > y2 + h2);
+                (x1 + w1 <= x2) ||
+                (x1 >= x2 + w2) ||
+                (y1 + h1 <= y2) ||
+                (y1 >= y2 + h2);
 
             return !separated;
         }
@@ -147,7 +148,7 @@ namespace RType {
             float dy = cy - closestY;
             float distanceSquared = dx * dx + dy * dy;
 
-            return distanceSquared < (radius * radius);
+            return distanceSquared <= (radius * radius);
         }
 
     }
