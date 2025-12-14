@@ -132,7 +132,7 @@ namespace network {
         // If we only read 1 packet per frame, we'll lag behind the server!
         int packetsRead = 0;
         while (packetsRead < 100) { // Safety limit to avoid infinite loop
-            std::vector<uint8_t> buffer(2048);
+            std::vector<uint8_t> buffer(65536);
 
             try {
                 asio::ip::udp::endpoint rawEndpoint;

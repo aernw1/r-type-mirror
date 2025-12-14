@@ -16,6 +16,9 @@
 #include "ECS/CollisionDetectionSystem.hpp"
 #include "ECS/BulletCollisionResponseSystem.hpp"
 #include "ECS/PlayerCollisionResponseSystem.hpp"
+#include "ECS/ObstacleCollisionResponseSystem.hpp"
+#include "ECS/ScrollingSystem.hpp"
+#include "ECS/LevelLoader.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/PlayerFactory.hpp"
 #include "ECS/EnemyFactory.hpp"
@@ -121,10 +124,12 @@ namespace network {
         std::unordered_map<uint64_t, ConnectedPlayer> m_connectedPlayers;
 
         RType::ECS::Registry m_registry;
+        std::unique_ptr<RType::ECS::ScrollingSystem> m_scrollingSystem;
         std::unique_ptr<RType::ECS::MovementSystem> m_movementSystem;
         std::unique_ptr<RType::ECS::CollisionDetectionSystem> m_collisionDetectionSystem;
         std::unique_ptr<RType::ECS::BulletCollisionResponseSystem> m_bulletResponseSystem;
         std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
+        std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
         std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
 
         // Legacy: Will be migrated to ECS

@@ -93,15 +93,16 @@ namespace network {
           m_lastSpawnTime(std::chrono::steady_clock::now()),
           m_levelPath(levelPath) {
 
-        // Increase send buffer to handle broadcasting to multiple clients at 60Hz
         asio::socket_base::send_buffer_size sendOption(1024 * 1024); // 1MB
         m_socket.set_option(sendOption);
 
         // Initialize ECS systems
+        m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
         m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
         m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
         m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
         m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
+        m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
         m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
 
         std::cout << "GameServer started on UDP port " << port << std::endl;
@@ -117,6 +118,30 @@ namespace network {
         m_running = true;
 
         WaitForAllPlayers();
+
+        // Load level and create obstacles
+        try {
+            std::cout << "Loading level from: " << m_levelPath << std::endl;
+            auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
+            std::cout << "Level JSON loaded: " << levelData.obstacles.size() << " obstacle definitions found" << std::endl;
+            
+            auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
+            std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, "
+                      << createdEntities.enemies.size() << " enemy entities created" << std::endl;
+            
+            size_t obstaclesWithColliders = 0;
+            for (auto obsEntity : createdEntities.obstacleColliders) {
+                if (m_registry.HasComponent<RType::ECS::Obstacle>(obsEntity) &&
+                    m_registry.HasComponent<RType::ECS::BoxCollider>(obsEntity) &&
+                    m_registry.HasComponent<RType::ECS::CollisionLayer>(obsEntity)) {
+                    obstaclesWithColliders++;
+                }
+            }
+            std::cout << "Verified: " << obstaclesWithColliders << " obstacles have collision components" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to load level: " << e.what() << std::endl;
+            std::cerr << "Continuing without obstacles..." << std::endl;
+        }
 
         const float defaultSpawnY[] = {200.0f, 360.0f, 520.0f, 680.0f};
         size_t playerIndex = 0;
@@ -400,6 +425,8 @@ namespace network {
     void GameServer::UpdateGameLogic(float dt) {
         m_scrollOffset += SCROLL_SPEED * dt;
 
+        // Update order: scrolling → movement → collision detection → response systems
+        m_scrollingSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
 
         UpdateBullets(dt);
@@ -408,12 +435,10 @@ namespace network {
         m_collisionDetectionSystem->Update(m_registry, dt);
         m_bulletResponseSystem->Update(m_registry, dt);
         m_playerResponseSystem->Update(m_registry, dt);
+        m_obstacleResponseSystem->Update(m_registry, dt);
         m_healthSystem->Update(m_registry, dt);
 
-        // Legacy: Update GameEntity positions from Registry for network sync
         UpdateLegacyEntitiesFromRegistry();
-
-        // Legacy cleanup for old GameEntity system (will be removed when fully migrated)
         CleanupDeadEntities();
 
         auto now = std::chrono::steady_clock::now();
@@ -428,8 +453,6 @@ namespace network {
         uint8_t playerNumber = static_cast<uint8_t>(m_connectedPlayers.size());
         RType::ECS::Entity playerEntity = RType::ECS::PlayerFactory::CreatePlayer(
             m_registry, playerNumber, hash, x, y, nullptr); // No renderer on server
-
-        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
         std::cout << "[Server] Spawned ECS player entity for playerHash=" << hash << " at (" << x << "," << y << ")" << std::endl;
     }
 
@@ -452,7 +475,6 @@ namespace network {
         uint32_t enemyId = static_cast<uint32_t>(enemyEntity);
         m_enemyShootCooldowns[enemyId] = 0.0f;
 
-        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
         std::cout << "[Server] Spawned ECS enemy type " << static_cast<int>(enemyType)
                   << " (entity=" << enemyId << ") at (" << spawnX << "," << spawnY << ")" << std::endl;
     }
@@ -469,8 +491,6 @@ namespace network {
         m_registry.AddComponent<CollisionLayer>(bulletEntity,
                                                 CollisionLayer(CollisionLayers::PLAYER_BULLET,
                                                                CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
-
-        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
     }
 
     void GameServer::SpawnEnemyBullet(uint32_t enemyId, float x, float y) {
@@ -482,7 +502,6 @@ namespace network {
             return;
         }
 
-        // Create ECS enemy bullet with server-authoritative collision components
         Entity bulletEntity = m_registry.CreateEntity();
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(-400.0f, 0.0f));
@@ -494,7 +513,6 @@ namespace network {
                                                 CollisionLayer(CollisionLayers::ENEMY_BULLET,
                                                                CollisionLayers::PLAYER | CollisionLayers::OBSTACLE));
 
-        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
     }
 
 
@@ -536,10 +554,8 @@ namespace network {
                 continue;
             }
 
-            // Apply movement patterns (updates Velocity component)
             EnemySystem::ApplyMovementPattern(m_registry, enemy, dt);
 
-            // Handle enemy shooting logic
             if (!m_registry.HasComponent<Enemy>(enemy) || !m_registry.HasComponent<Position>(enemy)) {
                 continue;
             }
@@ -547,7 +563,6 @@ namespace network {
             const auto& enemyComp = m_registry.GetComponent<Enemy>(enemy);
             const auto& pos = m_registry.GetComponent<Position>(enemy);
 
-            // Use entity ID as key for cooldowns
             uint32_t enemyId = static_cast<uint32_t>(enemy);
 
             if (m_enemyShootCooldowns.find(enemyId) == m_enemyShootCooldowns.end()) {
@@ -595,8 +610,6 @@ namespace network {
     void GameServer::UpdateLegacyEntitiesFromRegistry() {
         using namespace RType::ECS;
 
-        // Clear and rebuild GameEntity vector from ECS Registry for network serialization
-        // This is a temporary solution until network serialization is migrated to use Registry directly
         m_entities.clear();
 
         // Sync players
@@ -668,12 +681,11 @@ namespace network {
             const auto& vel = m_registry.GetComponent<Velocity>(bulletEntity);
             const auto& bullet = m_registry.GetComponent<Bullet>(bulletEntity);
 
-            // Determine bullet type based on collision layer
-            uint8_t flags = 0; // Default to player bullet
+            uint8_t flags = 0;
             if (m_registry.HasComponent<CollisionLayer>(bulletEntity)) {
                 const auto& collLayer = m_registry.GetComponent<CollisionLayer>(bulletEntity);
                 if (collLayer.layer == CollisionLayers::ENEMY_BULLET) {
-                    flags = 10; // Enemy bullet marker (10+)
+                    flags = 10;
                 }
             }
 
@@ -688,6 +700,38 @@ namespace network {
             entity.flags = flags;
             entity.ownerHash = 0;
             m_entities.push_back(entity);
+        }
+
+        auto obstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
+        const size_t maxObstaclesPerSnapshot = 64;
+        size_t obstacleCount = 0;
+        for (auto obstacleEntity : obstacles) {
+            if (!m_registry.IsEntityAlive(obstacleEntity) ||
+                !m_registry.HasComponent<Position>(obstacleEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(obstacleEntity);
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(obstacleEntity);
+            entity.type = EntityType::OBSTACLE;
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = 0.0f;
+            entity.vy = 0.0f;
+            entity.health = 255;
+            entity.flags = 0;
+            uint64_t obstacleIndex = 0;
+            if (m_registry.HasComponent<RType::ECS::ObstacleMetadata>(obstacleEntity)) {
+                obstacleIndex = m_registry.GetComponent<RType::ECS::ObstacleMetadata>(obstacleEntity).uniqueId;
+            }
+            entity.ownerHash = obstacleIndex;
+            m_entities.push_back(entity);
+            obstacleCount++;
+            if (obstacleCount >= maxObstaclesPerSnapshot) {
+                break;
+            }
         }
     }
 

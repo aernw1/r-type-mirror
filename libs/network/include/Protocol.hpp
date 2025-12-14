@@ -59,6 +59,7 @@ namespace network {
         ENEMY = 0x02,
         BULLET = 0x03,
         POWERUP = 0x04,
+        OBSTACLE = 0x05,
     };
 
     // ==================== STRUCTURES ====================
