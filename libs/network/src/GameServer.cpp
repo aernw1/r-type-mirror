@@ -124,11 +124,11 @@ namespace network {
             std::cout << "Loading level from: " << m_levelPath << std::endl;
             auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
             std::cout << "Level JSON loaded: " << levelData.obstacles.size() << " obstacle definitions found" << std::endl;
-            
+
             auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
             std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, "
                       << createdEntities.enemies.size() << " enemy entities created" << std::endl;
-            
+
             size_t obstaclesWithColliders = 0;
             for (auto obsEntity : createdEntities.obstacleColliders) {
                 if (m_registry.HasComponent<RType::ECS::Obstacle>(obsEntity) &&
@@ -512,7 +512,6 @@ namespace network {
         m_registry.AddComponent<CollisionLayer>(bulletEntity,
                                                 CollisionLayer(CollisionLayers::ENEMY_BULLET,
                                                                CollisionLayers::PLAYER | CollisionLayers::OBSTACLE));
-
     }
 
 
