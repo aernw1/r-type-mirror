@@ -44,7 +44,7 @@ namespace RType {
                         // Obstacles deal damage to enemies
                         constexpr int OBSTACLE_DAMAGE = 50;
                         enemyHealth.current -= OBSTACLE_DAMAGE;
-                        
+
                         if (enemyHealth.current <= 0) {
                             enemyHealth.current = 0;
                             // Enemy will be destroyed by HealthSystem

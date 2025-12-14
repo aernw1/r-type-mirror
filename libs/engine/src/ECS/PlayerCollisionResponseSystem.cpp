@@ -72,7 +72,7 @@ namespace RType {
                             auto& playerHealth = registry.GetComponent<Health>(player);
                             constexpr int OBSTACLE_DAMAGE = 10;
                             playerHealth.current -= OBSTACLE_DAMAGE;
-                            
+
                             if (playerHealth.current < 0) {
                                 playerHealth.current = 0;
                             }
