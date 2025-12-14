@@ -164,7 +164,6 @@ namespace RType {
                 const auto& metadata = m_registry.GetComponent<ECS::ObstacleMetadata>(collider);
                 m_obstacleIdToCollider[metadata.uniqueId] = collider;
             }
-            
         }
 
         void InGameState::createSystems() {
@@ -184,12 +183,12 @@ namespace RType {
             if (!m_isNetworkSession) {
                 m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(bulletSprite);
                 m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
-            m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
-            m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
-            m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
-            m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
-            m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
-            m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
+                m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
+                m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
+                m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
+                m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
+                m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
+                m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
             } else {
                 m_shootingSystem.reset();
                 m_movementSystem.reset();
