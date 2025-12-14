@@ -34,6 +34,7 @@ namespace RType {
             uint16_t serverPort;
             uint64_t playerHash;
             uint8_t playerNumber;
+            std::vector<network::PlayerInfo> allPlayers;
         };
 
         class IState {
