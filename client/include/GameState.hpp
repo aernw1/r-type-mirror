@@ -21,7 +21,12 @@
 #include "ECS/ObstacleCollisionResponseSystem.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/ScoreSystem.hpp"
+#include "ECS/ShieldSystem.hpp"
+#include "ECS/ForcePodSystem.hpp"
+#include "ECS/PowerUpSpawnSystem.hpp"
+#include "ECS/PowerUpCollisionSystem.hpp"
 #include "ECS/Component.hpp"
+#include "ECS/PowerUpFactory.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "Renderer/IRenderer.hpp"
 
@@ -79,6 +84,7 @@ namespace RType {
 
             // Server state update handler
             void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
+            void ApplyPowerUpStateToPlayer(ECS::Entity playerEntity, const network::EntityState& entityState);
 
             struct EnemySpriteConfig {
                 Renderer::SpriteId sprite = Renderer::INVALID_SPRITE_ID;
@@ -119,6 +125,10 @@ namespace RType {
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
+            std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
+            std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
+            std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
+            std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
 
             // Bullet textures and sprites
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
@@ -166,6 +176,13 @@ namespace RType {
             Renderer::SpriteId m_enemyGreenSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_enemyRedSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_enemyBlueSprite = Renderer::INVALID_SPRITE_ID;
+
+            // Power-up sprites
+            Renderer::SpriteId m_powerupSpreadSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupLaserSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupForcePodSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupSpeedSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupShieldSprite = Renderer::INVALID_SPRITE_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;

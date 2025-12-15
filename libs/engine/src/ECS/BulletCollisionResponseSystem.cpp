@@ -47,12 +47,16 @@ namespace RType {
                 }
 
                 if (hitPlayer && registry.HasComponent<Health>(other)) {
-                    auto& health = registry.GetComponent<Health>(other);
-                    const auto& damage = registry.GetComponent<Damage>(bullet);
-                    health.current -= damage.amount;
+                    if (registry.HasComponent<Shield>(other)) {
+                        continue;
+                    } else {
+                        auto& health = registry.GetComponent<Health>(other);
+                        const auto& damage = registry.GetComponent<Damage>(bullet);
+                        health.current -= damage.amount;
 
-                    if (health.current < 0) {
-                        health.current = 0;
+                        if (health.current < 0) {
+                            health.current = 0;
+                        }
                     }
                 }
 

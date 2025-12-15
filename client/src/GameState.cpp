@@ -141,6 +141,57 @@ namespace RType {
             ensureEnemySprite(m_enemyGreenSprite, m_playerGreenSprite, "assets/spaceships/enemy-green.png");
             ensureEnemySprite(m_enemyRedSprite, m_playerRedSprite, "assets/spaceships/enemy-red.png");
             ensureEnemySprite(m_enemyBlueSprite, m_playerBlueSprite, "assets/spaceships/enemy-blue.png");
+
+            // Load power-up sprites from level assets
+            auto powerupSpreadIt = m_levelAssets.sprites.find("powerup-spread");
+            if (powerupSpreadIt != m_levelAssets.sprites.end()) {
+                m_powerupSpreadSprite = powerupSpreadIt->second;
+            } else {
+                auto textureIt = m_levelAssets.textures.find("powerup-spread");
+                if (textureIt != m_levelAssets.textures.end()) {
+                    m_powerupSpreadSprite = m_renderer->CreateSprite(textureIt->second, {});
+                }
+            }
+
+            auto powerupLaserIt = m_levelAssets.sprites.find("powerup-laser");
+            if (powerupLaserIt != m_levelAssets.sprites.end()) {
+                m_powerupLaserSprite = powerupLaserIt->second;
+            } else {
+                auto textureIt = m_levelAssets.textures.find("powerup-laser");
+                if (textureIt != m_levelAssets.textures.end()) {
+                    m_powerupLaserSprite = m_renderer->CreateSprite(textureIt->second, {});
+                }
+            }
+
+            auto powerupForcePodIt = m_levelAssets.sprites.find("powerup-force-pod");
+            if (powerupForcePodIt != m_levelAssets.sprites.end()) {
+                m_powerupForcePodSprite = powerupForcePodIt->second;
+            } else {
+                auto textureIt = m_levelAssets.textures.find("powerup-force-pod");
+                if (textureIt != m_levelAssets.textures.end()) {
+                    m_powerupForcePodSprite = m_renderer->CreateSprite(textureIt->second, {});
+                }
+            }
+
+            auto powerupSpeedIt = m_levelAssets.sprites.find("powerup-speed");
+            if (powerupSpeedIt != m_levelAssets.sprites.end()) {
+                m_powerupSpeedSprite = powerupSpeedIt->second;
+            } else {
+                auto textureIt = m_levelAssets.textures.find("powerup-speed");
+                if (textureIt != m_levelAssets.textures.end()) {
+                    m_powerupSpeedSprite = m_renderer->CreateSprite(textureIt->second, {});
+                }
+            }
+
+            auto powerupShieldIt = m_levelAssets.sprites.find("powerup-shield");
+            if (powerupShieldIt != m_levelAssets.sprites.end()) {
+                m_powerupShieldSprite = powerupShieldIt->second;
+            } else {
+                auto textureIt = m_levelAssets.textures.find("powerup-shield");
+                if (textureIt != m_levelAssets.textures.end()) {
+                    m_powerupShieldSprite = m_renderer->CreateSprite(textureIt->second, {});
+                }
+            }
         }
 
         void InGameState::initializeFromLevel() {
@@ -153,15 +204,6 @@ namespace RType {
             m_backgroundEntities = m_levelEntities.backgrounds;
             m_obstacleSpriteEntities = m_levelEntities.obstacleVisuals;
             m_obstacleColliderEntities = m_levelEntities.obstacleColliders;
-            m_obstacleIdToCollider.clear();
-            for (auto collider : m_obstacleColliderEntities) {
-                if (!m_registry.IsEntityAlive(collider) ||
-                    !m_registry.HasComponent<ECS::ObstacleMetadata>(collider)) {
-                    continue;
-                }
-                const auto& metadata = m_registry.GetComponent<ECS::ObstacleMetadata>(collider);
-                m_obstacleIdToCollider[metadata.uniqueId] = collider;
-            }
             m_obstacleIdToCollider.clear();
             for (auto collider : m_obstacleColliderEntities) {
                 if (!m_registry.IsEntityAlive(collider) ||
@@ -186,6 +228,16 @@ namespace RType {
             m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
             m_renderingSystem = std::make_unique<RType::ECS::RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<RType::ECS::TextRenderingSystem>(m_renderer.get());
+
+            m_powerUpSpawnSystem = std::make_unique<RType::ECS::PowerUpSpawnSystem>(
+                m_renderer.get(),
+                m_levelData.config.screenWidth,
+                m_levelData.config.screenHeight);
+            m_powerUpSpawnSystem->SetSpawnInterval(m_levelData.config.powerUpSpawnInterval);
+            m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(m_renderer.get());
+            m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
+            m_shieldSystem = std::make_unique<RType::ECS::ShieldSystem>();
+            // Client still runs these systems for local VFX even when the server owns power-up logic.
 
             if (!m_isNetworkSession) {
                 m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(bulletSprite);
@@ -218,14 +270,34 @@ namespace RType {
 
             const uint8_t playerNumber = m_context.playerNumber == 0 ? 1 : m_context.playerNumber;
             const uint64_t playerHash = m_context.playerHash;
-            constexpr float spawnX = 100.0f;
-            constexpr float spawnY = 360.0f;
+
+            // Get player spawn position from level data
+            const auto& spawns = ECS::LevelLoader::GetPlayerSpawns(m_levelData);
+            uint8_t playerIndex = playerNumber - 1;
+
+            Position spawnPos{100.0f, 360.0f}; // Fallback default
+            if (!spawns.empty()) {
+                if (playerIndex < spawns.size()) {
+                    spawnPos = Position{spawns[playerIndex].x, spawns[playerIndex].y};
+                    Core::Logger::Info("[GameState] Player {} spawning at ({}, {}) from level data",
+                                       playerNumber, spawnPos.x, spawnPos.y);
+                } else {
+                    // Use first spawn as fallback
+                    spawnPos = Position{spawns[0].x, spawns[0].y};
+                    Core::Logger::Warning("[GameState] Player {} index out of range, using first spawn",
+                                          playerNumber);
+                }
+            } else {
+                Core::Logger::Warning("[GameState] No player spawns in level data, using default position");
+            }
+
+            const auto& playerConfig = m_levelData.config.playerDefaults;
 
             m_localPlayerEntity = ECS::PlayerFactory::CreatePlayer(m_registry,
                                                                    playerNumber,
                                                                    playerHash,
-                                                                   spawnX,
-                                                                   spawnY,
+                                                                   spawnPos.x,
+                                                                   spawnPos.y,
                                                                    m_renderer.get());
 
             if (m_localPlayerEntity == ECS::NULL_ENTITY) {
@@ -236,15 +308,55 @@ namespace RType {
             if (m_registry.HasComponent<ECS::Player>(m_localPlayerEntity)) {
                 auto& playerComp = m_registry.GetComponent<ECS::Player>(m_localPlayerEntity);
                 playerComp.isLocalPlayer = true;
+            } else {
+                m_registry.AddComponent<Player>(m_localPlayerEntity, Player{playerNumber, playerHash, true});
+            }
+
+            if (m_registry.HasComponent<ECS::Position>(m_localPlayerEntity)) {
+                auto& position = m_registry.GetComponent<ECS::Position>(m_localPlayerEntity);
+                position = spawnPos;
+            } else {
+                m_registry.AddComponent<Position>(m_localPlayerEntity, Position{spawnPos.x, spawnPos.y});
+            }
+
+            if (!m_registry.HasComponent<Velocity>(m_localPlayerEntity)) {
+                m_registry.AddComponent<Velocity>(m_localPlayerEntity, Velocity{0.0f, 0.0f});
             }
 
             if (m_registry.HasComponent<ECS::Controllable>(m_localPlayerEntity)) {
                 auto& controllable = m_registry.GetComponent<ECS::Controllable>(m_localPlayerEntity);
-                controllable.speed = 300.0f;
+                controllable.speed = playerConfig.movementSpeed;
+            } else {
+                m_registry.AddComponent<Controllable>(m_localPlayerEntity, Controllable{playerConfig.movementSpeed});
             }
 
-            m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{0.2f, 50.0f, 0.0f});
-            m_registry.AddComponent<ShootCommand>(m_localPlayerEntity, ShootCommand{});
+            Shooter shooterConfig{
+                playerConfig.fireRate,
+                playerConfig.bulletOffsetX,
+                playerConfig.bulletOffsetY};
+            if (m_registry.HasComponent<Shooter>(m_localPlayerEntity)) {
+                auto& shooter = m_registry.GetComponent<Shooter>(m_localPlayerEntity);
+                shooter = shooterConfig;
+            } else {
+                m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{shooterConfig.fireRate, shooterConfig.offsetX, shooterConfig.offsetY});
+            }
+
+            if (m_registry.HasComponent<ShootCommand>(m_localPlayerEntity)) {
+                auto& shootCommand = m_registry.GetComponent<ShootCommand>(m_localPlayerEntity);
+                shootCommand = ShootCommand{};
+            } else {
+                m_registry.AddComponent<ShootCommand>(m_localPlayerEntity, ShootCommand{});
+            }
+
+            if (m_registry.HasComponent<Health>(m_localPlayerEntity)) {
+                auto& health = m_registry.GetComponent<Health>(m_localPlayerEntity);
+                health.max = playerConfig.maxHealth;
+                if (health.current > playerConfig.maxHealth) {
+                    health.current = playerConfig.maxHealth;
+                }
+            } else {
+                m_registry.AddComponent<Health>(m_localPlayerEntity, Health{playerConfig.maxHealth});
+            }
 
             auto spriteIt = m_levelAssets.sprites.find("player_blue");
             if (spriteIt != m_levelAssets.sprites.end()) {
@@ -730,6 +842,24 @@ namespace RType {
 
                 if (it == m_networkEntityMap.end()) {
                     if (type == network::EntityType::PLAYER) {
+                        bool isForcePod = (entityState.flags & 0x80) != 0;
+                        if (isForcePod) {
+                            auto newEntity = m_registry.CreateEntity();
+                            m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                            m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+
+                            Renderer::SpriteId podSprite = m_powerupForcePodSprite;
+                            if (podSprite != Renderer::INVALID_SPRITE_ID) {
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(podSprite, 9));
+                                d.scale = {0.4f, 0.4f};
+                                d.origin = Math::Vector2(128.0f, 128.0f);
+                            }
+
+                            m_networkEntityMap[entityState.entityId] = newEntity;
+                            std::cout << "[GameState] Created FORCE POD entity " << entityState.entityId << std::endl;
+                            continue;
+                        }
+
                         if (entityState.ownerHash == m_context.playerHash) {
                             auto existing = m_networkEntityMap.find(entityState.entityId);
                             if (existing != m_networkEntityMap.end()) {
@@ -754,6 +884,15 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
                         m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
+                        
+                        // Add necessary components for player functionality
+                        m_registry.AddComponent<Controllable>(newEntity, Controllable{200.0f});
+                        m_registry.AddComponent<Shooter>(newEntity, Shooter{0.2f, 50.0f, 20.0f});
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{50.0f, 50.0f});
+                        m_registry.AddComponent<CircleCollider>(newEntity, CircleCollider{25.0f});
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::PLAYER,
+                                          CollisionLayers::ENEMY | CollisionLayers::ENEMY_BULLET | CollisionLayers::OBSTACLE));
 
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
                         drawable.scale = {0.5f, 0.5f};
@@ -763,13 +902,19 @@ namespace RType {
                         if (playerNum > 0 && playerNum <= MAX_PLAYERS) {
                             m_assignedPlayerNumbers.insert(playerNum);
                         }
-
                         CreatePlayerNameLabel(newEntity, playerName, entityState.x, entityState.y);
+
+                        // Apply power-up state from server
+                        ApplyPowerUpStateToPlayer(newEntity, entityState);
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
 
                         if (entityState.ownerHash == m_context.playerHash) {
                             m_localPlayerEntity = newEntity;
+                            // Ensure local player has ShootCommand for shooting
+                            if (!m_registry.HasComponent<ShootCommand>(newEntity)) {
+                                m_registry.AddComponent<ShootCommand>(newEntity, ShootCommand{});
+                            }
                             if (m_context.playerNumber >= 1 && m_context.playerNumber <= MAX_PLAYERS) {
                                 size_t localPlayerIndex = static_cast<size_t>(m_context.playerNumber - 1);
                                 m_playersHUD[localPlayerIndex].playerEntity = newEntity;
@@ -804,6 +949,13 @@ namespace RType {
                             enemySprite = m_enemyGreenSprite;
                         }
 
+                        if (enemySprite == Renderer::INVALID_SPRITE_ID) {
+                            Core::Logger::Error("[GameState] Missing enemy sprite for type {}, skipping entity {}",
+                                                static_cast<int>(enemyType),
+                                                entityState.entityId);
+                            continue;
+                        }
+
                         auto newEntity = m_registry.CreateEntity();
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
@@ -834,6 +986,14 @@ namespace RType {
                                 if (bulletSpriteIt != m_levelAssets.sprites.end()) {
                                     bulletSprite = bulletSpriteIt->second;
                                 }
+                            }
+
+                            if (bulletSprite == Renderer::INVALID_SPRITE_ID) {
+                                Core::Logger::Warning("[GameState] Missing enemy bullet sprite for type {} (entity {})",
+                                                      static_cast<int>(enemyType),
+                                                      entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
                             }
 
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSprite, 12));
@@ -888,6 +1048,55 @@ namespace RType {
                         }
 
                         m_networkEntityMap[entityState.entityId] = colliderEntity;
+                    } else if (type == network::EntityType::POWERUP) {
+                        uint8_t powerupType = entityState.flags;
+                        ECS::PowerUpType puType = static_cast<ECS::PowerUpType>(powerupType);
+
+                        auto newEntity = m_registry.CreateEntity();
+                        m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                        m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+
+                        Math::Color powerupColor = ECS::PowerUpFactory::GetPowerUpColor(puType);
+
+                        // Select appropriate power-up sprite based on type
+                        Renderer::SpriteId powerupSprite = Renderer::INVALID_SPRITE_ID;
+                        switch (puType) {
+                            case ECS::PowerUpType::FIRE_RATE_BOOST:
+                                // Use spread sprite for fire rate boost as fallback
+                                powerupSprite = m_powerupSpreadSprite;
+                                break;
+                            case ECS::PowerUpType::SPREAD_SHOT:
+                                powerupSprite = m_powerupSpreadSprite;
+                                break;
+                            case ECS::PowerUpType::LASER_BEAM:
+                                powerupSprite = m_powerupLaserSprite;
+                                break;
+                            case ECS::PowerUpType::FORCE_POD:
+                                powerupSprite = m_powerupForcePodSprite;
+                                break;
+                            case ECS::PowerUpType::SPEED_BOOST:
+                                powerupSprite = m_powerupSpeedSprite;
+                                break;
+                            case ECS::PowerUpType::SHIELD:
+                                powerupSprite = m_powerupShieldSprite;
+                                break;
+                            default:
+                                // Fallback to first available power-up sprite
+                                powerupSprite = m_powerupSpreadSprite;
+                                break;
+                        }
+
+                        if (powerupSprite != Renderer::INVALID_SPRITE_ID) {
+                            auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(powerupSprite, 5));
+                            d.scale = {0.8f, 0.8f};
+                            d.tint = powerupColor;
+                        }
+
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{32.0f, 32.0f});
+
+                        m_networkEntityMap[entityState.entityId] = newEntity;
+                        std::cout << "[GameState] Created POWERUP entity " << entityState.entityId
+                                  << " type " << static_cast<int>(powerupType) << std::endl;
                     }
                 } else {
                     auto ecsEntity = it->second;
@@ -946,7 +1155,7 @@ namespace RType {
                         vel.dx = entityState.vx;
                         vel.dy = entityState.vy;
                     }
-
+                  
                     if (type == network::EntityType::PLAYER) {
                         for (size_t i = 0; i < MAX_PLAYERS; i++) {
                             if (m_playersHUD[i].playerEntity == ecsEntity) {
@@ -957,6 +1166,13 @@ namespace RType {
                                 break;
                             }
                         }
+
+                    if (type == network::EntityType::POWERUP) {
+                        if (entityState.health == 0 && m_registry.IsEntityAlive(ecsEntity)) {
+                            m_registry.DestroyEntity(ecsEntity);
+                            entitiesToRemove.push_back(entityState.entityId);
+                        }
+                        continue;
                     }
 
                     if (m_registry.HasComponent<Health>(ecsEntity)) {
@@ -1029,6 +1245,10 @@ namespace RType {
                                 }
                             }
                         }
+                    }
+                    
+                    if (type == network::EntityType::PLAYER) {
+                        ApplyPowerUpStateToPlayer(ecsEntity, entityState);
                     }
                 }
             }
@@ -1137,8 +1357,30 @@ namespace RType {
                 m_healthSystem->Update(m_registry, dt);
             }
 
-            m_scrollingSystem->Update(m_registry, dt);
+            if (m_scrollingSystem) {
+                m_scrollingSystem->Update(m_registry, dt);
+            }
             m_localScrollOffset += -150.0f * dt;
+
+            // Power-up visual systems (client-side rendering)
+            if (m_shieldSystem) {
+                m_shieldSystem->Update(m_registry, dt);
+            }
+            if (m_forcePodSystem) {
+                m_forcePodSystem->Update(m_registry, dt);
+            }
+            
+            // Shooting system - enabled for local player to create bullets with power-up effects
+            // Server also creates bullets, but client needs this for local player's weapon effects
+            if (m_shootingSystem) {
+                if (m_context.networkClient) {
+                    // Only update shooting for local player in networked games
+                    // Server handles other players' bullets
+                    m_shootingSystem->Update(m_registry, dt);
+                } else {
+                    m_shootingSystem->Update(m_registry, dt);
+                }
+            }
 
             // Background infinite loop
             for (auto& bg : m_backgroundEntities) {
@@ -1204,6 +1446,71 @@ namespace RType {
             result.tint = tints[index];
             result.scale = scales[index];
             return result;
+        }
+
+        void InGameState::ApplyPowerUpStateToPlayer(ECS::Entity playerEntity, const network::EntityState& entityState) {
+            using namespace RType::ECS;
+            using namespace network;
+
+            if (!m_registry.IsEntityAlive(playerEntity)) {
+                return;
+            }
+
+            if (!m_registry.HasComponent<ActivePowerUps>(playerEntity)) {
+                m_registry.AddComponent<ActivePowerUps>(playerEntity, ActivePowerUps());
+            }
+            auto& activePowerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
+
+            activePowerUps.hasFireRateBoost = (entityState.powerUpFlags & PowerUpFlags::POWERUP_FIRE_RATE_BOOST) != 0;
+            activePowerUps.hasSpreadShot = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SPREAD_SHOT) != 0;
+            activePowerUps.hasLaserBeam = (entityState.powerUpFlags & PowerUpFlags::POWERUP_LASER_BEAM) != 0;
+            activePowerUps.hasShield = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SHIELD) != 0;
+
+            float speedMult = static_cast<float>(entityState.speedMultiplier) / 10.0f;
+            activePowerUps.speedMultiplier = speedMult;
+
+            if (m_registry.HasComponent<Controllable>(playerEntity)) {
+                auto& controllable = m_registry.GetComponent<Controllable>(playerEntity);
+                controllable.speed = 200.0f * speedMult;
+            }
+
+            WeaponType weaponType = static_cast<WeaponType>(entityState.weaponType);
+            float fireRate = static_cast<float>(entityState.fireRate) / 10.0f;
+
+            if (weaponType != WeaponType::STANDARD) {
+                if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
+                    auto& weaponSlot = m_registry.GetComponent<WeaponSlot>(playerEntity);
+                    weaponSlot.type = weaponType;
+                    weaponSlot.fireRate = fireRate;
+                } else {
+                    int damage = (weaponType == WeaponType::LASER) ? 40 : 20;
+                    m_registry.AddComponent<WeaponSlot>(playerEntity, WeaponSlot(weaponType, fireRate, damage));
+                }
+            } else {
+                if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
+                    m_registry.RemoveComponent<WeaponSlot>(playerEntity);
+                }
+            }
+
+            if (!m_registry.HasComponent<WeaponSlot>(playerEntity) && m_registry.HasComponent<Shooter>(playerEntity)) {
+                auto& shooter = m_registry.GetComponent<Shooter>(playerEntity);
+                shooter.fireRate = fireRate;
+            }
+
+            if (activePowerUps.hasShield) {
+                if (!m_registry.HasComponent<Shield>(playerEntity)) {
+                    // Mirror server: 5-second shield, primarily for visual effects client-side
+                    constexpr float SHIELD_DURATION_SECONDS = 5.0f;
+                    m_registry.AddComponent<Shield>(playerEntity, Shield(SHIELD_DURATION_SECONDS));
+                }
+            } else {
+                if (m_registry.HasComponent<Shield>(playerEntity)) {
+                    m_registry.RemoveComponent<Shield>(playerEntity);
+                }
+            }
+
+            // Note: Force Pod is handled as a separate entity on the server, so we don't create it here
+            // The server will sync the force pod entity separately if it exists
         }
 
         std::pair<std::string, uint8_t> InGameState::FindPlayerNameAndNumber(uint64_t ownerHash, const std::unordered_set<uint8_t>& assignedNumbers) const {
@@ -1291,5 +1598,5 @@ namespace RType {
             }
             m_playerNameLabels.erase(labelIt);
         }
-    }
+        }
 }

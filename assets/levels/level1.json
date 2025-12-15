@@ -14,7 +14,15 @@
             "player_blue": "assets/spaceships/player_blue.png",
             "player_green": "assets/spaceships/player_green.png",
             "player_red": "assets/spaceships/player_red.png",
-            "bullet": "assets/projectiles/bullet.png"
+            "enemy-green": "assets/spaceships/enemy-green.png",
+            "enemy-red": "assets/spaceships/enemy-red.png",
+            "enemy-blue": "assets/spaceships/enemy-blue.png",
+            "bullet": "assets/projectiles/bullet.png",
+            "powerup-spread": "assets/powerups/spread.png",
+            "powerup-laser": "assets/powerups/laser.png",
+            "powerup-force-pod": "assets/powerups/force_pod.png",
+            "powerup-speed": "assets/powerups/speed.png",
+            "powerup-shield": "assets/powerups/shield.png"
         },
         "fonts": {
             "main": {

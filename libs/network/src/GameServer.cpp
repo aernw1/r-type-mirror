@@ -60,6 +60,21 @@ namespace network {
         m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
         m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
         m_scoreSystem = std::make_unique<RType::ECS::ScoreSystem>();
+        m_powerUpSpawnSystem = std::make_unique<RType::ECS::PowerUpSpawnSystem>(
+            nullptr, // No renderer on server
+            1280.0f, // screenWidth
+            720.0f   // screenHeight
+        );
+        m_powerUpSpawnSystem->SetSpawnInterval(5.0f); // Spawn every 5 seconds for testing
+        m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(nullptr);
+        
+        // Shooting system for spread shot and laser beam
+        // Note: We use INVALID_SPRITE_ID since we don't need rendering on server
+        m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(0);
+        
+        // Force pod and shield systems
+        m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
+        m_shieldSystem = std::make_unique<RType::ECS::ShieldSystem>();
 
         std::cout << "GameServer started on UDP port " << port << std::endl;
         std::cout << "ECS collision systems initialized" << std::endl;
@@ -311,18 +326,9 @@ namespace network {
         if (input->inputs & InputFlags::RIGHT)
             vel.dx = SPEED;
 
-        if (input->inputs & InputFlags::SHOOT) {
-            if (m_registry.HasComponent<Position>(playerEntity)) {
-                const auto& pos = m_registry.GetComponent<Position>(playerEntity);
-                float offsetX = 50.0f;
-                float offsetY = 0.0f;
-                if (m_registry.HasComponent<Shooter>(playerEntity)) {
-                    const auto& shooter = m_registry.GetComponent<Shooter>(playerEntity);
-                    offsetX = shooter.offsetX;
-                    offsetY = shooter.offsetY;
-                }
-                SpawnBullet(input->playerHash, pos.x + offsetX, pos.y + offsetY);
-            }
+        if (m_registry.HasComponent<ShootCommand>(playerEntity)) {
+            auto& shootCmd = m_registry.GetComponent<ShootCommand>(playerEntity);
+            shootCmd.wantsToShoot = (input->inputs & InputFlags::SHOOT) != 0;
         }
     }
 
@@ -364,6 +370,10 @@ namespace network {
             state.flags = entity.flags;
             state.ownerHash = entity.ownerHash;
             state.score = entity.score;
+            state.powerUpFlags = entity.powerUpFlags;
+            state.speedMultiplier = entity.speedMultiplier;
+            state.weaponType = entity.weaponType;
+            state.fireRate = entity.fireRate;
 
             std::memcpy(packet.data() + offset, &state, sizeof(EntityState));
             offset += sizeof(EntityState);
@@ -398,6 +408,17 @@ namespace network {
 
         m_scrollingSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
+
+        // Powerup systems (server-side only)
+        m_powerUpSpawnSystem->Update(m_registry, dt);
+        m_powerUpCollisionSystem->Update(m_registry, dt);
+        
+        // Shooting system for weapon powerups (spread shot, laser)
+        m_shootingSystem->Update(m_registry, dt);
+        
+        // Force pod and shield systems
+        m_forcePodSystem->Update(m_registry, dt);
+        m_shieldSystem->Update(m_registry, dt);
 
         UpdateBullets(dt);
         UpdateEnemies(dt);
@@ -601,12 +622,68 @@ namespace network {
             entity.vx = vel.dx;
             entity.vy = vel.dy;
             entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
-            entity.flags = player.playerNumber;
+            
+            // Encode player number in flags (lower 4 bits)
+            uint8_t flags = player.playerNumber & 0x0F;
+            entity.flags = flags;
             entity.ownerHash = player.playerHash;
+          
             if (m_registry.HasComponent<ScoreValue>(playerEntity)) {
                 entity.score = m_registry.GetComponent<ScoreValue>(playerEntity).points;
             } else {
                 entity.score = 0;
+            }
+            
+            // Initialize power-up state defaults
+            entity.powerUpFlags = 0;
+            entity.speedMultiplier = 10; // 1.0 scaled by 10
+            entity.weaponType = 0; // STANDARD
+            entity.fireRate = 20; // 0.2 scaled by 10
+            
+            // Encode power-up state
+            if (m_registry.HasComponent<ActivePowerUps>(playerEntity)) {
+                const auto& powerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
+                
+                if (powerUps.hasFireRateBoost) {
+                    entity.powerUpFlags |= network::PowerUpFlags::POWERUP_FIRE_RATE_BOOST;
+                }
+                if (powerUps.hasSpreadShot) {
+                    entity.powerUpFlags |= network::PowerUpFlags::POWERUP_SPREAD_SHOT;
+                }
+                if (powerUps.hasLaserBeam) {
+                    entity.powerUpFlags |= network::PowerUpFlags::POWERUP_LASER_BEAM;
+                }
+                if (powerUps.hasShield) {
+                    entity.powerUpFlags |= network::PowerUpFlags::POWERUP_SHIELD;
+                }
+                
+                // Encode speed multiplier (scaled by 10, clamped to 0-255)
+                float speedMult = powerUps.speedMultiplier;
+                entity.speedMultiplier = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(speedMult * 10.0f))));
+            }
+            
+            // Check if player has a force pod (separate entity with ForcePod component pointing to this player)
+            auto forcePods = m_registry.GetEntitiesWithComponent<ForcePod>();
+            for (auto podEntity : forcePods) {
+                if (m_registry.IsEntityAlive(podEntity)) {
+                    const auto& pod = m_registry.GetComponent<ForcePod>(podEntity);
+                    if (pod.owner == playerEntity) {
+                        entity.powerUpFlags |= network::PowerUpFlags::POWERUP_FORCE_POD;
+                        break;
+                    }
+                }
+            }
+            
+            // Encode weapon type and fire rate
+            if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
+                const auto& weaponSlot = m_registry.GetComponent<WeaponSlot>(playerEntity);
+                entity.weaponType = static_cast<uint8_t>(weaponSlot.type);
+                // Fire rate scaled by 10, clamped to 0-255
+                entity.fireRate = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(weaponSlot.fireRate * 10.0f))));
+            } else if (m_registry.HasComponent<Shooter>(playerEntity)) {
+                // If no WeaponSlot, use Shooter fireRate (may be modified by fire rate boost)
+                const auto& shooter = m_registry.GetComponent<Shooter>(playerEntity);
+                entity.fireRate = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(shooter.fireRate * 10.0f))));
             }
             m_entities.push_back(entity);
         }
@@ -704,6 +781,72 @@ namespace network {
             if (obstacleCount >= maxObstaclesPerSnapshot) {
                 break;
             }
+        }
+
+        // Sync powerups
+        auto powerups = m_registry.GetEntitiesWithComponent<PowerUp>();
+        for (auto powerupEntity : powerups) {
+            if (!m_registry.IsEntityAlive(powerupEntity) ||
+                !m_registry.HasComponent<Position>(powerupEntity) ||
+                !m_registry.HasComponent<Velocity>(powerupEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(powerupEntity);
+            const auto& vel = m_registry.GetComponent<Velocity>(powerupEntity);
+            const auto& powerup = m_registry.GetComponent<PowerUp>(powerupEntity);
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(powerupEntity);
+            entity.type = EntityType::POWERUP;
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = vel.dx;
+            entity.vy = vel.dy;
+            entity.health = 1; // Powerups are "alive" until collected
+            entity.flags = static_cast<uint8_t>(powerup.type); // Powerup type
+            entity.ownerHash = 0;
+            m_entities.push_back(entity);
+        }
+
+        // Sync force pods (as separate entities so clients can render them)
+        auto forcePods = m_registry.GetEntitiesWithComponent<ForcePod>();
+        for (auto podEntity : forcePods) {
+            if (!m_registry.IsEntityAlive(podEntity) ||
+                !m_registry.HasComponent<Position>(podEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(podEntity);
+            const auto& pod = m_registry.GetComponent<ForcePod>(podEntity);
+
+            // Find owner to get player hash
+            uint64_t ownerHash = 0;
+            if (m_registry.IsEntityAlive(pod.owner) && 
+                m_registry.HasComponent<Player>(pod.owner)) {
+                const auto& owner = m_registry.GetComponent<Player>(pod.owner);
+                ownerHash = owner.playerHash;
+            }
+
+            // Force pods have velocity from movement system
+            float vx = 0.0f, vy = 0.0f;
+            if (m_registry.HasComponent<Velocity>(podEntity)) {
+                const auto& vel = m_registry.GetComponent<Velocity>(podEntity);
+                vx = vel.dx;
+                vy = vel.dy;
+            }
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(podEntity);
+            entity.type = EntityType::PLAYER; // Treat as player entity for rendering
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = vx;
+            entity.vy = vy;
+            entity.health = 1;
+            entity.flags = 0x80; // Bit 7 set to indicate force pod (will need special handling on client)
+            entity.ownerHash = ownerHash;
+            m_entities.push_back(entity);
         }
     }
 

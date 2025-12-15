@@ -2,6 +2,7 @@
 #include "../../include/ECS/Component.hpp"
 #include "../../include/ECS/ShootingSystem.hpp"
 #include "../../include/ECS/RenderingSystem.hpp"
+#include <cmath>
 
 namespace RType {
     namespace ECS {
@@ -82,6 +83,81 @@ namespace RType {
                 registry.AddComponent<CollisionLayer>(bulletEntity,
                                                       CollisionLayer(CollisionLayers::PLAYER_BULLET,
                                                                      CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+            }
+
+            // Handle WeaponSlot components (spread shot, laser, etc.)
+            auto weaponSlots = registry.GetEntitiesWithComponent<WeaponSlot>();
+
+            for (auto entity : weaponSlots) {
+                if (!registry.IsEntityAlive(entity)) continue;
+
+                auto& weapon = registry.GetComponent<WeaponSlot>(entity);
+                if (!weapon.enabled) continue;
+
+                weapon.cooldown -= deltaTime;
+                if (weapon.cooldown < 0.0f) weapon.cooldown = 0.0f;
+
+                if (registry.HasComponent<ShootCommand>(entity)) {
+                    auto& shootCmd = registry.GetComponent<ShootCommand>(entity);
+
+                    if (shootCmd.wantsToShoot && weapon.cooldown <= 0.0f) {
+                        if (registry.HasComponent<Position>(entity)) {
+                            const auto& pos = registry.GetComponent<Position>(entity);
+
+                            switch (weapon.type) {
+                                case WeaponType::SPREAD:
+                                    CreateSpreadShot(registry, entity, pos, weapon.damage);
+                                    break;
+                                case WeaponType::LASER:
+                                    CreateLaserShot(registry, entity, pos, weapon.damage);
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            weapon.cooldown = weapon.fireRate;
+                        }
+                    }
+                }
+            }
+        }
+
+        void ShootingSystem::CreateSpreadShot(Registry& registry, Entity shooter, const Position& pos, int damage) {
+            // Create 3 bullets at different angles
+            float angles[] = {-15.0f, 0.0f, 15.0f}; // degrees
+
+            for (float angle : angles) {
+                float radians = angle * 3.14159f / 180.0f;
+                float vx = 600.0f * std::cos(radians);
+                float vy = 600.0f * std::sin(radians);
+
+                auto bullet = registry.CreateEntity();
+                registry.AddComponent<Position>(bullet, Position(pos.x + 50, pos.y + 25));
+                registry.AddComponent<Velocity>(bullet, Velocity(vx, vy));
+                registry.AddComponent<Bullet>(bullet, Bullet(shooter));
+                registry.AddComponent<Damage>(bullet, Damage(damage));
+                registry.AddComponent<BoxCollider>(bullet, BoxCollider(8.0f, 4.0f));
+
+                if (m_bulletSprite != 0) {
+                    auto& d = registry.AddComponent<Drawable>(bullet, Drawable(m_bulletSprite, 2));
+                    d.scale = {0.08f, 0.08f};
+                    d.tint = Math::Color(1.0f, 1.0f, 0.0f, 1.0f); // Yellow for spread
+                }
+            }
+        }
+
+        void ShootingSystem::CreateLaserShot(Registry& registry, Entity shooter, const Position& pos, int damage) {
+            auto bullet = registry.CreateEntity();
+            registry.AddComponent<Position>(bullet, Position(pos.x + 50, pos.y + 25));
+            registry.AddComponent<Velocity>(bullet, Velocity(800.0f, 0.0f)); // Faster
+            registry.AddComponent<Bullet>(bullet, Bullet(shooter));
+            registry.AddComponent<Damage>(bullet, Damage(damage));
+            registry.AddComponent<BoxCollider>(bullet, BoxCollider(30.0f, 3.0f)); // Longer
+
+            if (m_bulletSprite != 0) {
+                auto& d = registry.AddComponent<Drawable>(bullet, Drawable(m_bulletSprite, 2));
+                d.scale = {0.3f, 0.05f}; // Long and thin
+                d.tint = Math::Color(0.0f, 1.0f, 1.0f, 1.0f); // Cyan for laser
             }
         }
     }

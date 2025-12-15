@@ -23,6 +23,11 @@
 #include "ECS/ScoreSystem.hpp"
 #include "ECS/PlayerFactory.hpp"
 #include "ECS/EnemyFactory.hpp"
+#include "ECS/PowerUpSpawnSystem.hpp"
+#include "ECS/PowerUpCollisionSystem.hpp"
+#include "ECS/ShootingSystem.hpp"
+#include "ECS/ForcePodSystem.hpp"
+#include "ECS/ShieldSystem.hpp"
 #include <asio.hpp>
 #include <vector>
 #include <unordered_map>
@@ -77,6 +82,10 @@ namespace network {
         uint8_t flags;
         uint64_t ownerHash = 0;
         uint32_t score = 0;
+        uint8_t powerUpFlags = 0;
+        uint8_t speedMultiplier = 10;
+        uint8_t weaponType = 0;
+        uint8_t fireRate = 20;
     };
 
     class GameServer {
@@ -135,6 +144,11 @@ namespace network {
         std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
         std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
         std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
+        std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
+        std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
+        std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
+        std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
+        std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
 
         std::vector<GameEntity> m_entities;
         uint32_t m_currentTick = 0;
