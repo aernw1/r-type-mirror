@@ -185,6 +185,30 @@ namespace RType {
             Obstacle(bool isBlocking) : blocking(isBlocking) {}
         };
 
+        struct ObstacleMetadata : public IComponent {
+            uint32_t uniqueId = 0;
+            Entity visualEntity = NULL_ENTITY;
+            float offsetX = 0.0f;
+            float offsetY = 0.0f;
+
+            ObstacleMetadata() = default;
+            ObstacleMetadata(uint32_t id,
+                             Entity visual = NULL_ENTITY,
+                             float offsetX = 0.0f,
+                             float offsetY = 0.0f)
+                : uniqueId(id),
+                  visualEntity(visual),
+                  offsetX(offsetX),
+                  offsetY(offsetY) {}
+        };
+
+        struct Invincibility : public IComponent {
+            float remainingTime = 0.0f;
+
+            Invincibility() = default;
+            Invincibility(float duration) : remainingTime(duration) {}
+        };
+
         struct CollisionLayer : public IComponent {
             uint16_t layer = 0;     // What layer this entity is on
             uint16_t mask = 0xFFFF; // Which layers this entity collides with

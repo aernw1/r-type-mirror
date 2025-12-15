@@ -8,7 +8,7 @@
 #pragma once
 
 #include "ISystem.hpp"
-#include "CollisionSystem.hpp"
+#include "CollisionDetectionSystem.hpp"
 #include "Renderer/IRenderer.hpp"
 
 namespace RType {

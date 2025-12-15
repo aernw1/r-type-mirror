@@ -59,6 +59,7 @@ namespace network {
         ENEMY = 0x02,
         BULLET = 0x03,
         POWERUP = 0x04,
+        OBSTACLE = 0x05,
     };
 
     // ==================== STRUCTURES ====================
@@ -104,6 +105,16 @@ namespace network {
         uint32_t timestamp = 0;  // Client timestamp (ms)
     };
 
+    // Power-up flags for EntityState (bitfield)
+    enum PowerUpFlags : uint8_t {
+        POWERUP_NONE = 0,
+        POWERUP_FIRE_RATE_BOOST = 1 << 0,  // 0x01
+        POWERUP_SPREAD_SHOT = 1 << 1,       // 0x02
+        POWERUP_LASER_BEAM = 1 << 2,        // 0x04
+        POWERUP_SHIELD = 1 << 3,            // 0x08
+        POWERUP_FORCE_POD = 1 << 4,         // 0x10
+    };
+
     // Entity state in STATE packet
     struct EntityState {
         uint32_t entityId = 0;
@@ -115,6 +126,11 @@ namespace network {
         uint8_t health = 0;
         uint8_t flags = 0;      // Custom flags per entity type
         uint64_t ownerHash = 0; // Player hash for PLAYER entities (for client-side prediction)
+        // Power-up state (only valid for PLAYER entities)
+        uint8_t powerUpFlags = 0;      // PowerUpFlags bitfield
+        uint8_t speedMultiplier = 10;  // Scaled by 10 (1.0 = 10, 1.3 = 13, max 25.5)
+        uint8_t weaponType = 0;        // WeaponType enum (0=STANDARD, 1=SPREAD, 2=LASER)
+        uint8_t fireRate = 20;         // Scaled by 10 (0.2 = 20, 0.5 = 50, max 25.5)
     };
 
     // STATE packet (Server → Client)

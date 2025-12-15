@@ -56,14 +56,15 @@ namespace RType {
                     }
                 }
 
+                bool shouldDestroy = false;
                 if (hitObstacle) {
                     const auto& obstacle = registry.GetComponent<Obstacle>(other);
-                    if (!obstacle.blocking) {
-                        continue;
+                    if (obstacle.blocking) {
+                        shouldDestroy = true;
                     }
                 }
 
-                if (hitEnemy || hitPlayer || (hitObstacle && registry.GetComponent<Obstacle>(other).blocking)) {
+                if (hitEnemy || hitPlayer || shouldDestroy) {
                     registry.DestroyEntity(bullet);
                 }
             }

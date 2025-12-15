@@ -73,6 +73,7 @@ namespace RType {
                 if (m_bulletSprite != 0) {
                     auto& d = registry.AddComponent<Drawable>(bulletEntity, Drawable(m_bulletSprite, 2));
                     d.scale = {0.1f, 0.1f};
+                    d.origin = Math::Vector2(128.0f, 128.0f);
                 }
 
                 registry.AddComponent<Damage>(bulletEntity, Damage(25));

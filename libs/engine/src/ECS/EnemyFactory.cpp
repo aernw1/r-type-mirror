@@ -79,6 +79,7 @@ namespace RType {
                     auto& drawable = registry.AddComponent<Drawable>(enemy, Drawable(spriteId, 1));
                     drawable.tint = data.color;
                     drawable.scale = Math::Vector2(0.5f, 0.5f);
+                    drawable.origin = Math::Vector2(128.0f, 128.0f);
                 } else {
                     Core::Logger::Error("Failed to load any enemy texture for type {}", static_cast<int>(type));
                 }

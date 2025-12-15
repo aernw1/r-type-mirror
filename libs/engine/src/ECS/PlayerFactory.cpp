@@ -23,10 +23,8 @@ namespace RType {
             registry.AddComponent<Controllable>(player, Controllable(200.0f));
 
             registry.AddComponent<Health>(player, Health(100, 100));
-
-            registry.AddComponent<BoxCollider>(player, BoxCollider(50.0f, 50.0f));
-
-            registry.AddComponent<CircleCollider>(player, CircleCollider(25.0f));
+            registry.AddComponent<BoxCollider>(player, BoxCollider(25.0f, 25.0f));
+            registry.AddComponent<CircleCollider>(player, CircleCollider(12.5f));
             registry.AddComponent<CollisionLayer>(player,
                                                   CollisionLayer(CollisionLayers::PLAYER,
                                                                  CollisionLayers::ENEMY | CollisionLayers::ENEMY_BULLET | CollisionLayers::OBSTACLE));
@@ -47,6 +45,7 @@ namespace RType {
                     auto& drawable = registry.AddComponent<Drawable>(player, Drawable(spriteId, 2));
                     drawable.tint = GetPlayerColor(playerNumber);
                     drawable.scale = Math::Vector2(0.5f, 0.5f);
+                    drawable.origin = Math::Vector2(128.0f, 128.0f);
                 } else {
                     Core::Logger::Error("Failed to load any player texture for player {}", playerNumber);
                 }

@@ -93,16 +93,34 @@ namespace network {
           m_lastSpawnTime(std::chrono::steady_clock::now()),
           m_levelPath(levelPath) {
 
-        // Increase send buffer to handle broadcasting to multiple clients at 60Hz
         asio::socket_base::send_buffer_size sendOption(1024 * 1024); // 1MB
         m_socket.set_option(sendOption);
 
         // Initialize ECS systems
+        m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
         m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
         m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
         m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
         m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
+        m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
         m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
+        
+        // Powerup systems (server-side only to prevent cheating)
+        m_powerUpSpawnSystem = std::make_unique<RType::ECS::PowerUpSpawnSystem>(
+            nullptr, // No renderer on server
+            1280.0f, // screenWidth
+            720.0f   // screenHeight
+        );
+        m_powerUpSpawnSystem->SetSpawnInterval(5.0f); // Spawn every 5 seconds for testing
+        m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(nullptr);
+        
+        // Shooting system for spread shot and laser beam
+        // Note: We use INVALID_SPRITE_ID since we don't need rendering on server
+        m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(0);
+        
+        // Force pod and shield systems
+        m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
+        m_shieldSystem = std::make_unique<RType::ECS::ShieldSystem>();
 
         std::cout << "GameServer started on UDP port " << port << std::endl;
         std::cout << "ECS collision systems initialized" << std::endl;
@@ -117,6 +135,30 @@ namespace network {
         m_running = true;
 
         WaitForAllPlayers();
+
+        // Load level and create obstacles
+        try {
+            std::cout << "Loading level from: " << m_levelPath << std::endl;
+            auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
+            std::cout << "Level JSON loaded: " << levelData.obstacles.size() << " obstacle definitions found" << std::endl;
+
+            auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
+            std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, "
+                      << createdEntities.enemies.size() << " enemy entities created" << std::endl;
+
+            size_t obstaclesWithColliders = 0;
+            for (auto obsEntity : createdEntities.obstacleColliders) {
+                if (m_registry.HasComponent<RType::ECS::Obstacle>(obsEntity) &&
+                    m_registry.HasComponent<RType::ECS::BoxCollider>(obsEntity) &&
+                    m_registry.HasComponent<RType::ECS::CollisionLayer>(obsEntity)) {
+                    obstaclesWithColliders++;
+                }
+            }
+            std::cout << "Verified: " << obstaclesWithColliders << " obstacles have collision components" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to load level: " << e.what() << std::endl;
+            std::cerr << "Continuing without obstacles..." << std::endl;
+        }
 
         const float defaultSpawnY[] = {200.0f, 360.0f, 520.0f, 680.0f};
         size_t playerIndex = 0;
@@ -365,6 +407,11 @@ namespace network {
             state.health = entity.health;
             state.flags = entity.flags;
             state.ownerHash = entity.ownerHash;
+            // Copy power-up state
+            state.powerUpFlags = entity.powerUpFlags;
+            state.speedMultiplier = entity.speedMultiplier;
+            state.weaponType = entity.weaponType;
+            state.fireRate = entity.fireRate;
 
             std::memcpy(packet.data() + offset, &state, sizeof(EntityState));
             offset += sizeof(EntityState);
@@ -400,7 +447,20 @@ namespace network {
     void GameServer::UpdateGameLogic(float dt) {
         m_scrollOffset += SCROLL_SPEED * dt;
 
+        // Update order: scrolling → movement → collision detection → response systems
+        m_scrollingSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
+
+        // Powerup systems (server-side only)
+        m_powerUpSpawnSystem->Update(m_registry, dt);
+        m_powerUpCollisionSystem->Update(m_registry, dt);
+        
+        // Shooting system for weapon powerups (spread shot, laser)
+        m_shootingSystem->Update(m_registry, dt);
+        
+        // Force pod and shield systems
+        m_forcePodSystem->Update(m_registry, dt);
+        m_shieldSystem->Update(m_registry, dt);
 
         UpdateBullets(dt);
         UpdateEnemies(dt);
@@ -408,12 +468,10 @@ namespace network {
         m_collisionDetectionSystem->Update(m_registry, dt);
         m_bulletResponseSystem->Update(m_registry, dt);
         m_playerResponseSystem->Update(m_registry, dt);
+        m_obstacleResponseSystem->Update(m_registry, dt);
         m_healthSystem->Update(m_registry, dt);
 
-        // Legacy: Update GameEntity positions from Registry for network sync
         UpdateLegacyEntitiesFromRegistry();
-
-        // Legacy cleanup for old GameEntity system (will be removed when fully migrated)
         CleanupDeadEntities();
 
         auto now = std::chrono::steady_clock::now();
@@ -428,8 +486,6 @@ namespace network {
         uint8_t playerNumber = static_cast<uint8_t>(m_connectedPlayers.size());
         RType::ECS::Entity playerEntity = RType::ECS::PlayerFactory::CreatePlayer(
             m_registry, playerNumber, hash, x, y, nullptr); // No renderer on server
-
-        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
         std::cout << "[Server] Spawned ECS player entity for playerHash=" << hash << " at (" << x << "," << y << ")" << std::endl;
     }
 
@@ -452,7 +508,6 @@ namespace network {
         uint32_t enemyId = static_cast<uint32_t>(enemyEntity);
         m_enemyShootCooldowns[enemyId] = 0.0f;
 
-        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
         std::cout << "[Server] Spawned ECS enemy type " << static_cast<int>(enemyType)
                   << " (entity=" << enemyId << ") at (" << spawnX << "," << spawnY << ")" << std::endl;
     }
@@ -469,8 +524,6 @@ namespace network {
         m_registry.AddComponent<CollisionLayer>(bulletEntity,
                                                 CollisionLayer(CollisionLayers::PLAYER_BULLET,
                                                                CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
-
-        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
     }
 
     void GameServer::SpawnEnemyBullet(uint32_t enemyId, float x, float y) {
@@ -482,7 +535,6 @@ namespace network {
             return;
         }
 
-        // Create ECS enemy bullet with server-authoritative collision components
         Entity bulletEntity = m_registry.CreateEntity();
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(-400.0f, 0.0f));
@@ -493,8 +545,6 @@ namespace network {
         m_registry.AddComponent<CollisionLayer>(bulletEntity,
                                                 CollisionLayer(CollisionLayers::ENEMY_BULLET,
                                                                CollisionLayers::PLAYER | CollisionLayers::OBSTACLE));
-
-        // GameEntity vector is rebuilt each frame by UpdateLegacyEntitiesFromRegistry()
     }
 
 
@@ -536,10 +586,8 @@ namespace network {
                 continue;
             }
 
-            // Apply movement patterns (updates Velocity component)
             EnemySystem::ApplyMovementPattern(m_registry, enemy, dt);
 
-            // Handle enemy shooting logic
             if (!m_registry.HasComponent<Enemy>(enemy) || !m_registry.HasComponent<Position>(enemy)) {
                 continue;
             }
@@ -547,7 +595,6 @@ namespace network {
             const auto& enemyComp = m_registry.GetComponent<Enemy>(enemy);
             const auto& pos = m_registry.GetComponent<Position>(enemy);
 
-            // Use entity ID as key for cooldowns
             uint32_t enemyId = static_cast<uint32_t>(enemy);
 
             if (m_enemyShootCooldowns.find(enemyId) == m_enemyShootCooldowns.end()) {
@@ -595,8 +642,6 @@ namespace network {
     void GameServer::UpdateLegacyEntitiesFromRegistry() {
         using namespace RType::ECS;
 
-        // Clear and rebuild GameEntity vector from ECS Registry for network serialization
-        // This is a temporary solution until network serialization is migrated to use Registry directly
         m_entities.clear();
 
         // Sync players
@@ -622,8 +667,64 @@ namespace network {
             entity.vx = vel.dx;
             entity.vy = vel.dy;
             entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
-            entity.flags = player.playerNumber;
+            
+            // Encode player number in flags (lower 4 bits)
+            uint8_t flags = player.playerNumber & 0x0F;
+            entity.flags = flags;
             entity.ownerHash = player.playerHash;
+            
+            // Initialize power-up state defaults
+            entity.powerUpFlags = 0;
+            entity.speedMultiplier = 10; // 1.0 scaled by 10
+            entity.weaponType = 0; // STANDARD
+            entity.fireRate = 20; // 0.2 scaled by 10
+            
+            // Encode power-up state
+            if (m_registry.HasComponent<ActivePowerUps>(playerEntity)) {
+                const auto& powerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
+                
+                if (powerUps.hasFireRateBoost) {
+                    entity.powerUpFlags |= network::PowerUpFlags::POWERUP_FIRE_RATE_BOOST;
+                }
+                if (powerUps.hasSpreadShot) {
+                    entity.powerUpFlags |= network::PowerUpFlags::POWERUP_SPREAD_SHOT;
+                }
+                if (powerUps.hasLaserBeam) {
+                    entity.powerUpFlags |= network::PowerUpFlags::POWERUP_LASER_BEAM;
+                }
+                if (powerUps.hasShield) {
+                    entity.powerUpFlags |= network::PowerUpFlags::POWERUP_SHIELD;
+                }
+                
+                // Encode speed multiplier (scaled by 10, clamped to 0-255)
+                float speedMult = powerUps.speedMultiplier;
+                entity.speedMultiplier = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(speedMult * 10.0f))));
+            }
+            
+            // Check if player has a force pod (separate entity with ForcePod component pointing to this player)
+            auto forcePods = m_registry.GetEntitiesWithComponent<ForcePod>();
+            for (auto podEntity : forcePods) {
+                if (m_registry.IsEntityAlive(podEntity)) {
+                    const auto& pod = m_registry.GetComponent<ForcePod>(podEntity);
+                    if (pod.owner == playerEntity) {
+                        entity.powerUpFlags |= network::PowerUpFlags::POWERUP_FORCE_POD;
+                        break;
+                    }
+                }
+            }
+            
+            // Encode weapon type and fire rate
+            if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
+                const auto& weaponSlot = m_registry.GetComponent<WeaponSlot>(playerEntity);
+                entity.weaponType = static_cast<uint8_t>(weaponSlot.type);
+                // Fire rate scaled by 10, clamped to 0-255
+                entity.fireRate = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(weaponSlot.fireRate * 10.0f))));
+            } else if (m_registry.HasComponent<Shooter>(playerEntity)) {
+                // If no WeaponSlot, use Shooter fireRate (may be modified by fire rate boost)
+                const auto& shooter = m_registry.GetComponent<Shooter>(playerEntity);
+                entity.fireRate = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(shooter.fireRate * 10.0f))));
+            }
+            
             m_entities.push_back(entity);
         }
 
@@ -668,12 +769,11 @@ namespace network {
             const auto& vel = m_registry.GetComponent<Velocity>(bulletEntity);
             const auto& bullet = m_registry.GetComponent<Bullet>(bulletEntity);
 
-            // Determine bullet type based on collision layer
-            uint8_t flags = 0; // Default to player bullet
+            uint8_t flags = 0;
             if (m_registry.HasComponent<CollisionLayer>(bulletEntity)) {
                 const auto& collLayer = m_registry.GetComponent<CollisionLayer>(bulletEntity);
                 if (collLayer.layer == CollisionLayers::ENEMY_BULLET) {
-                    flags = 10; // Enemy bullet marker (10+)
+                    flags = 10;
                 }
             }
 
@@ -687,6 +787,102 @@ namespace network {
             entity.health = 1;
             entity.flags = flags;
             entity.ownerHash = 0;
+            m_entities.push_back(entity);
+        }
+
+        auto obstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
+        const size_t maxObstaclesPerSnapshot = 64;
+        size_t obstacleCount = 0;
+        for (auto obstacleEntity : obstacles) {
+            if (!m_registry.IsEntityAlive(obstacleEntity) ||
+                !m_registry.HasComponent<Position>(obstacleEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(obstacleEntity);
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(obstacleEntity);
+            entity.type = EntityType::OBSTACLE;
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = 0.0f;
+            entity.vy = 0.0f;
+            entity.health = 255;
+            entity.flags = 0;
+            uint64_t obstacleIndex = 0;
+            if (m_registry.HasComponent<RType::ECS::ObstacleMetadata>(obstacleEntity)) {
+                obstacleIndex = m_registry.GetComponent<RType::ECS::ObstacleMetadata>(obstacleEntity).uniqueId;
+            }
+            entity.ownerHash = obstacleIndex;
+            m_entities.push_back(entity);
+            obstacleCount++;
+            if (obstacleCount >= maxObstaclesPerSnapshot) {
+                break;
+            }
+        // Sync powerups
+        auto powerups = m_registry.GetEntitiesWithComponent<PowerUp>();
+        for (auto powerupEntity : powerups) {
+            if (!m_registry.IsEntityAlive(powerupEntity) ||
+                !m_registry.HasComponent<Position>(powerupEntity) ||
+                !m_registry.HasComponent<Velocity>(powerupEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(powerupEntity);
+            const auto& vel = m_registry.GetComponent<Velocity>(powerupEntity);
+            const auto& powerup = m_registry.GetComponent<PowerUp>(powerupEntity);
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(powerupEntity);
+            entity.type = EntityType::POWERUP;
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = vel.dx;
+            entity.vy = vel.dy;
+            entity.health = 1; // Powerups are "alive" until collected
+            entity.flags = static_cast<uint8_t>(powerup.type); // Powerup type
+            entity.ownerHash = 0;
+            m_entities.push_back(entity);
+        }
+
+        // Sync force pods (as separate entities so clients can render them)
+        auto forcePods = m_registry.GetEntitiesWithComponent<ForcePod>();
+        for (auto podEntity : forcePods) {
+            if (!m_registry.IsEntityAlive(podEntity) ||
+                !m_registry.HasComponent<Position>(podEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(podEntity);
+            const auto& pod = m_registry.GetComponent<ForcePod>(podEntity);
+
+            // Find owner to get player hash
+            uint64_t ownerHash = 0;
+            if (m_registry.IsEntityAlive(pod.owner) && 
+                m_registry.HasComponent<Player>(pod.owner)) {
+                const auto& owner = m_registry.GetComponent<Player>(pod.owner);
+                ownerHash = owner.playerHash;
+            }
+
+            // Force pods have velocity from movement system
+            float vx = 0.0f, vy = 0.0f;
+            if (m_registry.HasComponent<Velocity>(podEntity)) {
+                const auto& vel = m_registry.GetComponent<Velocity>(podEntity);
+                vx = vel.dx;
+                vy = vel.dy;
+            }
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(podEntity);
+            entity.type = EntityType::PLAYER; // Treat as player entity for rendering
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = vx;
+            entity.vy = vy;
+            entity.health = 1;
+            entity.flags = 0x80; // Bit 7 set to indicate force pod (will need special handling on client)
+            entity.ownerHash = ownerHash;
             m_entities.push_back(entity);
         }
     }

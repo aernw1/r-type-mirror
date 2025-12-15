@@ -20,11 +20,10 @@
 #include "ECS/PlayerCollisionResponseSystem.hpp"
 #include "ECS/ObstacleCollisionResponseSystem.hpp"
 #include "ECS/HealthSystem.hpp"
-#include "ECS/PowerUpSpawnSystem.hpp"
-#include "ECS/PowerUpCollisionSystem.hpp"
-#include "ECS/ForcePodSystem.hpp"
 #include "ECS/ShieldSystem.hpp"
+#include "ECS/ForcePodSystem.hpp"
 #include "ECS/Component.hpp"
+#include "ECS/PowerUpFactory.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "Renderer/IRenderer.hpp"
 
@@ -33,6 +32,7 @@
 #include <vector>
 #include <chrono>
 #include <unordered_set>
+#include <unordered_map>
 #include <array>
 
 namespace RType {
@@ -81,11 +81,14 @@ namespace RType {
 
             // Server state update handler
             void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
+            void ApplyPowerUpStateToPlayer(ECS::Entity playerEntity, const network::EntityState& entityState);
 
             struct EnemySpriteConfig {
-                Renderer::SpriteId sprite;
-                Math::Color tint;
+                Renderer::SpriteId sprite = Renderer::INVALID_SPRITE_ID;
+                Math::Color tint{1.0f, 1.0f, 1.0f, 1.0f};
+                float rotation = 0.0f;
             };
+
             struct EnemyBulletSpriteConfig {
                 Renderer::SpriteId sprite;
                 Math::Color tint;
@@ -113,10 +116,8 @@ namespace RType {
             std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
-            std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
-            std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
-            std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
             std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
+            std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
 
             // Bullet textures and sprites
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
@@ -132,7 +133,8 @@ namespace RType {
 
             // Background and obstacles entities
             std::vector<RType::ECS::Entity> m_backgroundEntities;
-            std::vector<RType::ECS::Entity> m_obstacleEntities;
+            std::vector<RType::ECS::Entity> m_obstacleSpriteEntities;
+            std::vector<RType::ECS::Entity> m_obstacleColliderEntities;
 
             bool m_escapeKeyPressed = false;
 
@@ -146,7 +148,7 @@ namespace RType {
 
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
-            RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player for prediction
+            RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player entity mirrored from server
 
             // Individual player ship sprites
             Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;
@@ -163,6 +165,13 @@ namespace RType {
             Renderer::SpriteId m_enemyGreenSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_enemyRedSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_enemyBlueSprite = Renderer::INVALID_SPRITE_ID;
+
+            // Power-up sprites
+            Renderer::SpriteId m_powerupSpreadSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupLaserSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupForcePodSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupSpeedSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupShieldSprite = Renderer::INVALID_SPRITE_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
@@ -185,6 +194,9 @@ namespace RType {
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;
             static constexpr float MAX_CHARGE_TIME = 2.0f; // 2 seconds for full charge
+
+            bool m_isNetworkSession = false;
+            std::unordered_map<uint64_t, RType::ECS::Entity> m_obstacleIdToCollider;
 
             // Level loader data
             RType::ECS::LevelData m_levelData;

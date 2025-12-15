@@ -16,9 +16,17 @@
 #include "ECS/CollisionDetectionSystem.hpp"
 #include "ECS/BulletCollisionResponseSystem.hpp"
 #include "ECS/PlayerCollisionResponseSystem.hpp"
+#include "ECS/ObstacleCollisionResponseSystem.hpp"
+#include "ECS/ScrollingSystem.hpp"
+#include "ECS/LevelLoader.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/PlayerFactory.hpp"
 #include "ECS/EnemyFactory.hpp"
+#include "ECS/PowerUpSpawnSystem.hpp"
+#include "ECS/PowerUpCollisionSystem.hpp"
+#include "ECS/ShootingSystem.hpp"
+#include "ECS/ForcePodSystem.hpp"
+#include "ECS/ShieldSystem.hpp"
 #include <asio.hpp>
 #include <vector>
 #include <unordered_map>
@@ -72,6 +80,11 @@ namespace network {
         uint8_t health;
         uint8_t flags;
         uint64_t ownerHash = 0;
+        // Power-up state (only valid for PLAYER entities)
+        uint8_t powerUpFlags = 0;      // PowerUpFlags bitfield
+        uint8_t speedMultiplier = 10;  // Scaled by 10 (1.0 = 10, 1.3 = 13, max 25.5)
+        uint8_t weaponType = 0;        // WeaponType enum (0=STANDARD, 1=SPREAD, 2=LASER)
+        uint8_t fireRate = 20;         // Scaled by 10 (0.2 = 20, 0.5 = 50, max 25.5)
     };
 
     class GameServer {
@@ -121,11 +134,18 @@ namespace network {
         std::unordered_map<uint64_t, ConnectedPlayer> m_connectedPlayers;
 
         RType::ECS::Registry m_registry;
+        std::unique_ptr<RType::ECS::ScrollingSystem> m_scrollingSystem;
         std::unique_ptr<RType::ECS::MovementSystem> m_movementSystem;
         std::unique_ptr<RType::ECS::CollisionDetectionSystem> m_collisionDetectionSystem;
         std::unique_ptr<RType::ECS::BulletCollisionResponseSystem> m_bulletResponseSystem;
         std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
+        std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
         std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
+        std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
+        std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
+        std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
+        std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
+        std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
 
         // Legacy: Will be migrated to ECS
         std::vector<GameEntity> m_entities;

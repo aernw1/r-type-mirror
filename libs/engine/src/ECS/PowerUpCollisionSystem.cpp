@@ -7,6 +7,7 @@
 
 #include "ECS/PowerUpCollisionSystem.hpp"
 #include "ECS/PowerUpFactory.hpp"
+#include "ECS/CollisionDetectionSystem.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 
@@ -38,7 +39,7 @@ namespace RType {
                         continue;
                     }
 
-                    if (CollisionSystem::CheckCollision(registry, powerup, player)) {
+                    if (CollisionDetectionSystem::CheckCollision(registry, powerup, player)) {
                         const auto& powerupComp = registry.GetComponent<PowerUp>(powerup);
 
                         PowerUpFactory::ApplyPowerUpToPlayer(

@@ -29,9 +29,19 @@ namespace RType {
                 auto& pos = registry.GetComponent<Position>(entity);
                 pos.x = pos.x + scrollable.speed * deltaTime;
 
-                float destroyThreshold = -1500.0f;
-                if (pos.x < destroyThreshold) {
-                    registry.DestroyEntity(entity);
+                bool isObstacleCollider = registry.HasComponent<Obstacle>(entity) &&
+                                          !registry.HasComponent<Drawable>(entity);
+
+                if (!isObstacleCollider) {
+                    float destroyThreshold = -1500.0f;
+                    if (pos.x < destroyThreshold) {
+                        registry.DestroyEntity(entity);
+                    }
+                } else {
+                    float destroyThreshold = -2000.0f;
+                    if (pos.x < destroyThreshold) {
+                        registry.DestroyEntity(entity);
+                    }
                 }
             }
         }

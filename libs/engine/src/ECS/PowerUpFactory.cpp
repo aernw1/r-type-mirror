@@ -26,7 +26,7 @@ namespace RType {
             const std::array<PowerUpData, 6> POWERUP_DATA_TABLE = {{
                 // FIRE_RATE_BOOST - Red
                 {Math::Color(1.0f, 0.2f, 0.2f, 1.0f),
-                 "../assets/powerups/fire_rate.png", "Fire Rate"},
+                 "../assets/powerups/spread.png", "Fire Rate Boost"},
                 // SPREAD_SHOT - Yellow
                 {Math::Color(1.0f, 1.0f, 0.2f, 1.0f),
                  "../assets/powerups/spread.png", "Spread Shot"},
@@ -60,15 +60,16 @@ namespace RType {
             registry.AddComponent<PowerUp>(powerup, PowerUp(type, uniqueId));
 
             registry.AddComponent<BoxCollider>(powerup, BoxCollider(32.0f, 32.0f));
+            registry.AddComponent<CollisionLayer>(powerup,
+                CollisionLayer(CollisionLayers::POWERUP,
+                               CollisionLayers::PLAYER));
 
             if (renderer) {
                 const PowerUpData& data = POWERUP_DATA_TABLE[static_cast<size_t>(type)];
 
-                // Try loading sprite, fallback to colored square
                 Renderer::TextureId textureId = renderer->LoadTexture(data.spritePath);
                 if (textureId == Renderer::INVALID_TEXTURE_ID) {
-                    // Fallback: use bullet texture with different tint
-                    textureId = renderer->LoadTexture("../assets/projectiles/bullet.png");
+                    textureId = renderer->LoadTexture("../assets/powerups/laser.png");
                 }
 
                 if (textureId != Renderer::INVALID_TEXTURE_ID) {
@@ -153,7 +154,6 @@ namespace RType {
                 case PowerUpType::SHIELD: {
                     if (!activePowerUps.hasShield) {
                         activePowerUps.hasShield = true;
-                        // Permanent shield (duration = 0)
                         registry.AddComponent<Shield>(player, Shield(0.0f));
                     }
                     break;
@@ -168,7 +168,6 @@ namespace RType {
         ) {
             Entity forcePod = registry.CreateEntity();
 
-            // Force pod starts at owner position
             if (registry.HasComponent<Position>(owner)) {
                 const auto& ownerPos = registry.GetComponent<Position>(owner);
                 registry.AddComponent<Position>(forcePod, Position(ownerPos.x - 60.0f, ownerPos.y));
@@ -179,14 +178,12 @@ namespace RType {
             registry.AddComponent<ForcePod>(forcePod, ForcePod(owner, -60.0f, 0.0f));
             registry.AddComponent<BoxCollider>(forcePod, BoxCollider(40.0f, 40.0f));
 
-            // Force pod can also shoot
             registry.AddComponent<Shooter>(forcePod, Shooter(0.25f, 50.0f, 20.0f));
             registry.AddComponent<ShootCommand>(forcePod, ShootCommand());
 
             if (renderer) {
-                Renderer::TextureId textureId = renderer->LoadTexture("../assets/powerups/force_pod_sprite.png");
+                Renderer::TextureId textureId = renderer->LoadTexture("../assets/powerups/force_pod.png");
                 if (textureId == Renderer::INVALID_TEXTURE_ID) {
-                    // Fallback to player sprite with orange tint
                     textureId = renderer->LoadTexture("../assets/spaceships/player_blue.png");
                 }
 
@@ -197,7 +194,7 @@ namespace RType {
                     );
 
                     auto& drawable = registry.AddComponent<Drawable>(forcePod, Drawable(spriteId, 9));
-                    drawable.tint = Math::Color(1.0f, 0.6f, 0.0f, 1.0f); // Orange
+                    drawable.tint = Math::Color(1.0f, 0.6f, 0.0f, 1.0f);
                     drawable.scale = Math::Vector2(0.4f, 0.4f);
                 }
             }
