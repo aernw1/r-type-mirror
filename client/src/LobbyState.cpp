@@ -344,6 +344,7 @@ namespace RType {
 
                 m_context.playerHash = localPlayer.hash;
                 m_context.playerNumber = localPlayer.number;
+                m_context.allPlayers = m_client.getPlayers();
 
                 auto gameClient = std::make_shared<network::GameClient>(serverIp, udpPort, localPlayer);
                 if (gameClient->ConnectToServer()) {
