@@ -81,8 +81,7 @@ namespace network {
 
     class GameServer {
     public:
-        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
-                   const std::string& levelPath = "assets/levels/level1.json");
+        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath = "assets/levels/level1.json");
         ~GameServer();
 
         void Run();
@@ -137,13 +136,11 @@ namespace network {
         std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
         std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
 
-        // Legacy: Will be migrated to ECS
         std::vector<GameEntity> m_entities;
         uint32_t m_currentTick = 0;
         uint32_t m_nextEntityId = 1;
         std::atomic<bool> m_running{false};
 
-        // Map scrolling
         float m_scrollOffset = 0.0f;
         const float SCROLL_SPEED = -150.0f;
 
@@ -157,7 +154,6 @@ namespace network {
 
         static const std::array<EnemyStats, 5> s_enemyStats;
 
-        // Level data
         std::string m_levelPath;
     };
 

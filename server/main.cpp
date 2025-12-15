@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** Server main entry point
+*/
+
 #include "LobbyServer.hpp"
 #include "GameServer.hpp"
 #include <iostream>

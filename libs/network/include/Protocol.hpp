@@ -29,7 +29,7 @@ namespace network {
         DISCONNECT = 0x17,
         PLAYER_LEFT = 0x18,
         COUNTDOWN = 0x19,
-        ERROR_MSG = 0x1F, // @haloys i renamed to avoid Windows macro conflict
+        ERROR_MSG = 0x1F,
     };
 
     // ==================== GAME PROTOCOL (UDP) ====================
@@ -127,7 +127,6 @@ namespace network {
         uint16_t entityCount = 0;  // Number of entities following
         float scrollOffset = 0.0f; // Background scroll offset
     };
-    // Followed by: EntityState[entityCount]
 
     // PING packet
     struct PingPacket {

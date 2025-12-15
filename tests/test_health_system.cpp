@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** Test Health System
+*/
+
 #include "Core/Engine.hpp"
 #include "Core/Logger.hpp"
 #include "Core/Platform.hpp"
@@ -159,8 +166,7 @@ int main(int, char*[]) {
             } else {
                 healthLabel.color = Math::Color(1.0f, 1.0f, 1.0f, 1.0f);
             }
-        } else if (healthDisplay != ECS::NULL_ENTITY && !registry.IsEntityAlive(player) &&
-                   registry.HasComponent<ECS::TextLabel>(healthDisplay)) {
+        } else if (healthDisplay != ECS::NULL_ENTITY && !registry.IsEntityAlive(player) && registry.HasComponent<ECS::TextLabel>(healthDisplay)) {
             auto& healthLabel = registry.GetComponent<ECS::TextLabel>(healthDisplay);
             healthLabel.text = "Health: 0/100 - PLAYER DEAD";
             healthLabel.color = Math::Color(1.0f, 0.0f, 0.0f, 1.0f);

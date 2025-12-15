@@ -12,8 +12,7 @@
 
 namespace network {
 
-    LobbyServer::LobbyServer(uint16_t port, size_t maxPlayers, size_t minPlayers)
-        : _server(port), _maxPlayers(maxPlayers), _minPlayers(minPlayers), _rng(std::random_device{}()) {
+    LobbyServer::LobbyServer(uint16_t port, size_t maxPlayers, size_t minPlayers) : _server(port), _maxPlayers(maxPlayers), _minPlayers(minPlayers), _rng(std::random_device{}()) {
         _clients.resize(_maxPlayers);
         _players.resize(_maxPlayers);
         _lastUpdateTime = std::chrono::steady_clock::now();
@@ -162,8 +161,7 @@ namespace network {
         s.writeU8(_players[clientIdx]->number);
         broadcast(LobbyPacket::PLAYER_READY, s.finalize());
 
-        std::cout << "[Lobby] Player #" << (int)_players[clientIdx]->number << " is "
-                  << (_players[clientIdx]->ready ? "ready" : "not ready") << std::endl;
+        std::cout << "[Lobby] Player #" << (int)_players[clientIdx]->number << " is " << (_players[clientIdx]->ready ? "ready" : "not ready") << std::endl;
 
         if (!_players[clientIdx]->ready && _countdownActive) {
             _countdownActive = false;
