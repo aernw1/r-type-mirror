@@ -241,7 +241,7 @@ namespace RType {
                 controllable.speed = 300.0f;
             }
 
-            m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{0.2f, 50.0f, 25.0f});
+            m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{0.2f, 50.0f, 0.0f});
             m_registry.AddComponent<ShootCommand>(m_localPlayerEntity, ShootCommand{});
 
             auto spriteIt = m_levelAssets.sprites.find("player_blue");
