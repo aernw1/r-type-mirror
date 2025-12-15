@@ -379,11 +379,9 @@ namespace network {
         if (input->inputs & InputFlags::RIGHT)
             vel.dx = SPEED;
 
-        if (input->inputs & InputFlags::SHOOT) {
-            if (m_registry.HasComponent<Position>(playerEntity)) {
-                const auto& pos = m_registry.GetComponent<Position>(playerEntity);
-                SpawnBullet(input->playerHash, pos.x + 70.0f, pos.y + 50.0f);
-            }
+        if (m_registry.HasComponent<ShootCommand>(playerEntity)) {
+            auto& shootCmd = m_registry.GetComponent<ShootCommand>(playerEntity);
+            shootCmd.wantsToShoot = (input->inputs & InputFlags::SHOOT) != 0;
         }
     }
 

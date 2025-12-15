@@ -154,7 +154,8 @@ namespace RType {
                 case PowerUpType::SHIELD: {
                     if (!activePowerUps.hasShield) {
                         activePowerUps.hasShield = true;
-                        registry.AddComponent<Shield>(player, Shield(0.0f));
+                        constexpr float SHIELD_DURATION_SECONDS = 5.0f;
+                        registry.AddComponent<Shield>(player, Shield(SHIELD_DURATION_SECONDS));
                     }
                     break;
                 }

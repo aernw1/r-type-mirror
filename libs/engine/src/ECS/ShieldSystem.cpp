@@ -37,11 +37,14 @@ namespace RType {
                 }
             }
 
-            // Remove expired shields
             for (Entity entity : expiredShields) {
                 registry.RemoveComponent<Shield>(entity);
 
-                // Reset tint if entity still has drawable
+                if (registry.HasComponent<ActivePowerUps>(entity)) {
+                    auto& active = registry.GetComponent<ActivePowerUps>(entity);
+                    active.hasShield = false;
+                }
+
                 if (registry.HasComponent<Drawable>(entity)) {
                     auto& drawable = registry.GetComponent<Drawable>(entity);
                     drawable.tint = Math::Color(1.0f, 1.0f, 1.0f, 1.0f);

@@ -793,6 +793,24 @@ namespace RType {
 
                 if (it == m_networkEntityMap.end()) {
                     if (type == network::EntityType::PLAYER) {
+                        bool isForcePod = (entityState.flags & 0x80) != 0;
+                        if (isForcePod) {
+                            auto newEntity = m_registry.CreateEntity();
+                            m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                            m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+
+                            Renderer::SpriteId podSprite = m_powerupForcePodSprite;
+                            if (podSprite != Renderer::INVALID_SPRITE_ID) {
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(podSprite, 9));
+                                d.scale = {0.4f, 0.4f};
+                                d.origin = Math::Vector2(128.0f, 128.0f);
+                            }
+
+                            m_networkEntityMap[entityState.entityId] = newEntity;
+                            std::cout << "[GameState] Created FORCE POD entity " << entityState.entityId << std::endl;
+                            continue;
+                        }
+
                         if (entityState.ownerHash == m_context.playerHash) {
                             auto existing = m_networkEntityMap.find(entityState.entityId);
                             if (existing != m_networkEntityMap.end()) {
@@ -1369,60 +1387,52 @@ namespace RType {
                 return;
             }
 
-            // Ensure ActivePowerUps component exists
             if (!m_registry.HasComponent<ActivePowerUps>(playerEntity)) {
                 m_registry.AddComponent<ActivePowerUps>(playerEntity, ActivePowerUps());
             }
             auto& activePowerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
 
-            // Update power-up flags
             activePowerUps.hasFireRateBoost = (entityState.powerUpFlags & PowerUpFlags::POWERUP_FIRE_RATE_BOOST) != 0;
             activePowerUps.hasSpreadShot = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SPREAD_SHOT) != 0;
             activePowerUps.hasLaserBeam = (entityState.powerUpFlags & PowerUpFlags::POWERUP_LASER_BEAM) != 0;
             activePowerUps.hasShield = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SHIELD) != 0;
 
-            // Update speed multiplier
             float speedMult = static_cast<float>(entityState.speedMultiplier) / 10.0f;
             activePowerUps.speedMultiplier = speedMult;
 
-            // Apply speed to Controllable component
             if (m_registry.HasComponent<Controllable>(playerEntity)) {
                 auto& controllable = m_registry.GetComponent<Controllable>(playerEntity);
                 controllable.speed = 200.0f * speedMult;
             }
 
-            // Update weapon type and fire rate
             WeaponType weaponType = static_cast<WeaponType>(entityState.weaponType);
             float fireRate = static_cast<float>(entityState.fireRate) / 10.0f;
 
             if (weaponType != WeaponType::STANDARD) {
-                // Add or update WeaponSlot component
                 if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
                     auto& weaponSlot = m_registry.GetComponent<WeaponSlot>(playerEntity);
                     weaponSlot.type = weaponType;
                     weaponSlot.fireRate = fireRate;
                 } else {
-                    // Create WeaponSlot with appropriate damage based on type
                     int damage = (weaponType == WeaponType::LASER) ? 40 : 20;
                     m_registry.AddComponent<WeaponSlot>(playerEntity, WeaponSlot(weaponType, fireRate, damage));
                 }
             } else {
-                // Remove WeaponSlot if switching back to standard
                 if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
                     m_registry.RemoveComponent<WeaponSlot>(playerEntity);
                 }
             }
 
-            // Update Shooter fireRate if no WeaponSlot (standard weapon with possible fire rate boost)
             if (!m_registry.HasComponent<WeaponSlot>(playerEntity) && m_registry.HasComponent<Shooter>(playerEntity)) {
                 auto& shooter = m_registry.GetComponent<Shooter>(playerEntity);
                 shooter.fireRate = fireRate;
             }
 
-            // Update Shield component
             if (activePowerUps.hasShield) {
                 if (!m_registry.HasComponent<Shield>(playerEntity)) {
-                    m_registry.AddComponent<Shield>(playerEntity, Shield(0.0f));
+                    // Mirror server: 5-second shield, primarily for visual effects client-side
+                    constexpr float SHIELD_DURATION_SECONDS = 5.0f;
+                    m_registry.AddComponent<Shield>(playerEntity, Shield(SHIELD_DURATION_SECONDS));
                 }
             } else {
                 if (m_registry.HasComponent<Shield>(playerEntity)) {

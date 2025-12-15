@@ -44,12 +44,14 @@ namespace RType {
 
                 if (hitEnemy) {
                     if (registry.HasComponent<Damage>(other) && registry.HasComponent<Health>(player)) {
-                        const auto& damageComp = registry.GetComponent<Damage>(other);
-                        auto& playerHealth = registry.GetComponent<Health>(player);
+                        if (!registry.HasComponent<Shield>(player)) {
+                            const auto& damageComp = registry.GetComponent<Damage>(other);
+                            auto& playerHealth = registry.GetComponent<Health>(player);
 
-                        playerHealth.current -= damageComp.amount;
-                        if (playerHealth.current < 0) {
-                            playerHealth.current = 0;
+                            playerHealth.current -= damageComp.amount;
+                            if (playerHealth.current < 0) {
+                                playerHealth.current = 0;
+                            }
                         }
                     }
 
@@ -60,6 +62,8 @@ namespace RType {
                     const auto& obstacle = registry.GetComponent<Obstacle>(other);
 
                     if (obstacle.blocking) {
+                        bool hasShield = registry.HasComponent<Shield>(player);
+
                         bool isInvincible = false;
                         if (registry.HasComponent<Invincibility>(player)) {
                             auto& invincibility = registry.GetComponent<Invincibility>(player);
@@ -68,7 +72,7 @@ namespace RType {
                             }
                         }
 
-                        if (!isInvincible && registry.HasComponent<Health>(player)) {
+                        if (!hasShield && !isInvincible && registry.HasComponent<Health>(player)) {
                             auto& playerHealth = registry.GetComponent<Health>(player);
                             constexpr int OBSTACLE_DAMAGE = 10;
                             playerHealth.current -= OBSTACLE_DAMAGE;
