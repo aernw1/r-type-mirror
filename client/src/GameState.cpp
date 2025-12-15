@@ -316,7 +316,7 @@ namespace RType {
                 auto& position = m_registry.GetComponent<ECS::Position>(m_localPlayerEntity);
                 position = spawnPos;
             } else {
-                m_registry.AddComponent<Position>(m_localPlayerEntity, spawnPos);
+                m_registry.AddComponent<Position>(m_localPlayerEntity, Position{spawnPos.x, spawnPos.y});
             }
 
             if (!m_registry.HasComponent<Velocity>(m_localPlayerEntity)) {
@@ -338,7 +338,7 @@ namespace RType {
                 auto& shooter = m_registry.GetComponent<Shooter>(m_localPlayerEntity);
                 shooter = shooterConfig;
             } else {
-                m_registry.AddComponent<Shooter>(m_localPlayerEntity, shooterConfig);
+                m_registry.AddComponent<Shooter>(m_localPlayerEntity, Shooter{shooterConfig.fireRate, shooterConfig.offsetX, shooterConfig.offsetY});
             }
 
             if (m_registry.HasComponent<ShootCommand>(m_localPlayerEntity)) {
@@ -867,6 +867,13 @@ namespace RType {
                             enemySprite = m_enemyGreenSprite;
                         }
 
+                        if (enemySprite == Renderer::INVALID_SPRITE_ID) {
+                            Core::Logger::Error("[GameState] Missing enemy sprite for type {}, skipping entity {}",
+                                                static_cast<int>(enemyType),
+                                                entityState.entityId);
+                            continue;
+                        }
+
                         auto newEntity = m_registry.CreateEntity();
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
@@ -897,6 +904,14 @@ namespace RType {
                                 if (bulletSpriteIt != m_levelAssets.sprites.end()) {
                                     bulletSprite = bulletSpriteIt->second;
                                 }
+                            }
+
+                            if (bulletSprite == Renderer::INVALID_SPRITE_ID) {
+                                Core::Logger::Warning("[GameState] Missing enemy bullet sprite for type {} (entity {})",
+                                                      static_cast<int>(enemyType),
+                                                      entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
                             }
 
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSprite, 12));
@@ -991,7 +1006,7 @@ namespace RType {
 
                         if (powerupSprite != Renderer::INVALID_SPRITE_ID) {
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(powerupSprite, 5));
-                            d.scale = {0.5f, 0.5f};
+                            d.scale = {0.8f, 0.8f};
                             d.tint = powerupColor;
                         }
 
@@ -1124,7 +1139,6 @@ namespace RType {
                         }
                     }
                     
-                    // Apply power-up state updates for player entities
                     if (type == network::EntityType::PLAYER) {
                         ApplyPowerUpStateToPlayer(ecsEntity, entityState);
                     }
@@ -1218,27 +1232,39 @@ namespace RType {
                 m_healthSystem->Update(m_registry, dt);
             }
 
-            m_scrollingSystem->Update(m_registry, dt);
+            if (m_scrollingSystem) {
+                m_scrollingSystem->Update(m_registry, dt);
+            }
             m_localScrollOffset += -150.0f * dt;
 
             // Power-up visual systems (client-side rendering)
-            m_shieldSystem->Update(m_registry, dt);
-            m_forcePodSystem->Update(m_registry, dt);
+            if (m_shieldSystem) {
+                m_shieldSystem->Update(m_registry, dt);
+            }
+            if (m_forcePodSystem) {
+                m_forcePodSystem->Update(m_registry, dt);
+            }
             
             // Shooting system - enabled for local player to create bullets with power-up effects
             // Server also creates bullets, but client needs this for local player's weapon effects
-            if (m_context.networkClient) {
-                // Only update shooting for local player in networked games
-                // Server handles other players' bullets
-                m_shootingSystem->Update(m_registry, dt);
-            } else {
-                m_shootingSystem->Update(m_registry, dt);
+            if (m_shootingSystem) {
+                if (m_context.networkClient) {
+                    // Only update shooting for local player in networked games
+                    // Server handles other players' bullets
+                    m_shootingSystem->Update(m_registry, dt);
+                } else {
+                    m_shootingSystem->Update(m_registry, dt);
+                }
             }
-            m_movementSystem->Update(m_registry, dt);
-            // Note: InputSystem disabled - HandleInput() handles local player input
+
+            if (m_movementSystem) {
+                m_movementSystem->Update(m_registry, dt);
+            }
 
             // Collision systems
-            m_healthSystem->Update(m_registry, dt);
+            if (m_healthSystem) {
+                m_healthSystem->Update(m_registry, dt);
+            }
 
             // Background infinite loop
             for (auto& bg : m_backgroundEntities) {

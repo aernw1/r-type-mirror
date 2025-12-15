@@ -22,6 +22,8 @@
 #include "ECS/HealthSystem.hpp"
 #include "ECS/ShieldSystem.hpp"
 #include "ECS/ForcePodSystem.hpp"
+#include "ECS/PowerUpSpawnSystem.hpp"
+#include "ECS/PowerUpCollisionSystem.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/PowerUpFactory.hpp"
 #include "ECS/LevelLoader.hpp"
@@ -118,6 +120,8 @@ namespace RType {
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
             std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
             std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
+            std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
+            std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
 
             // Bullet textures and sprites
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
