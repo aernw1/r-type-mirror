@@ -313,7 +313,14 @@ namespace network {
         if (input->inputs & InputFlags::SHOOT) {
             if (m_registry.HasComponent<Position>(playerEntity)) {
                 const auto& pos = m_registry.GetComponent<Position>(playerEntity);
-                SpawnBullet(input->playerHash, pos.x + 70.0f, pos.y + 50.0f);
+                float offsetX = 50.0f;
+                float offsetY = 0.0f;
+                if (m_registry.HasComponent<Shooter>(playerEntity)) {
+                    const auto& shooter = m_registry.GetComponent<Shooter>(playerEntity);
+                    offsetX = shooter.offsetX;
+                    offsetY = shooter.offsetY;
+                }
+                SpawnBullet(input->playerHash, pos.x + offsetX, pos.y + offsetY);
             }
         }
     }
