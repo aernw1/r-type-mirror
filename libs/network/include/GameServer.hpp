@@ -20,6 +20,7 @@
 #include "ECS/ScrollingSystem.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "ECS/HealthSystem.hpp"
+#include "ECS/ScoreSystem.hpp"
 #include "ECS/PlayerFactory.hpp"
 #include "ECS/EnemyFactory.hpp"
 #include <asio.hpp>
@@ -75,6 +76,7 @@ namespace network {
         uint8_t health;
         uint8_t flags;
         uint64_t ownerHash = 0;
+        uint32_t score = 0;
     };
 
     class GameServer {
@@ -131,6 +133,7 @@ namespace network {
         std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
         std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
         std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
+        std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
 
         // Legacy: Will be migrated to ECS
         std::vector<GameEntity> m_entities;

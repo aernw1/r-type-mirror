@@ -704,6 +704,8 @@ namespace RType {
                                 size_t localPlayerIndex = static_cast<size_t>(m_context.playerNumber - 1);
                                 m_playersHUD[localPlayerIndex].playerEntity = newEntity;
                                 m_playersHUD[localPlayerIndex].active = true;
+                                m_playersHUD[localPlayerIndex].score = entityState.score;
+                                m_playerScore = entityState.score;
                                 if (entityState.health > 0) {
                                     m_playersHUD[localPlayerIndex].isDead = false;
                                 }
@@ -713,6 +715,7 @@ namespace RType {
                         if (playerIndex < MAX_PLAYERS) {
                             m_playersHUD[playerIndex].active = true;
                             m_playersHUD[playerIndex].playerEntity = newEntity;
+                            m_playersHUD[playerIndex].score = entityState.score;
                             if (entityState.health > 0) {
                                 m_playersHUD[playerIndex].isDead = false;
                             }
@@ -869,6 +872,18 @@ namespace RType {
                         vel.dy = entityState.vy;
                     }
 
+                    if (type == network::EntityType::PLAYER) {
+                        for (size_t i = 0; i < MAX_PLAYERS; i++) {
+                            if (m_playersHUD[i].playerEntity == ecsEntity) {
+                                m_playersHUD[i].score = entityState.score;
+                                if (ecsEntity == m_localPlayerEntity) {
+                                    m_playerScore = entityState.score;
+                                }
+                                break;
+                            }
+                        }
+                    }
+
                     if (m_registry.HasComponent<Health>(ecsEntity)) {
                         auto& health = m_registry.GetComponent<Health>(ecsEntity);
                         int newHealth = static_cast<int>(entityState.health);
@@ -973,13 +988,14 @@ namespace RType {
         void InGameState::Update(float dt) {
             if (m_context.networkClient) {
                 m_context.networkClient->ReceivePackets();
-            }
-
-            m_scoreAccumulator += dt * 100.0f;
-            if (m_scoreAccumulator >= 1.0f) {
-                int points = static_cast<int>(m_scoreAccumulator);
-                m_playerScore += points;
-                m_scoreAccumulator -= points;
+            } else {
+                // Solo passive score: +100 every 10 seconds
+                m_scoreAccumulator += dt;
+                if (m_scoreAccumulator >= 10.0f) {
+                    uint32_t intervals = static_cast<uint32_t>(m_scoreAccumulator / 10.0f);
+                    m_playerScore += intervals * 10;
+                    m_scoreAccumulator -= static_cast<float>(intervals) * 10.0f;
+                }
             }
 
             if (m_isCharging) {

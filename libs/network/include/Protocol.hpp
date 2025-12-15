@@ -116,6 +116,7 @@ namespace network {
         uint8_t health = 0;
         uint8_t flags = 0;      // Custom flags per entity type
         uint64_t ownerHash = 0; // Player hash for PLAYER entities (for client-side prediction)
+        uint32_t score = 0;
     };
 
     // STATE packet (Server → Client)
