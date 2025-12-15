@@ -732,11 +732,7 @@ namespace RType {
                                 }
                             }
                         }
-                        if (playerIndex < MAX_PLAYERS) {
-                            m_playersHUD[playerIndex].active = true;
-                            m_playersHUD[playerIndex].playerEntity = newEntity;
-                            m_playersHUD[playerIndex].score = entityState.score;
-                        } else if (playerNum > 0 && playerNum <= MAX_PLAYERS) {
+                        if (playerNum > 0 && playerNum <= MAX_PLAYERS) {
                             size_t hudPlayerIndex = static_cast<size_t>(playerNum - 1);
                             m_playersHUD[hudPlayerIndex].active = true;
                             m_playersHUD[hudPlayerIndex].playerEntity = newEntity;
