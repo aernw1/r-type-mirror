@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** Test Enemy System
+*/
+
 #include "Core/Engine.hpp"
 #include "Core/Logger.hpp"
 #include "Core/Platform.hpp"
@@ -10,8 +17,9 @@
 #include <memory>
 #include <chrono>
 
+using namespace RType;
+
 int main(int, char*[]) {
-    using namespace RType;
 
     Core::Logger::SetLogLevel(Core::LogLevel::Debug);
 

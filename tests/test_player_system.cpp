@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** Test Player System
+*/
+
 #include "Core/Engine.hpp"
 #include "Core/Logger.hpp"
 #include "Core/Platform.hpp"

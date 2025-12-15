@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** Test Renderer
+*/
+
 #include "Core/Engine.hpp"
 #include "Core/Logger.hpp"
 #include "Core/Platform.hpp"
@@ -148,7 +155,6 @@ int main(int, char*[]) {
         for (auto enemy : enemies) {
             if (!registry.IsEntityAlive(enemy)) continue;
 
-            // Simple AABB collision check for test purposes
             auto& playerPos = registry.GetComponent<ECS::Position>(player);
             auto& enemyPos = registry.GetComponent<ECS::Position>(enemy);
             bool colliding = false;
@@ -162,8 +168,7 @@ int main(int, char*[]) {
             }
             if (colliding) {
                 auto& enemyPos = registry.GetComponent<ECS::Position>(enemy);
-                Core::Logger::Warning("COLLISION! Player hit enemy at ({}, {})",
-                                     enemyPos.x, enemyPos.y);
+                Core::Logger::Warning("COLLISION! Player hit enemy at ({}, {})", enemyPos.x, enemyPos.y);
 
                 auto& enemyDrawable = registry.GetComponent<ECS::Drawable>(enemy);
                 enemyDrawable.tint = Renderer::Color{1.0f, 0.0f, 0.0f, 1.0f};
