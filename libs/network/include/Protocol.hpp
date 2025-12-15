@@ -29,7 +29,7 @@ namespace network {
         DISCONNECT = 0x17,
         PLAYER_LEFT = 0x18,
         COUNTDOWN = 0x19,
-        ERROR_MSG = 0x1F, // @haloys i renamed to avoid Windows macro conflict
+        ERROR_MSG = 0x1F,
     };
 
     // ==================== GAME PROTOCOL (UDP) ====================
@@ -126,11 +126,11 @@ namespace network {
         uint8_t health = 0;
         uint8_t flags = 0;      // Custom flags per entity type
         uint64_t ownerHash = 0; // Player hash for PLAYER entities (for client-side prediction)
-        // Power-up state (only valid for PLAYER entities)
-        uint8_t powerUpFlags = 0;      // PowerUpFlags bitfield
-        uint8_t speedMultiplier = 10;  // Scaled by 10 (1.0 = 10, 1.3 = 13, max 25.5)
-        uint8_t weaponType = 0;        // WeaponType enum (0=STANDARD, 1=SPREAD, 2=LASER)
-        uint8_t fireRate = 20;         // Scaled by 10 (0.2 = 20, 0.5 = 50, max 25.5)
+        uint32_t score = 0;
+        uint8_t powerUpFlags = 0;
+        uint8_t speedMultiplier = 10;
+        uint8_t weaponType = 0;
+        uint8_t fireRate = 20;
     };
 
     // STATE packet (Server → Client)
@@ -141,7 +141,6 @@ namespace network {
         uint16_t entityCount = 0;  // Number of entities following
         float scrollOffset = 0.0f; // Background scroll offset
     };
-    // Followed by: EntityState[entityCount]
 
     // PING packet
     struct PingPacket {

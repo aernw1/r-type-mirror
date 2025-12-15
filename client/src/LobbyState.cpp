@@ -221,7 +221,11 @@ namespace RType {
             Entity entity = it->second;
             const auto& netPlayer = m_registry.GetComponent<NetworkPlayer>(entity);
 
-            std::string displayText = "P" + std::to_string(netPlayer.playerNumber) + " - " + std::string(player.name);
+            std::string playerNameStr = std::string(player.name);
+            if (playerNameStr.length() > 16) {
+                playerNameStr = playerNameStr.substr(0, 16);
+            }
+            std::string displayText = "P" + std::to_string(netPlayer.playerNumber) + " - " + playerNameStr;
             if (netPlayer.ready) {
                 displayText += "\n[READY]";
             } else {

@@ -20,6 +20,7 @@
 #include "ECS/PlayerCollisionResponseSystem.hpp"
 #include "ECS/ObstacleCollisionResponseSystem.hpp"
 #include "ECS/HealthSystem.hpp"
+#include "ECS/ScoreSystem.hpp"
 #include "ECS/ShieldSystem.hpp"
 #include "ECS/ForcePodSystem.hpp"
 #include "ECS/PowerUpSpawnSystem.hpp"
@@ -122,6 +123,7 @@ namespace RType {
             std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
             std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
+            std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
             std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
             std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;

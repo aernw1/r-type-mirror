@@ -20,6 +20,7 @@
 #include "ECS/ScrollingSystem.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "ECS/HealthSystem.hpp"
+#include "ECS/ScoreSystem.hpp"
 #include "ECS/PlayerFactory.hpp"
 #include "ECS/EnemyFactory.hpp"
 #include "ECS/PowerUpSpawnSystem.hpp"
@@ -80,17 +81,16 @@ namespace network {
         uint8_t health;
         uint8_t flags;
         uint64_t ownerHash = 0;
-        // Power-up state (only valid for PLAYER entities)
-        uint8_t powerUpFlags = 0;      // PowerUpFlags bitfield
-        uint8_t speedMultiplier = 10;  // Scaled by 10 (1.0 = 10, 1.3 = 13, max 25.5)
-        uint8_t weaponType = 0;        // WeaponType enum (0=STANDARD, 1=SPREAD, 2=LASER)
-        uint8_t fireRate = 20;         // Scaled by 10 (0.2 = 20, 0.5 = 50, max 25.5)
+        uint32_t score = 0;
+        uint8_t powerUpFlags = 0;
+        uint8_t speedMultiplier = 10;
+        uint8_t weaponType = 0;
+        uint8_t fireRate = 20;
     };
 
     class GameServer {
     public:
-        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
-                   const std::string& levelPath = "assets/levels/level1.json");
+        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath = "assets/levels/level1.json");
         ~GameServer();
 
         void Run();
@@ -143,19 +143,18 @@ namespace network {
         std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
         std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
         std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
+        std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
         std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
         std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
         std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
         std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
         std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
 
-        // Legacy: Will be migrated to ECS
         std::vector<GameEntity> m_entities;
         uint32_t m_currentTick = 0;
         uint32_t m_nextEntityId = 1;
         std::atomic<bool> m_running{false};
 
-        // Map scrolling
         float m_scrollOffset = 0.0f;
         const float SCROLL_SPEED = -150.0f;
 
@@ -169,7 +168,6 @@ namespace network {
 
         static const std::array<EnemyStats, 5> s_enemyStats;
 
-        // Level data
         std::string m_levelPath;
     };
 

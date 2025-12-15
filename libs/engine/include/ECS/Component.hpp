@@ -129,6 +129,14 @@ namespace RType {
                 : points(scorePoints) {}
         };
 
+        struct ScoreTimer : public IComponent {
+            float elapsed = 0.0f;
+
+            ScoreTimer() = default;
+            ScoreTimer(float startElapsed)
+                : elapsed(startElapsed) {}
+        };
+
         struct Damage : public IComponent {
             int amount = 10;
 

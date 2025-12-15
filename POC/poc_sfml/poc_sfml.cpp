@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** R-Type
+** File description:
+** POC SFML
+*/
+
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <iostream>

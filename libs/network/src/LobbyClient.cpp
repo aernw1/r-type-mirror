@@ -12,8 +12,7 @@
 
 namespace network {
 
-    LobbyClient::LobbyClient(const std::string& serverAddr, uint16_t port)
-        : _socket(serverAddr, port) {
+    LobbyClient::LobbyClient(const std::string& serverAddr, uint16_t port) : _socket(serverAddr, port) {
         if (_socket.isConnected())
             std::cout << "[Client] Connected to server" << std::endl;
         else
