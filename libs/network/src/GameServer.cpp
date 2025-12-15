@@ -45,58 +45,13 @@ namespace network {
         }
     }
 
-    const std::array<EnemyStats, 5> GameServer::s_enemyStats = {{{220.0f, // speed
-                                                                  100,    // health
-                                                                  8,      // damage
-                                                                  1.0f,   // fireRate
-                                                                  -50.0f, // bulletXOffset
-                                                                  25.0f,  // bulletYOffset
-                                                                  25,     // collisionDamageMultiplier (2.5x)
-                                                                  BasicMovementPattern},
-                                                                 {200.0f,
-                                                                  50,
-                                                                  3,
-                                                                  0.5f,
-                                                                  -50.0f,
-                                                                  20.0f,
-                                                                  20,
-                                                                  FastMovementPattern},
-                                                                 {220.0f,
-                                                                  200,
-                                                                  18,
-                                                                  1.8f,
-                                                                  -30.0f,
-                                                                  -20.0f,
-                                                                  30,
-                                                                  TankMovementPattern},
-                                                                 {75.0f,
-                                                                  255,
-                                                                  50,
-                                                                  0.5f,
-                                                                  -30.0f,
-                                                                  45.0f,
-                                                                  50,
-                                                                  BossMovementPattern},
-                                                                 {100.0f,
-                                                                  100,
-                                                                  10,
-                                                                  1.5f,
-                                                                  -30.0f,
-                                                                  45.0f,
-                                                                  25,
-                                                                  FormationMovementPattern}}};
+    const std::array<EnemyStats, 5> GameServer::s_enemyStats = {{{220.0f, 100, 8, 1.0f, -50.0f, 25.0f, 25, BasicMovementPattern}, {200.0f, 50, 3, 0.5f, -50.0f, 20.0f, 20, FastMovementPattern}, {220.0f, 200, 18, 1.8f, -30.0f, -20.0f, 30, TankMovementPattern}, {75.0f, 255, 50, 0.5f, -30.0f, 45.0f, 50, BossMovementPattern}, {100.0f, 100, 10, 1.5f, -30.0f, 45.0f, 25, FormationMovementPattern}}};
 
-    GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
-                           const std::string& levelPath)
-        : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)),
-          m_expectedPlayers(expectedPlayers),
-          m_lastSpawnTime(std::chrono::steady_clock::now()),
-          m_levelPath(levelPath) {
+    GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath) : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)), m_expectedPlayers(expectedPlayers), m_lastSpawnTime(std::chrono::steady_clock::now()), m_levelPath(levelPath) {
 
-        asio::socket_base::send_buffer_size sendOption(1024 * 1024); // 1MB
+        asio::socket_base::send_buffer_size sendOption(1024 * 1024);
         m_socket.set_option(sendOption);
 
-        // Initialize ECS systems
         m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
         m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
         m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
@@ -125,14 +80,11 @@ namespace network {
             std::cout << "Level JSON loaded: " << levelData.obstacles.size() << " obstacle definitions found" << std::endl;
 
             auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
-            std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, "
-                      << createdEntities.enemies.size() << " enemy entities created" << std::endl;
+            std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, " << createdEntities.enemies.size() << " enemy entities created" << std::endl;
 
             size_t obstaclesWithColliders = 0;
             for (auto obsEntity : createdEntities.obstacleColliders) {
-                if (m_registry.HasComponent<RType::ECS::Obstacle>(obsEntity) &&
-                    m_registry.HasComponent<RType::ECS::BoxCollider>(obsEntity) &&
-                    m_registry.HasComponent<RType::ECS::CollisionLayer>(obsEntity)) {
+                if (m_registry.HasComponent<RType::ECS::Obstacle>(obsEntity) && m_registry.HasComponent<RType::ECS::BoxCollider>(obsEntity) && m_registry.HasComponent<RType::ECS::CollisionLayer>(obsEntity)) {
                     obstaclesWithColliders++;
                 }
             }
@@ -200,10 +152,10 @@ namespace network {
             auto timeSinceLastPing = std::chrono::duration_cast<std::chrono::seconds>(
                 now - player.lastPingTime);
             if (timeSinceLastPing < DISCONNECT_TIMEOUT) {
-                return false; // At least one player is still connected
+                return false;
             }
         }
-        return true; // All players timed out
+        return true;
     }
 
     void GameServer::WaitForAllPlayers() {
@@ -278,8 +230,7 @@ namespace network {
 
         const HelloPacket* hello = reinterpret_cast<const HelloPacket*>(data.data());
 
-        auto it = std::find_if(m_expectedPlayers.begin(), m_expectedPlayers.end(),
-                               [hello](const PlayerInfo& p) { return p.hash == hello->playerHash; });
+        auto it = std::find_if(m_expectedPlayers.begin(), m_expectedPlayers.end(), [hello](const PlayerInfo& p) { return p.hash == hello->playerHash; });
 
         if (it != m_expectedPlayers.end()) {
             if (m_connectedPlayers.find(hello->playerHash) != m_connectedPlayers.end()) {
@@ -303,8 +254,7 @@ namespace network {
 
             SendTo(response, from);
 
-            std::cout << "Player " << it->name << " connected ("
-                      << m_connectedPlayers.size() << "/" << m_expectedPlayers.size() << ")" << std::endl;
+            std::cout << "Player " << it->name << " connected (" << m_connectedPlayers.size() << "/" << m_expectedPlayers.size() << ")" << std::endl;
         }
     }
 
@@ -323,14 +273,12 @@ namespace network {
 
         static int recvLog = 0;
         if (input->inputs != 0 && recvLog++ % 10 == 0) {
-            std::cout << "[SERVER RECV INPUT] t=" << ms << " from=" << it->second.info.name
-                      << " inputs=" << (int)input->inputs << " seq=" << input->sequence << std::endl;
+            std::cout << "[SERVER RECV INPUT] t=" << ms << " from=" << it->second.info.name << " inputs=" << (int)input->inputs << " seq=" << input->sequence << std::endl;
         }
 
         it->second.lastInputSequence = input->sequence;
         it->second.lastPingTime = now;
 
-        // Find player entity in ECS Registry by playerHash
         using namespace RType::ECS;
         RType::ECS::Entity playerEntity = NULL_ENTITY;
         auto players = m_registry.GetEntitiesWithComponent<Player>();
@@ -388,10 +336,7 @@ namespace network {
     void GameServer::SendStateSnapshots() {
         StatePacketHeader header;
         header.tick = m_currentTick;
-        header.timestamp = static_cast<uint32_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
+        header.timestamp = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
         header.entityCount = static_cast<uint16_t>(m_entities.size());
         header.scrollOffset = m_scrollOffset;
 
@@ -417,11 +362,8 @@ namespace network {
 
         static int sendCount = 0;
         if (sendCount++ % 60 == 0) {
-            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          std::chrono::steady_clock::now().time_since_epoch())
-                          .count();
-            std::cout << "[SERVER SEND] t=" << ms << " tick=" << m_currentTick
-                      << " Broadcasting state to " << m_connectedPlayers.size() << " clients" << std::endl;
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+            std::cout << "[SERVER SEND] t=" << ms << " tick=" << m_currentTick << " Broadcasting state to " << m_connectedPlayers.size() << " clients" << std::endl;
         }
 
         Broadcast(packet);
@@ -445,7 +387,6 @@ namespace network {
     void GameServer::UpdateGameLogic(float dt) {
         m_scrollOffset += SCROLL_SPEED * dt;
 
-        // Update order: scrolling → movement → collision detection → response systems
         m_scrollingSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
 
@@ -471,8 +412,7 @@ namespace network {
 
     void GameServer::SpawnPlayer(uint64_t hash, float x, float y) {
         uint8_t playerNumber = static_cast<uint8_t>(m_connectedPlayers.size());
-        RType::ECS::Entity playerEntity = RType::ECS::PlayerFactory::CreatePlayer(
-            m_registry, playerNumber, hash, x, y, nullptr); // No renderer on server
+        RType::ECS::Entity playerEntity = RType::ECS::PlayerFactory::CreatePlayer(m_registry, playerNumber, hash, x, y, nullptr); // No renderer on server
         std::cout << "[Server] Spawned ECS player entity for playerHash=" << hash << " at (" << x << "," << y << ")" << std::endl;
     }
 
@@ -488,15 +428,12 @@ namespace network {
 
         RType::ECS::EnemyType ecsEnemyType = static_cast<RType::ECS::EnemyType>(static_cast<uint8_t>(enemyType));
 
-        RType::ECS::Entity enemyEntity = RType::ECS::EnemyFactory::CreateEnemy(
-            m_registry, ecsEnemyType, spawnX, spawnY, nullptr);
+        RType::ECS::Entity enemyEntity = RType::ECS::EnemyFactory::CreateEnemy(m_registry, ecsEnemyType, spawnX, spawnY, nullptr);
 
-        // Initialize shooting cooldown for enemy entity
         uint32_t enemyId = static_cast<uint32_t>(enemyEntity);
         m_enemyShootCooldowns[enemyId] = 0.0f;
 
-        std::cout << "[Server] Spawned ECS enemy type " << static_cast<int>(enemyType)
-                  << " (entity=" << enemyId << ") at (" << spawnX << "," << spawnY << ")" << std::endl;
+        std::cout << "[Server] Spawned ECS enemy type " << static_cast<int>(enemyType) << " (entity=" << enemyId << ") at (" << spawnX << "," << spawnY << ")" << std::endl;
     }
 
     void GameServer::SpawnBullet(uint64_t ownerHash, float x, float y) {
@@ -504,13 +441,11 @@ namespace network {
         Entity bulletEntity = m_registry.CreateEntity();
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(500.0f, 0.0f));
-        m_registry.AddComponent<Bullet>(bulletEntity, Bullet(NULL_ENTITY)); // Owner tracking
+        m_registry.AddComponent<Bullet>(bulletEntity, Bullet(NULL_ENTITY));
         m_registry.AddComponent<Damage>(bulletEntity, Damage(25));
         m_registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
         m_registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
-        m_registry.AddComponent<CollisionLayer>(bulletEntity,
-                                                CollisionLayer(CollisionLayers::PLAYER_BULLET,
-                                                               CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+        m_registry.AddComponent<CollisionLayer>(bulletEntity, CollisionLayer(CollisionLayers::PLAYER_BULLET, CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
     }
 
     void GameServer::SpawnEnemyBullet(uint32_t enemyId, float x, float y) {
@@ -526,12 +461,10 @@ namespace network {
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(-400.0f, 0.0f));
         m_registry.AddComponent<Bullet>(bulletEntity, Bullet(NULL_ENTITY));
-        m_registry.AddComponent<Damage>(bulletEntity, Damage(10)); // Enemy bullet damage
+        m_registry.AddComponent<Damage>(bulletEntity, Damage(10));
         m_registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
         m_registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
-        m_registry.AddComponent<CollisionLayer>(bulletEntity,
-                                                CollisionLayer(CollisionLayers::ENEMY_BULLET,
-                                                               CollisionLayers::PLAYER | CollisionLayers::OBSTACLE));
+        m_registry.AddComponent<CollisionLayer>(bulletEntity, CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER | CollisionLayers::OBSTACLE));
     }
 
 
@@ -543,7 +476,6 @@ namespace network {
         const float MAX_Y = 1000.0f;
         const float MIN_Y = -200.0f;
 
-        // Use ECS to find bullets out of bounds and destroy them
         auto bullets = m_registry.GetEntitiesWithComponent<Bullet>();
         std::vector<Entity> bulletsToDestroy;
 
@@ -590,8 +522,6 @@ namespace network {
 
             m_enemyShootCooldowns[enemyId] -= dt;
 
-            // TODO: Implement HasPlayerInSight using ECS
-            // For now, always allow shooting if cooldown is ready
             if (m_enemyShootCooldowns[enemyId] <= 0.0f) {
                 EnemyType type = static_cast<EnemyType>(static_cast<uint8_t>(enemyComp.type));
                 const EnemyStats& stats = GetEnemyStats(type);
@@ -600,10 +530,8 @@ namespace network {
             }
         }
 
-        // Destroy enemies that went off screen
         EnemySystem::DestroyEnemiesOffScreen(m_registry, 1280.0f);
 
-        // Clean up cooldowns for destroyed enemies
         for (auto it = m_enemyShootCooldowns.begin(); it != m_enemyShootCooldowns.end();) {
             Entity enemyEntity = static_cast<Entity>(it->first);
             if (!m_registry.IsEntityAlive(enemyEntity) || !m_registry.HasComponent<Enemy>(enemyEntity)) {
@@ -615,15 +543,7 @@ namespace network {
     }
 
     void GameServer::CleanupDeadEntities() {
-        m_entities.erase(
-            std::remove_if(m_entities.begin(), m_entities.end(),
-                           [this](const GameEntity& e) {
-                               if (e.health == 0 && e.type == EntityType::ENEMY) {
-                                   m_enemyShootCooldowns.erase(e.id);
-                               }
-                               return e.health == 0;
-                           }),
-            m_entities.end());
+        m_entities.erase(std::remove_if(m_entities.begin(), m_entities.end(), [this](const GameEntity& e) { if (e.health == 0 && e.type == EntityType::ENEMY) { m_enemyShootCooldowns.erase(e.id); } return e.health == 0; }), m_entities.end());
     }
 
     void GameServer::UpdateLegacyEntitiesFromRegistry() {
@@ -631,7 +551,6 @@ namespace network {
 
         m_entities.clear();
 
-        // Sync players
         auto players = m_registry.GetEntitiesWithComponent<Player>();
         for (auto playerEntity : players) {
             if (!m_registry.IsEntityAlive(playerEntity) ||
@@ -659,7 +578,6 @@ namespace network {
             m_entities.push_back(entity);
         }
 
-        // Sync enemies
         auto enemies = m_registry.GetEntitiesWithComponent<Enemy>();
         for (auto enemyEntity : enemies) {
             if (!m_registry.IsEntityAlive(enemyEntity) ||
@@ -687,7 +605,6 @@ namespace network {
             m_entities.push_back(entity);
         }
 
-        // Sync bullets
         auto bullets = m_registry.GetEntitiesWithComponent<Bullet>();
         for (auto bulletEntity : bullets) {
             if (!m_registry.IsEntityAlive(bulletEntity) ||
