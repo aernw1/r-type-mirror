@@ -136,7 +136,6 @@ namespace network {
 
         WaitForAllPlayers();
 
-        // Load level and create obstacles
         try {
             std::cout << "Loading level from: " << m_levelPath << std::endl;
             auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
@@ -183,10 +182,15 @@ namespace network {
 
             ProcessIncomingPackets();
 
+            if (AllPlayersDisconnected()) {
+                std::cout << "All players disconnected. Stopping game server..." << std::endl;
+                Stop();
+                break;
+            }
+
             UpdateGameLogic(TICK_RATE);
             m_currentTick++;
 
-            // Send snapshots EVERY tick for instant responsiveness
             SendStateSnapshots();
 
             auto elapsed = std::chrono::steady_clock::now() - now;
@@ -201,6 +205,22 @@ namespace network {
 
     void GameServer::Stop() {
         m_running = false;
+    }
+
+    bool GameServer::AllPlayersDisconnected() const {
+        if (m_connectedPlayers.empty()) {
+            return true;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        for (const auto& [hash, player] : m_connectedPlayers) {
+            auto timeSinceLastPing = std::chrono::duration_cast<std::chrono::seconds>(
+                now - player.lastPingTime);
+            if (timeSinceLastPing < DISCONNECT_TIMEOUT) {
+                return false; // At least one player is still connected
+            }
+        }
+        return true; // All players timed out
     }
 
     void GameServer::WaitForAllPlayers() {

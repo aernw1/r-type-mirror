@@ -38,6 +38,13 @@ namespace RType {
 
             m_isNetworkSession = (m_context.networkClient != nullptr);
 
+            for (const auto& player : m_context.allPlayers) {
+                if (player.hash != 0) {
+                    m_playerNameMap[player.hash] = player.name;
+                }
+                m_playerNameMap[static_cast<uint64_t>(player.number)] = player.name;
+            }
+
             loadLevel(m_currentLevelPath);
             createSystems();
             initializeFromLevel();
@@ -197,15 +204,6 @@ namespace RType {
             m_backgroundEntities = m_levelEntities.backgrounds;
             m_obstacleSpriteEntities = m_levelEntities.obstacleVisuals;
             m_obstacleColliderEntities = m_levelEntities.obstacleColliders;
-            m_obstacleIdToCollider.clear();
-            for (auto collider : m_obstacleColliderEntities) {
-                if (!m_registry.IsEntityAlive(collider) ||
-                    !m_registry.HasComponent<ECS::ObstacleMetadata>(collider)) {
-                    continue;
-                }
-                const auto& metadata = m_registry.GetComponent<ECS::ObstacleMetadata>(collider);
-                m_obstacleIdToCollider[metadata.uniqueId] = collider;
-            }
             m_obstacleIdToCollider.clear();
             for (auto collider : m_obstacleColliderEntities) {
                 if (!m_registry.IsEntityAlive(collider) ||
@@ -762,6 +760,13 @@ namespace RType {
                     m_registry.DestroyEntity(playerHUD.scoreEntity);
                 }
             }
+
+            for (auto& [playerEntity, labelEntity] : m_playerNameLabels) {
+                if (m_registry.IsEntityAlive(labelEntity)) {
+                    m_registry.DestroyEntity(labelEntity);
+                }
+            }
+            m_playerNameLabels.clear();
         }
 
         void InGameState::OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities) {
@@ -826,6 +831,12 @@ namespace RType {
                         drawable.scale = {0.5f, 0.5f};
                         drawable.origin = Math::Vector2(128.0f, 128.0f);
 
+                        auto [playerName, playerNum] = FindPlayerNameAndNumber(entityState.ownerHash, m_assignedPlayerNumbers);
+                        if (playerNum > 0 && playerNum <= MAX_PLAYERS) {
+                            m_assignedPlayerNumbers.insert(playerNum);
+                        }
+                        CreatePlayerNameLabel(newEntity, playerName, entityState.x, entityState.y);
+
                         // Apply power-up state from server
                         ApplyPowerUpStateToPlayer(newEntity, entityState);
 
@@ -845,15 +856,14 @@ namespace RType {
                                     m_playersHUD[localPlayerIndex].isDead = false;
                                 }
                             }
-                        }
-
-                        if (playerIndex < MAX_PLAYERS) {
-                            m_playersHUD[playerIndex].active = true;
-                            m_playersHUD[playerIndex].playerEntity = newEntity;
+                        } else if (playerNum > 0 && playerNum <= MAX_PLAYERS) {
+                            size_t hudPlayerIndex = static_cast<size_t>(playerNum - 1);
+                            m_playersHUD[hudPlayerIndex].active = true;
+                            m_playersHUD[hudPlayerIndex].playerEntity = newEntity;
                             if (entityState.health > 0) {
-                                m_playersHUD[playerIndex].isDead = false;
+                                m_playersHUD[hudPlayerIndex].isDead = false;
                             }
-                            std::cout << "[GameState] Player P" << (playerIndex + 1) << " added to scoreboard" << std::endl;
+                            std::cout << "[GameState] Player P" << (int)playerNum << " (" << playerName << ") added to scoreboard" << std::endl;
                         }
 
                         std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
@@ -1062,6 +1072,10 @@ namespace RType {
                         auto& pos = m_registry.GetComponent<Position>(ecsEntity);
                         pos.x = entityState.x;
                         pos.y = entityState.y;
+
+                        if (type == network::EntityType::PLAYER) {
+                            UpdatePlayerNameLabelPosition(ecsEntity, entityState.x, entityState.y);
+                        }
                     }
 
                     if (m_registry.HasComponent<Velocity>(ecsEntity)) {
@@ -1124,6 +1138,17 @@ namespace RType {
                                     m_playersHUD[playerIndex].health = 0;
                                     health.current = 0;
 
+                                    DestroyPlayerNameLabel(ecsEntity);
+
+                                    for (const auto& p : m_context.allPlayers) {
+                                        if (m_playersHUD[playerIndex].playerEntity == ecsEntity) {
+                                            if (p.number > 0 && p.number <= MAX_PLAYERS) {
+                                                m_assignedPlayerNumbers.erase(p.number);
+                                            }
+                                            break;
+                                        }
+                                    }
+
                                     if (m_registry.IsEntityAlive(ecsEntity)) {
                                         m_registry.DestroyEntity(ecsEntity);
                                     }
@@ -1155,11 +1180,20 @@ namespace RType {
             for (auto it = m_networkEntityMap.begin(); it != m_networkEntityMap.end();) {
                 if (receivedIds.find(it->first) == receivedIds.end()) {
                     auto ecsEntity = it->second;
+
+                    DestroyPlayerNameLabel(ecsEntity);
+
                     for (size_t i = 0; i < MAX_PLAYERS; i++) {
                         if (m_playersHUD[i].playerEntity == ecsEntity) {
                             m_playersHUD[i].isDead = true;
                             m_playersHUD[i].health = 0;
                             m_playersHUD[i].playerEntity = NULL_ENTITY;
+                            for (const auto& p : m_context.allPlayers) {
+                                if (p.number > 0 && p.number <= MAX_PLAYERS && static_cast<size_t>(p.number - 1) == i) {
+                                    m_assignedPlayerNumbers.erase(p.number);
+                                    break;
+                                }
+                            }
                             break;
                         }
                     }
@@ -1208,12 +1242,16 @@ namespace RType {
                 m_movementSystem->Update(m_registry, dt);
             }
 
-            if (!m_isNetworkSession &&
-                m_localPlayerEntity != ECS::NULL_ENTITY &&
-                m_registry.HasComponent<Position>(m_localPlayerEntity)) {
-                auto& pos = m_registry.GetComponent<Position>(m_localPlayerEntity);
-                pos.x = std::max(0.0f, std::min(pos.x, 1280.0f - 66.0f));
-                pos.y = std::max(0.0f, std::min(pos.y, 720.0f - 32.0f));
+            auto entities = m_registry.GetEntitiesWithComponent<Position>();
+            for (auto entity : entities) {
+                if (m_registry.HasComponent<Velocity>(entity)) {
+                    auto& pos = m_registry.GetComponent<Position>(entity);
+                    if (entity == m_localPlayerEntity) {
+                        pos.x = std::max(0.0f, std::min(pos.x, 1280.0f - 66.0f));
+                        pos.y = std::max(0.0f, std::min(pos.y, 720.0f - 32.0f));
+                    }
+                    UpdatePlayerNameLabelPosition(entity, pos.x, pos.y);
+                }
             }
 
             if (m_collisionDetectionSystem) {
@@ -1255,15 +1293,6 @@ namespace RType {
                 } else {
                     m_shootingSystem->Update(m_registry, dt);
                 }
-            }
-
-            if (m_movementSystem) {
-                m_movementSystem->Update(m_registry, dt);
-            }
-
-            // Collision systems
-            if (m_healthSystem) {
-                m_healthSystem->Update(m_registry, dt);
             }
 
             // Background infinite loop
@@ -1404,5 +1433,86 @@ namespace RType {
             // Note: Force Pod is handled as a separate entity on the server, so we don't create it here
             // The server will sync the force pod entity separately if it exists
         }
-    }
+
+        std::pair<std::string, uint8_t> InGameState::FindPlayerNameAndNumber(uint64_t ownerHash, const std::unordered_set<uint8_t>& assignedNumbers) const {
+            std::string playerName = "Player";
+            uint8_t playerNum = 0;
+
+            if (ownerHash != 0) {
+                auto nameIt = m_playerNameMap.find(ownerHash);
+                if (nameIt != m_playerNameMap.end()) {
+                    playerName = nameIt->second;
+                }
+                for (const auto& p : m_context.allPlayers) {
+                    if (p.hash == ownerHash) {
+                        playerNum = p.number;
+                        break;
+                    }
+                }
+            }
+
+            if (playerName == "Player" || playerNum == 0) {
+                for (const auto& p : m_context.allPlayers) {
+                    if (p.number > 0 && p.number <= MAX_PLAYERS) {
+                        if (assignedNumbers.find(p.number) == assignedNumbers.end()) {
+                            auto fallbackIt = m_playerNameMap.find(static_cast<uint64_t>(p.number));
+                            if (fallbackIt != m_playerNameMap.end() && !fallbackIt->second.empty()) {
+                                playerName = fallbackIt->second;
+                                playerNum = p.number;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return {playerName, playerNum};
+        }
+
+        void InGameState::CreatePlayerNameLabel(Entity playerEntity, const std::string& playerName, float x, float y) {
+            Renderer::FontId nameFont = (m_hudFontSmall != Renderer::INVALID_FONT_ID) ? m_hudFontSmall : m_hudFont;
+            if (nameFont == Renderer::INVALID_FONT_ID) {
+                return;
+            }
+
+            Entity nameLabelEntity = m_registry.CreateEntity();
+            m_registry.AddComponent<Position>(nameLabelEntity, Position{x, y});
+            TextLabel nameLabel(playerName, nameFont, 12);
+            nameLabel.color = {1.0f, 1.0f, 1.0f, 1.0f};
+            nameLabel.centered = true;
+            nameLabel.offsetY = -30.0f;
+            nameLabel.offsetX = 0.0f;
+            m_registry.AddComponent<TextLabel>(nameLabelEntity, std::move(nameLabel));
+            m_playerNameLabels[playerEntity] = nameLabelEntity;
+        }
+
+        void InGameState::UpdatePlayerNameLabelPosition(Entity playerEntity, float x, float y) {
+            auto labelIt = m_playerNameLabels.find(playerEntity);
+            if (labelIt == m_playerNameLabels.end()) {
+                return;
+            }
+
+            Entity labelEntity = labelIt->second;
+            if (!m_registry.IsEntityAlive(labelEntity) || !m_registry.HasComponent<Position>(labelEntity)) {
+                return;
+            }
+
+            auto& labelPos = m_registry.GetComponent<Position>(labelEntity);
+            labelPos.x = x;
+            labelPos.y = y;
+        }
+
+        void InGameState::DestroyPlayerNameLabel(Entity playerEntity) {
+            auto labelIt = m_playerNameLabels.find(playerEntity);
+            if (labelIt == m_playerNameLabels.end()) {
+                return;
+            }
+
+            Entity labelEntity = labelIt->second;
+            if (m_registry.IsEntityAlive(labelEntity)) {
+                m_registry.DestroyEntity(labelEntity);
+            }
+            m_playerNameLabels.erase(labelIt);
+        }
+        }
 }
