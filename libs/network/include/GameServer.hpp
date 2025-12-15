@@ -87,6 +87,7 @@ namespace network {
 
         void Run();
         void Stop();
+        bool AllPlayersDisconnected() const;
 
         uint32_t GetCurrentTick() const { return m_currentTick; }
         size_t GetConnectedPlayerCount() const { return m_connectedPlayers.size(); }
@@ -124,6 +125,7 @@ namespace network {
         asio::ip::udp::socket m_socket;
         std::vector<PlayerInfo> m_expectedPlayers;
         std::unordered_map<uint64_t, ConnectedPlayer> m_connectedPlayers;
+        const std::chrono::seconds DISCONNECT_TIMEOUT{10};
 
         RType::ECS::Registry m_registry;
         std::unique_ptr<RType::ECS::ScrollingSystem> m_scrollingSystem;
