@@ -196,6 +196,7 @@ namespace RType {
                 m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
                 m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
                 m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
+                m_scoreSystem = std::make_unique<RType::ECS::ScoreSystem>();
             } else {
                 m_shootingSystem.reset();
                 m_movementSystem.reset();
@@ -205,6 +206,7 @@ namespace RType {
                 m_playerResponseSystem.reset();
                 m_obstacleResponseSystem.reset();
                 m_healthSystem.reset();
+                m_scoreSystem.reset();
             }
         }
 
@@ -319,6 +321,13 @@ namespace RType {
         }
 
         void InGameState::updateHUD() {
+            if (m_localPlayerEntity != ECS::NULL_ENTITY &&
+                m_registry.IsEntityAlive(m_localPlayerEntity) &&
+                m_registry.HasComponent<ScoreValue>(m_localPlayerEntity)) {
+                const auto& scoreComp = m_registry.GetComponent<ScoreValue>(m_localPlayerEntity);
+                m_playerScore = scoreComp.points;
+            }
+
             if (m_hudScoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudScoreEntity)) {
                 auto& scoreLabel = m_registry.GetComponent<TextLabel>(m_hudScoreEntity);
                 std::ostringstream ss;
@@ -375,6 +384,10 @@ namespace RType {
                                 m_playersHUD[i].isDead = true;
                                 m_playersHUD[i].health = 0;
                             }
+                            if (m_registry.HasComponent<ScoreValue>(m_playersHUD[i].playerEntity)) {
+                                const auto& scoreComp = m_registry.GetComponent<ScoreValue>(m_playersHUD[i].playerEntity);
+                                m_playersHUD[i].score = scoreComp.points;
+                            }
                             entityExists = true;
                         } else if (i == static_cast<size_t>(m_context.playerNumber - 1) &&
                                    m_localPlayerEntity != ECS::NULL_ENTITY &&
@@ -387,6 +400,10 @@ namespace RType {
                             } else {
                                 m_playersHUD[i].isDead = true;
                                 m_playersHUD[i].health = 0;
+                            }
+                            if (m_registry.HasComponent<ScoreValue>(m_localPlayerEntity)) {
+                                const auto& scoreComp = m_registry.GetComponent<ScoreValue>(m_localPlayerEntity);
+                                m_playersHUD[i].score = scoreComp.points;
                             }
                             entityExists = true;
 
@@ -1112,6 +1129,9 @@ namespace RType {
             }
             if (m_obstacleResponseSystem) {
                 m_obstacleResponseSystem->Update(m_registry, dt);
+            }
+            if (m_scoreSystem) {
+                m_scoreSystem->Update(m_registry, dt);
             }
             if (m_healthSystem) {
                 m_healthSystem->Update(m_registry, dt);

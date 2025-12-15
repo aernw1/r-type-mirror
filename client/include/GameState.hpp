@@ -20,6 +20,7 @@
 #include "ECS/PlayerCollisionResponseSystem.hpp"
 #include "ECS/ObstacleCollisionResponseSystem.hpp"
 #include "ECS/HealthSystem.hpp"
+#include "ECS/ScoreSystem.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "Renderer/IRenderer.hpp"
@@ -116,6 +117,7 @@ namespace RType {
             std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
             std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
+            std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
 
             // Bullet textures and sprites

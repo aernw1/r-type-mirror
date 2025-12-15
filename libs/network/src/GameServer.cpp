@@ -466,7 +466,10 @@ namespace network {
         }
 
         m_registry.AddComponent<Bullet>(bulletEntity, Bullet(ownerEntity));
-        m_registry.AddComponent<Bullet>(bulletEntity, Bullet(NULL_ENTITY));
+        if (ownerEntity == NULL_ENTITY) {
+            std::cout << "[Server] Warning: SpawnBullet could not resolve ownerHash=" << ownerHash
+                      << " to an ECS player entity; bullet owner will be NULL_ENTITY" << std::endl;
+        }
         m_registry.AddComponent<Damage>(bulletEntity, Damage(25));
         m_registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
         m_registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
