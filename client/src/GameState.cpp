@@ -404,9 +404,41 @@ namespace RType {
                         }
                     }
 
-                    // Format: "P1 00000000"
+                    std::string playerDisplayName = "P" + std::to_string(i + 1);
+                    uint8_t playerNum = static_cast<uint8_t>(i + 1);
+                    
+                    for (const auto& p : m_context.allPlayers) {
+                        if (p.number == playerNum && p.name[0] != '\0') {
+                            playerDisplayName = std::string(p.name);
+                            break;
+                        }
+                    }
+                    
+                    if (playerDisplayName == "P" + std::to_string(i + 1)) {
+                        auto nameIt = m_playerNameMap.find(static_cast<uint64_t>(playerNum));
+                        if (nameIt != m_playerNameMap.end() && !nameIt->second.empty()) {
+                            playerDisplayName = nameIt->second;
+                        }
+                    }
+                    
+                    size_t originalLength = playerDisplayName.length();
+                    bool nameTooLong = originalLength > 16;
+                    
+                    if (nameTooLong) {
+                        playerDisplayName = playerDisplayName.substr(0, 16);
+                    }
+                    
+                    if (nameTooLong && m_registry.HasComponent<Position>(m_playersHUD[i].scoreEntity)) {
+                        auto& pos = m_registry.GetComponent<Position>(m_playersHUD[i].scoreEntity);
+                        float shiftAmount = static_cast<float>(originalLength - 16) * 38.0f;
+                        pos.x = 1050.0f - shiftAmount;
+                    } else if (m_registry.HasComponent<Position>(m_playersHUD[i].scoreEntity)) {
+                        auto& pos = m_registry.GetComponent<Position>(m_playersHUD[i].scoreEntity);
+                        pos.x = 1050.0f;
+                    }
+                    
                     std::ostringstream ss;
-                    ss << "P" << (i + 1) << " " << std::setw(8) << std::setfill('0') << m_playersHUD[i].score;
+                    ss << playerDisplayName << " " << std::setw(8) << std::setfill('0') << m_playersHUD[i].score;
                     label.text = ss.str();
                     label.color = playerColors[i];
 
@@ -725,14 +757,19 @@ namespace RType {
                                 size_t localPlayerIndex = static_cast<size_t>(m_context.playerNumber - 1);
                                 m_playersHUD[localPlayerIndex].playerEntity = newEntity;
                                 m_playersHUD[localPlayerIndex].active = true;
+                                m_playersHUD[localPlayerIndex].score = entityState.score;
+                                m_playerScore = entityState.score;
                                 if (entityState.health > 0) {
                                     m_playersHUD[localPlayerIndex].isDead = false;
                                 }
                             }
-                        } else if (playerNum > 0 && playerNum <= MAX_PLAYERS) {
+                        }
+                        if (playerNum > 0 && playerNum <= MAX_PLAYERS) {
                             size_t hudPlayerIndex = static_cast<size_t>(playerNum - 1);
                             m_playersHUD[hudPlayerIndex].active = true;
                             m_playersHUD[hudPlayerIndex].playerEntity = newEntity;
+                            m_playersHUD[hudPlayerIndex].score = entityState.score;
+
                             if (entityState.health > 0) {
                                 m_playersHUD[hudPlayerIndex].isDead = false;
                             }
@@ -893,6 +930,18 @@ namespace RType {
                         vel.dy = entityState.vy;
                     }
 
+                    if (type == network::EntityType::PLAYER) {
+                        for (size_t i = 0; i < MAX_PLAYERS; i++) {
+                            if (m_playersHUD[i].playerEntity == ecsEntity) {
+                                m_playersHUD[i].score = entityState.score;
+                                if (ecsEntity == m_localPlayerEntity) {
+                                    m_playerScore = entityState.score;
+                                }
+                                break;
+                            }
+                        }
+                    }
+
                     if (m_registry.HasComponent<Health>(ecsEntity)) {
                         auto& health = m_registry.GetComponent<Health>(ecsEntity);
                         int newHealth = static_cast<int>(entityState.health);
@@ -1017,13 +1066,14 @@ namespace RType {
         void InGameState::Update(float dt) {
             if (m_context.networkClient) {
                 m_context.networkClient->ReceivePackets();
-            }
-
-            m_scoreAccumulator += dt * 100.0f;
-            if (m_scoreAccumulator >= 1.0f) {
-                int points = static_cast<int>(m_scoreAccumulator);
-                m_playerScore += points;
-                m_scoreAccumulator -= points;
+            } else {
+                // Solo passive score: +100 every 10 seconds
+                m_scoreAccumulator += dt;
+                if (m_scoreAccumulator >= 10.0f) {
+                    uint32_t intervals = static_cast<uint32_t>(m_scoreAccumulator / 10.0f);
+                    m_playerScore += intervals * 10;
+                    m_scoreAccumulator -= static_cast<float>(intervals) * 10.0f;
+                }
             }
 
             if (m_isCharging) {
@@ -1177,9 +1227,14 @@ namespace RType {
                 return;
             }
 
+            std::string displayName = playerName;
+            if (displayName.length() > 16) {
+                displayName = displayName.substr(0, 16);
+            }
+
             Entity nameLabelEntity = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(nameLabelEntity, Position{x, y});
-            TextLabel nameLabel(playerName, nameFont, 12);
+            TextLabel nameLabel(displayName, nameFont, 12);
             nameLabel.color = {1.0f, 1.0f, 1.0f, 1.0f};
             nameLabel.centered = true;
             nameLabel.offsetY = -30.0f;

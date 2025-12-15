@@ -59,6 +59,7 @@ namespace network {
         m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
         m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
         m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
+        m_scoreSystem = std::make_unique<RType::ECS::ScoreSystem>();
 
         std::cout << "GameServer started on UDP port " << port << std::endl;
         std::cout << "ECS collision systems initialized" << std::endl;
@@ -362,6 +363,7 @@ namespace network {
             state.health = entity.health;
             state.flags = entity.flags;
             state.ownerHash = entity.ownerHash;
+            state.score = entity.score;
 
             std::memcpy(packet.data() + offset, &state, sizeof(EntityState));
             offset += sizeof(EntityState);
@@ -404,6 +406,7 @@ namespace network {
         m_bulletResponseSystem->Update(m_registry, dt);
         m_playerResponseSystem->Update(m_registry, dt);
         m_obstacleResponseSystem->Update(m_registry, dt);
+        m_scoreSystem->Update(m_registry, dt);
         m_healthSystem->Update(m_registry, dt);
 
         UpdateLegacyEntitiesFromRegistry();
@@ -448,6 +451,21 @@ namespace network {
         Entity bulletEntity = m_registry.CreateEntity();
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(500.0f, 0.0f));
+
+        Entity ownerEntity = NULL_ENTITY;
+        auto players = m_registry.GetEntitiesWithComponent<Player>();
+        for (auto entity : players) {
+            if (!m_registry.IsEntityAlive(entity) || !m_registry.HasComponent<Player>(entity)) {
+                continue;
+            }
+            const auto& player = m_registry.GetComponent<Player>(entity);
+            if (player.playerHash == ownerHash) {
+                ownerEntity = entity;
+                break;
+            }
+        }
+
+        m_registry.AddComponent<Bullet>(bulletEntity, Bullet(ownerEntity));
         m_registry.AddComponent<Bullet>(bulletEntity, Bullet(NULL_ENTITY));
         m_registry.AddComponent<Damage>(bulletEntity, Damage(25));
         m_registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
@@ -582,6 +600,11 @@ namespace network {
             entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
             entity.flags = player.playerNumber;
             entity.ownerHash = player.playerHash;
+            if (m_registry.HasComponent<ScoreValue>(playerEntity)) {
+                entity.score = m_registry.GetComponent<ScoreValue>(playerEntity).points;
+            } else {
+                entity.score = 0;
+            }
             m_entities.push_back(entity);
         }
 
@@ -609,6 +632,7 @@ namespace network {
             entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
             entity.flags = static_cast<uint8_t>(enemy.type);
             entity.ownerHash = 0;
+            entity.score = 0;
             m_entities.push_back(entity);
         }
 
@@ -642,6 +666,7 @@ namespace network {
             entity.health = 1;
             entity.flags = flags;
             entity.ownerHash = 0;
+            entity.score = 0;
             m_entities.push_back(entity);
         }
 
@@ -670,6 +695,7 @@ namespace network {
                 obstacleIndex = m_registry.GetComponent<RType::ECS::ObstacleMetadata>(obstacleEntity).uniqueId;
             }
             entity.ownerHash = obstacleIndex;
+            entity.score = 0;
             m_entities.push_back(entity);
             obstacleCount++;
             if (obstacleCount >= maxObstaclesPerSnapshot) {
