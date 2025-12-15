@@ -50,7 +50,7 @@ namespace network {
                                                                   8,      // damage
                                                                   1.0f,   // fireRate
                                                                   -50.0f, // bulletXOffset
-                                                                  25.0f,  // bulletYOffset
+                                                                  0.0f,   // bulletYOffset
                                                                   25,     // collisionDamageMultiplier (2.5x)
                                                                   BasicMovementPattern},
                                                                  {200.0f,
@@ -58,7 +58,7 @@ namespace network {
                                                                   3,
                                                                   0.5f,
                                                                   -50.0f,
-                                                                  20.0f,
+                                                                  0.0f,
                                                                   20,
                                                                   FastMovementPattern},
                                                                  {220.0f,
@@ -66,7 +66,7 @@ namespace network {
                                                                   18,
                                                                   1.8f,
                                                                   -30.0f,
-                                                                  -20.0f,
+                                                                  0.0f,
                                                                   30,
                                                                   TankMovementPattern},
                                                                  {75.0f,
@@ -74,7 +74,7 @@ namespace network {
                                                                   50,
                                                                   0.5f,
                                                                   -30.0f,
-                                                                  45.0f,
+                                                                  0.0f,
                                                                   50,
                                                                   BossMovementPattern},
                                                                  {100.0f,
@@ -82,7 +82,7 @@ namespace network {
                                                                   10,
                                                                   1.5f,
                                                                   -30.0f,
-                                                                  45.0f,
+                                                                  0.0f,
                                                                   25,
                                                                   FormationMovementPattern}}};
 
