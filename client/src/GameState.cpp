@@ -404,9 +404,41 @@ namespace RType {
                         }
                     }
 
-                    // Format: "P1 00000000"
+                    std::string playerDisplayName = "P" + std::to_string(i + 1);
+                    uint8_t playerNum = static_cast<uint8_t>(i + 1);
+                    
+                    for (const auto& p : m_context.allPlayers) {
+                        if (p.number == playerNum && p.name[0] != '\0') {
+                            playerDisplayName = std::string(p.name);
+                            break;
+                        }
+                    }
+                    
+                    if (playerDisplayName == "P" + std::to_string(i + 1)) {
+                        auto nameIt = m_playerNameMap.find(static_cast<uint64_t>(playerNum));
+                        if (nameIt != m_playerNameMap.end() && !nameIt->second.empty()) {
+                            playerDisplayName = nameIt->second;
+                        }
+                    }
+                    
+                    size_t originalLength = playerDisplayName.length();
+                    bool nameTooLong = originalLength > 16;
+                    
+                    if (nameTooLong) {
+                        playerDisplayName = playerDisplayName.substr(0, 16);
+                    }
+                    
+                    if (nameTooLong && m_registry.HasComponent<Position>(m_playersHUD[i].scoreEntity)) {
+                        auto& pos = m_registry.GetComponent<Position>(m_playersHUD[i].scoreEntity);
+                        float shiftAmount = static_cast<float>(originalLength - 16) * 38.0f;
+                        pos.x = 1050.0f - shiftAmount;
+                    } else if (m_registry.HasComponent<Position>(m_playersHUD[i].scoreEntity)) {
+                        auto& pos = m_registry.GetComponent<Position>(m_playersHUD[i].scoreEntity);
+                        pos.x = 1050.0f;
+                    }
+                    
                     std::ostringstream ss;
-                    ss << "P" << (i + 1) << " " << std::setw(8) << std::setfill('0') << m_playersHUD[i].score;
+                    ss << playerDisplayName << " " << std::setw(8) << std::setfill('0') << m_playersHUD[i].score;
                     label.text = ss.str();
                     label.color = playerColors[i];
 
@@ -1195,9 +1227,14 @@ namespace RType {
                 return;
             }
 
+            std::string displayName = playerName;
+            if (displayName.length() > 16) {
+                displayName = displayName.substr(0, 16);
+            }
+
             Entity nameLabelEntity = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(nameLabelEntity, Position{x, y});
-            TextLabel nameLabel(playerName, nameFont, 12);
+            TextLabel nameLabel(displayName, nameFont, 12);
             nameLabel.color = {1.0f, 1.0f, 1.0f, 1.0f};
             nameLabel.centered = true;
             nameLabel.offsetY = -30.0f;
