@@ -92,6 +92,11 @@ namespace RType {
             };
             EnemySpriteConfig GetEnemySpriteConfig(uint8_t enemyType) const;
             EnemyBulletSpriteConfig GetEnemyBulletSpriteConfig(uint8_t enemyType) const;
+
+            std::pair<std::string, uint8_t> FindPlayerNameAndNumber(uint64_t ownerHash, const std::unordered_set<uint8_t>& assignedNumbers) const;
+            void CreatePlayerNameLabel(RType::ECS::Entity playerEntity, const std::string& playerName, float x, float y);
+            void UpdatePlayerNameLabelPosition(RType::ECS::Entity playerEntity, float x, float y);
+            void DestroyPlayerNameLabel(RType::ECS::Entity playerEntity);
         private:
             GameStateMachine& m_machine;
             GameContext& m_context;
@@ -143,6 +148,11 @@ namespace RType {
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
             RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player entity mirrored from server
+
+            // Player name tracking
+            std::unordered_map<uint64_t, std::string> m_playerNameMap;
+            std::unordered_map<RType::ECS::Entity, RType::ECS::Entity> m_playerNameLabels;
+            std::unordered_set<uint8_t> m_assignedPlayerNumbers;
 
             // Individual player ship sprites
             Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;
