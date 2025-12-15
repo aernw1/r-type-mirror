@@ -1166,6 +1166,7 @@ namespace RType {
                                 break;
                             }
                         }
+                    }
 
                     if (type == network::EntityType::POWERUP) {
                         if (entityState.health == 0 && m_registry.IsEntityAlive(ecsEntity)) {
