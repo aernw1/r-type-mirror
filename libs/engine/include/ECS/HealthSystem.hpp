@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ISystem.hpp"
-#include "CollisionSystem.hpp"
 
 namespace RType {
 
@@ -16,7 +15,6 @@ namespace RType {
             const char* GetName() const override { return "HealthSystem"; }
         private:
             void checkAndDestroyDeadEntities(Registry& registry);
-            void handleEnemyPlayerCollisions(Registry& registry);
         };
 
     }

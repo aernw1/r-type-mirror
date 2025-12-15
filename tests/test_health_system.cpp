@@ -9,7 +9,7 @@
 #include "ECS/EnemySystem.hpp"
 #include "ECS/EnemyFactory.hpp"
 #include "ECS/MovementSystem.hpp"
-#include "ECS/CollisionSystem.hpp"
+#include "ECS/CollisionDetectionSystem.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
@@ -75,7 +75,7 @@ int main(int, char*[]) {
     auto movementSystem = std::make_unique<ECS::MovementSystem>();
     engine->RegisterSystem(std::move(movementSystem));
 
-    auto collisionSystem = std::make_unique<ECS::CollisionSystem>();
+    auto collisionSystem = std::make_unique<ECS::CollisionDetectionSystem>();
     engine->RegisterSystem(std::move(collisionSystem));
 
     auto healthSystem = std::make_unique<ECS::HealthSystem>();

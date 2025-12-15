@@ -8,7 +8,15 @@ namespace RType {
             : m_nextEntityID(1), m_entityCount(0) {}
 
         Entity Registry::CreateEntity() {
-            Entity newEntity = m_nextEntityID++;
+            Entity newEntity;
+
+            if (!m_freeEntityIds.empty()) {
+                newEntity = m_freeEntityIds.back();
+                m_freeEntityIds.pop_back();
+            } else {
+                newEntity = m_nextEntityID++;
+            }
+
             m_aliveEntities.insert(newEntity);
             m_entityCount++;
             return newEntity;
@@ -29,6 +37,7 @@ namespace RType {
             }
             m_aliveEntities.erase(entity);
             m_entityCount--;
+            m_freeEntityIds.push_back(entity);
         }
 
         bool Registry::IsEntityAlive(Entity entity) const {

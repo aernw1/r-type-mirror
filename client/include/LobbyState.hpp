@@ -14,9 +14,11 @@
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
 #include "Renderer/IRenderer.hpp"
+#include "GameState.hpp"
 
 #include <cstdint>
 #include <memory>
+#include <cstring>
 #include <string>
 #include <unordered_map>
 

@@ -15,6 +15,9 @@ namespace RType {
             auto entities = registry.GetEntitiesWithComponent<TextLabel>();
 
             for (Entity entity : entities) {
+                if (!registry.IsEntityAlive(entity)) {
+                    continue;
+                }
                 if (!registry.HasComponent<Position>(entity))
                     continue;
 

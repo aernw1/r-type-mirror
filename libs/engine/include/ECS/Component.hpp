@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <typeindex>
 #include <type_traits>
+#include <vector>
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
 #include "Entity.hpp"
@@ -153,7 +154,7 @@ namespace RType {
                 : owner(shooter) {}
         };
 
-        struct Shooter : IComponent {
+        struct Shooter : public IComponent {
             float fireRate = 0.2f;
             float cooldown = 0.0f;
             float offsetX = 50.0f;
@@ -168,6 +169,78 @@ namespace RType {
 
             ShootCommand() = default;
             ShootCommand(bool shoot) : wantsToShoot(shoot) {}
+        };
+
+        struct Scrollable : public IComponent {
+            float speed = -100.0f;
+
+            Scrollable() = default;
+            Scrollable(float scrollSpeed) : speed(scrollSpeed) {}
+        };
+
+        struct Obstacle : public IComponent {
+            bool blocking = true;
+
+            Obstacle() = default;
+            Obstacle(bool isBlocking) : blocking(isBlocking) {}
+        };
+
+        struct ObstacleMetadata : public IComponent {
+            uint32_t uniqueId = 0;
+            Entity visualEntity = NULL_ENTITY;
+            float offsetX = 0.0f;
+            float offsetY = 0.0f;
+
+            ObstacleMetadata() = default;
+            ObstacleMetadata(uint32_t id,
+                             Entity visual = NULL_ENTITY,
+                             float offsetX = 0.0f,
+                             float offsetY = 0.0f)
+                : uniqueId(id),
+                  visualEntity(visual),
+                  offsetX(offsetX),
+                  offsetY(offsetY) {}
+        };
+
+        struct Invincibility : public IComponent {
+            float remainingTime = 0.0f;
+
+            Invincibility() = default;
+            Invincibility(float duration) : remainingTime(duration) {}
+        };
+
+        struct CollisionLayer : public IComponent {
+            uint16_t layer = 0;     // What layer this entity is on
+            uint16_t mask = 0xFFFF; // Which layers this entity collides with
+
+            CollisionLayer() = default;
+            CollisionLayer(uint16_t l, uint16_t m) : layer(l), mask(m) {}
+        };
+
+        // masks for collision layers
+        namespace CollisionLayers {
+            constexpr uint16_t NONE = 0;
+            constexpr uint16_t PLAYER = 1 << 0;        // 0x0001
+            constexpr uint16_t ENEMY = 1 << 1;         // 0x0002
+            constexpr uint16_t PLAYER_BULLET = 1 << 2; // 0x0004
+            constexpr uint16_t ENEMY_BULLET = 1 << 3;  // 0x0008
+            constexpr uint16_t OBSTACLE = 1 << 4;      // 0x0010
+            constexpr uint16_t POWERUP = 1 << 5;       // 0x0020
+            constexpr uint16_t ALL = 0xFFFF;
+        }
+
+        struct CircleCollider : public IComponent {
+            float radius = 0.0f;
+
+            CircleCollider() = default;
+            CircleCollider(float r) : radius(r) {}
+        };
+
+        struct CollisionEvent : public IComponent {
+            Entity other = NULL_ENTITY;
+
+            CollisionEvent() = default;
+            CollisionEvent(Entity e) : other(e) {}
         };
     }
 

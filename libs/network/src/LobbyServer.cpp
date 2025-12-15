@@ -298,9 +298,12 @@ namespace network {
         float deltaTime = std::chrono::duration<float>(now - _lastUpdateTime).count();
         _lastUpdateTime = now;
 
+        static int lastBroadcastedSecond = -1;
+
         if (allPlayersReady() && !_countdownActive && !_gameStarted) {
             _countdownActive = true;
             _countdownTimer = 5.0f;
+            lastBroadcastedSecond = -1;
             std::cout << "[Lobby] All players ready! Starting countdown..." << std::endl;
         }
 
@@ -308,7 +311,6 @@ namespace network {
             _countdownTimer -= deltaTime;
 
             int currentSecond = static_cast<int>(std::ceil(_countdownTimer));
-            static int lastBroadcastedSecond = -1;
 
             if (currentSecond != lastBroadcastedSecond && currentSecond > 0) {
                 Serializer s;

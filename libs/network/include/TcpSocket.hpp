@@ -18,7 +18,7 @@ namespace network {
 
     class TcpSocket {
     public:
-        static constexpr size_t MAX_PACKET_SIZE = 4096;
+        static constexpr size_t MAX_PACKET_SIZE = 2048;
 
         TcpSocket(const std::string& address, uint16_t port);
         explicit TcpSocket(asio::ip::tcp::socket socket);

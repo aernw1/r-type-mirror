@@ -11,6 +11,7 @@
 #include <stack>
 #include "Renderer/IRenderer.hpp"
 #include "ECS/Registry.hpp"
+#include "../../libs/network/include/GameClient.hpp"
 
 namespace RType {
     namespace Client {
@@ -26,10 +27,13 @@ namespace RType {
         struct GameContext {
             std::shared_ptr<Renderer::IRenderer> renderer;
             std::shared_ptr<ECS::Registry> registry;
+            std::shared_ptr<network::GameClient> networkClient;
 
             std::string playerName;
             std::string serverIp;
             uint16_t serverPort;
+            uint64_t playerHash;
+            uint8_t playerNumber;
         };
 
         class IState {
@@ -46,6 +50,12 @@ namespace RType {
         class GameStateMachine {
         public:
             GameStateMachine() = default;
+            ~GameStateMachine() {
+                while (!m_states.empty()) {
+                    m_states.top()->Cleanup();
+                    m_states.pop();
+                }
+            }
 
             void PushState(std::unique_ptr<IState> state) {
                 m_states.push(std::move(state));

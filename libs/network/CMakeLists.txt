@@ -5,6 +5,8 @@ add_library(rtype_network
     src/Deserializer.cpp
     src/LobbyServer.cpp
     src/LobbyClient.cpp
+    src/GameServer.cpp
+    src/GameClient.cpp
 )
 
 target_include_directories(rtype_network PUBLIC
@@ -12,7 +14,7 @@ target_include_directories(rtype_network PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libs/engine/include>
 )
 
-target_link_libraries(rtype_network PUBLIC asio Threads::Threads)
+target_link_libraries(rtype_network PUBLIC asio Threads::Threads nlohmann_json::nlohmann_json rtype_ecs)
 
 if(WIN32)
     target_compile_definitions(rtype_network PUBLIC

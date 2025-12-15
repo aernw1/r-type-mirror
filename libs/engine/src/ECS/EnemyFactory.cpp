@@ -58,6 +58,11 @@ namespace RType {
             registry.AddComponent<ScoreValue>(enemy, ScoreValue(data.score));
             registry.AddComponent<BoxCollider>(enemy, BoxCollider(50.0f, 50.0f));
 
+            registry.AddComponent<CircleCollider>(enemy, CircleCollider(25.0f));
+            registry.AddComponent<CollisionLayer>(enemy,
+                                                  CollisionLayer(CollisionLayers::ENEMY,
+                                                                 CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET | CollisionLayers::OBSTACLE));
+
             if (renderer) {
                 std::string spritePath(data.spritePath);
                 Renderer::TextureId textureId = renderer->LoadTexture(spritePath);
@@ -74,6 +79,7 @@ namespace RType {
                     auto& drawable = registry.AddComponent<Drawable>(enemy, Drawable(spriteId, 1));
                     drawable.tint = data.color;
                     drawable.scale = Math::Vector2(0.5f, 0.5f);
+                    drawable.origin = Math::Vector2(128.0f, 128.0f);
                 } else {
                     Core::Logger::Error("Failed to load any enemy texture for type {}", static_cast<int>(type));
                 }
