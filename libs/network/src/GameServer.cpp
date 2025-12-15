@@ -820,6 +820,8 @@ namespace network {
             if (obstacleCount >= maxObstaclesPerSnapshot) {
                 break;
             }
+        }
+
         // Sync powerups
         auto powerups = m_registry.GetEntitiesWithComponent<PowerUp>();
         for (auto powerupEntity : powerups) {
