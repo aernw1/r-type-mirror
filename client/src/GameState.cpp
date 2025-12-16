@@ -536,12 +536,11 @@ namespace RType {
                             }
                         }
 
-                        if (!entityExists && m_playersHUD[i].health > 0) {
-                            m_playersHUD[i].isDead = true;
-                            m_playersHUD[i].health = 0;
-                        } else if (!entityExists) {
-                            m_playersHUD[i].isDead = true;
-                            m_playersHUD[i].health = 0;
+                        if (!entityExists) {
+                            if (!m_isNetworkSession) {
+                                m_playersHUD[i].isDead = true;
+                                m_playersHUD[i].health = 0;
+                            }
                         }
                     }
 
