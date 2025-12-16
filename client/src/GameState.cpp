@@ -11,6 +11,8 @@
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include "ECS/PlayerFactory.hpp"
+#include "ResultsState.hpp"
+#include "LobbyState.hpp"
 #include <iomanip>
 #include <sstream>
 #include <cmath>
@@ -383,6 +385,16 @@ namespace RType {
                 m_hudFontSmall = m_renderer->LoadFont("../assets/fonts/PressStart2P-Regular.ttf", 12);
             }
 
+            m_gameOverFontLarge = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 48);
+            if (m_gameOverFontLarge == Renderer::INVALID_FONT_ID) {
+                m_gameOverFontLarge = m_renderer->LoadFont("../assets/fonts/PressStart2P-Regular.ttf", 48);
+            }
+
+            m_gameOverFontMedium = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 20);
+            if (m_gameOverFontMedium == Renderer::INVALID_FONT_ID) {
+                m_gameOverFontMedium = m_renderer->LoadFont("../assets/fonts/PressStart2P-Regular.ttf", 20);
+            }
+
             if (m_hudFont == Renderer::INVALID_FONT_ID) {
                 std::cerr << "[GameState] Error: Failed to load HUD font!" << std::endl;
                 return;
@@ -584,6 +596,27 @@ namespace RType {
         }
 
         void InGameState::HandleInput() {
+            if (m_isGameOver) {
+                if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_gameOverEnterPressed) {
+                    m_gameOverEnterPressed = true;
+                    enterResultsScreen();
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
+                    m_gameOverEnterPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_gameOverEscapePressed) {
+                    m_gameOverEscapePressed = true;
+                    if (m_context.networkClient) {
+                        m_context.networkClient->Stop();
+                        m_context.networkClient.reset();
+                    }
+                    m_machine.ChangeState(std::make_unique<LobbyState>(m_machine, m_context));
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
+                    m_gameOverEscapePressed = false;
+                }
+                return;
+            }
+
             m_currentInputs = 0;
 
             if (m_renderer->IsKeyPressed(Renderer::Key::Up)) {
@@ -647,6 +680,7 @@ namespace RType {
 
             renderChargeBar();
             renderHealthBars();
+            renderGameOverOverlay();
         }
 
         void InGameState::renderChargeBar() {
@@ -1320,6 +1354,13 @@ namespace RType {
                     m_chargeTime = MAX_CHARGE_TIME;
                 }
             }
+
+            triggerGameOverIfNeeded();
+            if (m_isGameOver) {
+                m_gameOverElapsed += dt;
+                updateHUD();
+                return;
+            }
             if (m_inputSystem) {
                 m_inputSystem->Update(m_registry, dt);
             }
@@ -1394,6 +1435,111 @@ namespace RType {
             }
 
             updateHUD();
+        }
+
+        void InGameState::triggerGameOverIfNeeded() {
+            if (m_isGameOver) {
+                return;
+            }
+
+            bool dead = false;
+            if (m_isNetworkSession) {
+                if (m_context.playerNumber >= 1 && m_context.playerNumber <= MAX_PLAYERS) {
+                    size_t idx = static_cast<size_t>(m_context.playerNumber - 1);
+                    dead = m_playersHUD[idx].active && m_playersHUD[idx].isDead;
+                }
+            } else {
+                if (m_localPlayerEntity == ECS::NULL_ENTITY || !m_registry.IsEntityAlive(m_localPlayerEntity)) {
+                    dead = true;
+                } else if (m_registry.HasComponent<Health>(m_localPlayerEntity)) {
+                    const auto& h = m_registry.GetComponent<Health>(m_localPlayerEntity);
+                    dead = (h.current <= 0);
+                }
+            }
+
+            if (!dead) {
+                return;
+            }
+
+            m_isGameOver = true;
+            m_gameOverElapsed = 0.0f;
+            m_isCharging = false;
+            m_chargeTime = 0.0f;
+
+            if (m_gameOverTitleEntity == NULL_ENTITY && m_gameOverFontLarge != Renderer::INVALID_FONT_ID) {
+                m_gameOverTitleEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(m_gameOverTitleEntity, Position{640.0f, 260.0f});
+                TextLabel title("GAME OVER", m_gameOverFontLarge, 56);
+                title.centered = true;
+                title.color = {1.0f, 0.08f, 0.58f, 1.0f};
+                m_registry.AddComponent<TextLabel>(m_gameOverTitleEntity, std::move(title));
+            }
+
+            if (m_gameOverScoreEntity == NULL_ENTITY && m_gameOverFontMedium != Renderer::INVALID_FONT_ID) {
+                m_gameOverScoreEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(m_gameOverScoreEntity, Position{640.0f, 360.0f});
+                TextLabel score("", m_gameOverFontMedium, 22);
+                score.centered = true;
+                score.color = {0.5f, 0.86f, 1.0f, 0.95f};
+                m_registry.AddComponent<TextLabel>(m_gameOverScoreEntity, std::move(score));
+            }
+
+            if (m_gameOverHintEntity == NULL_ENTITY && m_hudFontSmall != Renderer::INVALID_FONT_ID) {
+                m_gameOverHintEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(m_gameOverHintEntity, Position{640.0f, 430.0f});
+                TextLabel hint("Press ENTER to view results  |  ESC to return to lobby", m_hudFontSmall, 14);
+                hint.centered = true;
+                hint.color = {0.5f, 0.86f, 1.0f, 0.85f};
+                m_registry.AddComponent<TextLabel>(m_gameOverHintEntity, std::move(hint));
+            }
+
+            if (m_gameOverScoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_gameOverScoreEntity)) {
+                auto& label = m_registry.GetComponent<TextLabel>(m_gameOverScoreEntity);
+                label.text = "SCORE " + std::to_string(m_playerScore);
+            }
+        }
+
+        void InGameState::renderGameOverOverlay() {
+            if (!m_isGameOver) {
+                return;
+            }
+
+            Renderer::Rectangle rect;
+            rect.position = Renderer::Vector2(0.0f, 0.0f);
+            rect.size = Renderer::Vector2(1280.0f, 720.0f);
+            m_renderer->DrawRectangle(rect, Renderer::Color(0.0f, 0.0f, 0.0f, 0.45f));
+        }
+
+        void InGameState::enterResultsScreen() {
+            std::vector<std::pair<std::string, uint32_t>> scores;
+            scores.reserve(MAX_PLAYERS);
+
+            for (size_t i = 0; i < MAX_PLAYERS; i++) {
+                if (!m_playersHUD[i].active) {
+                    continue;
+                }
+                uint8_t playerNum = static_cast<uint8_t>(i + 1);
+                std::string name = "P" + std::to_string(playerNum);
+                for (const auto& p : m_context.allPlayers) {
+                    if (p.number == playerNum && p.name[0] != '\0') {
+                        name = std::string(p.name);
+                        break;
+                    }
+                }
+                scores.push_back({name, m_playersHUD[i].score});
+            }
+
+            if (!m_isNetworkSession && scores.empty()) {
+                std::string name = m_context.playerName.empty() ? "P1" : m_context.playerName;
+                scores.push_back({name, m_playerScore});
+            }
+
+            if (m_context.networkClient) {
+                m_context.networkClient->Stop();
+                m_context.networkClient.reset();
+            }
+
+            m_machine.ChangeState(std::make_unique<ResultsState>(m_machine, m_context, std::move(scores)));
         }
 
         InGameState::EnemySpriteConfig InGameState::GetEnemySpriteConfig(uint8_t enemyType) const {
