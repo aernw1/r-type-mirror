@@ -23,6 +23,10 @@ namespace RType {
             registry.AddComponent<Controllable>(player, Controllable(200.0f));
 
             registry.AddComponent<Health>(player, Health(100, 100));
+            registry.AddComponent<ScoreValue>(player, ScoreValue(0));
+            registry.AddComponent<ScoreTimer>(player, ScoreTimer(0.0f));
+            registry.AddComponent<Shooter>(player, Shooter(0.2f, 50.0f, 0.0f));
+            registry.AddComponent<ShootCommand>(player, ShootCommand());
             registry.AddComponent<BoxCollider>(player, BoxCollider(25.0f, 25.0f));
             registry.AddComponent<CircleCollider>(player, CircleCollider(12.5f));
             registry.AddComponent<CollisionLayer>(player,

@@ -221,7 +221,11 @@ namespace RType {
             Entity entity = it->second;
             const auto& netPlayer = m_registry.GetComponent<NetworkPlayer>(entity);
 
-            std::string displayText = "P" + std::to_string(netPlayer.playerNumber) + " - " + std::string(player.name);
+            std::string playerNameStr = std::string(player.name);
+            if (playerNameStr.length() > 16) {
+                playerNameStr = playerNameStr.substr(0, 16);
+            }
+            std::string displayText = "P" + std::to_string(netPlayer.playerNumber) + " - " + playerNameStr;
             if (netPlayer.ready) {
                 displayText += "\n[READY]";
             } else {
@@ -344,6 +348,7 @@ namespace RType {
 
                 m_context.playerHash = localPlayer.hash;
                 m_context.playerNumber = localPlayer.number;
+                m_context.allPlayers = m_client.getPlayers();
 
                 auto gameClient = std::make_shared<network::GameClient>(serverIp, udpPort, localPlayer);
                 if (gameClient->ConnectToServer()) {

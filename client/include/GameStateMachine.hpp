@@ -9,9 +9,11 @@
 
 #include <memory>
 #include <stack>
+#include <vector>
 #include "Renderer/IRenderer.hpp"
 #include "ECS/Registry.hpp"
 #include "../../libs/network/include/GameClient.hpp"
+#include "../../libs/network/include/Protocol.hpp"
 
 namespace RType {
     namespace Client {
@@ -34,6 +36,7 @@ namespace RType {
             uint16_t serverPort;
             uint64_t playerHash;
             uint8_t playerNumber;
+            std::vector<network::PlayerInfo> allPlayers;
         };
 
         class IState {

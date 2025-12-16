@@ -20,8 +20,14 @@
 #include "ECS/ScrollingSystem.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "ECS/HealthSystem.hpp"
+#include "ECS/ScoreSystem.hpp"
 #include "ECS/PlayerFactory.hpp"
 #include "ECS/EnemyFactory.hpp"
+#include "ECS/PowerUpSpawnSystem.hpp"
+#include "ECS/PowerUpCollisionSystem.hpp"
+#include "ECS/ShootingSystem.hpp"
+#include "ECS/ForcePodSystem.hpp"
+#include "ECS/ShieldSystem.hpp"
 #include <asio.hpp>
 #include <vector>
 #include <unordered_map>
@@ -75,16 +81,21 @@ namespace network {
         uint8_t health;
         uint8_t flags;
         uint64_t ownerHash = 0;
+        uint32_t score = 0;
+        uint8_t powerUpFlags = 0;
+        uint8_t speedMultiplier = 10;
+        uint8_t weaponType = 0;
+        uint8_t fireRate = 20;
     };
 
     class GameServer {
     public:
-        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers,
-                   const std::string& levelPath = "assets/levels/level1.json");
+        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath = "assets/levels/level1.json");
         ~GameServer();
 
         void Run();
         void Stop();
+        bool AllPlayersDisconnected() const;
 
         uint32_t GetCurrentTick() const { return m_currentTick; }
         size_t GetConnectedPlayerCount() const { return m_connectedPlayers.size(); }
@@ -122,6 +133,7 @@ namespace network {
         asio::ip::udp::socket m_socket;
         std::vector<PlayerInfo> m_expectedPlayers;
         std::unordered_map<uint64_t, ConnectedPlayer> m_connectedPlayers;
+        const std::chrono::seconds DISCONNECT_TIMEOUT{10};
 
         RType::ECS::Registry m_registry;
         std::unique_ptr<RType::ECS::ScrollingSystem> m_scrollingSystem;
@@ -131,14 +143,18 @@ namespace network {
         std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
         std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
         std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
+        std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
+        std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
+        std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
+        std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
+        std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
+        std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
 
-        // Legacy: Will be migrated to ECS
         std::vector<GameEntity> m_entities;
         uint32_t m_currentTick = 0;
         uint32_t m_nextEntityId = 1;
         std::atomic<bool> m_running{false};
 
-        // Map scrolling
         float m_scrollOffset = 0.0f;
         const float SCROLL_SPEED = -150.0f;
 
@@ -152,7 +168,6 @@ namespace network {
 
         static const std::array<EnemyStats, 5> s_enemyStats;
 
-        // Level data
         std::string m_levelPath;
     };
 

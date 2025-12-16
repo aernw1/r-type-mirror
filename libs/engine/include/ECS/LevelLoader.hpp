@@ -60,12 +60,30 @@ namespace RType {
             int layer = -100;
         };
 
+        struct PlayerConfig {
+            float movementSpeed = 200.0f;
+            float fireRate = 0.2f;
+            float bulletOffsetX = 50.0f;
+            float bulletOffsetY = 25.0f;
+            int maxHealth = 100;
+        };
+
+        struct LevelConfig {
+            float screenWidth = 1280.0f;
+            float screenHeight = 720.0f;
+            float powerUpSpawnInterval = 5.0f;
+            PlayerConfig playerDefaults;
+        };
+
         struct LevelData {
             std::string name;
 
             // Asset paths
             std::unordered_map<std::string, std::string> textures;
             std::unordered_map<std::string, FontDef> fonts;
+
+            // Level configuration
+            LevelConfig config;
 
             // Level elements
             BackgroundDef background;

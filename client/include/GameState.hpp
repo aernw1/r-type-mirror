@@ -20,7 +20,13 @@
 #include "ECS/PlayerCollisionResponseSystem.hpp"
 #include "ECS/ObstacleCollisionResponseSystem.hpp"
 #include "ECS/HealthSystem.hpp"
+#include "ECS/ScoreSystem.hpp"
+#include "ECS/ShieldSystem.hpp"
+#include "ECS/ForcePodSystem.hpp"
+#include "ECS/PowerUpSpawnSystem.hpp"
+#include "ECS/PowerUpCollisionSystem.hpp"
 #include "ECS/Component.hpp"
+#include "ECS/PowerUpFactory.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "Renderer/IRenderer.hpp"
 
@@ -78,6 +84,7 @@ namespace RType {
 
             // Server state update handler
             void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
+            void ApplyPowerUpStateToPlayer(ECS::Entity playerEntity, const network::EntityState& entityState);
 
             struct EnemySpriteConfig {
                 Renderer::SpriteId sprite = Renderer::INVALID_SPRITE_ID;
@@ -92,6 +99,11 @@ namespace RType {
             };
             EnemySpriteConfig GetEnemySpriteConfig(uint8_t enemyType) const;
             EnemyBulletSpriteConfig GetEnemyBulletSpriteConfig(uint8_t enemyType) const;
+
+            std::pair<std::string, uint8_t> FindPlayerNameAndNumber(uint64_t ownerHash, const std::unordered_set<uint8_t>& assignedNumbers) const;
+            void CreatePlayerNameLabel(RType::ECS::Entity playerEntity, const std::string& playerName, float x, float y);
+            void UpdatePlayerNameLabelPosition(RType::ECS::Entity playerEntity, float x, float y);
+            void DestroyPlayerNameLabel(RType::ECS::Entity playerEntity);
         private:
             GameStateMachine& m_machine;
             GameContext& m_context;
@@ -111,7 +123,12 @@ namespace RType {
             std::unique_ptr<RType::ECS::PlayerCollisionResponseSystem> m_playerResponseSystem;
             std::unique_ptr<RType::ECS::ObstacleCollisionResponseSystem> m_obstacleResponseSystem;
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
+            std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
+            std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
+            std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
+            std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
+            std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
 
             // Bullet textures and sprites
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
@@ -160,6 +177,13 @@ namespace RType {
             Renderer::SpriteId m_enemyRedSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_enemyBlueSprite = Renderer::INVALID_SPRITE_ID;
 
+            // Power-up sprites
+            Renderer::SpriteId m_powerupSpreadSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupLaserSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupForcePodSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupSpeedSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::SpriteId m_powerupShieldSprite = Renderer::INVALID_SPRITE_ID;
+
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
             Renderer::FontId m_hudFontSmall = Renderer::INVALID_FONT_ID;
@@ -184,6 +208,11 @@ namespace RType {
 
             bool m_isNetworkSession = false;
             std::unordered_map<uint64_t, RType::ECS::Entity> m_obstacleIdToCollider;
+
+            // Player name tracking
+            std::unordered_map<uint64_t, std::string> m_playerNameMap;
+            std::unordered_map<RType::ECS::Entity, RType::ECS::Entity> m_playerNameLabels;
+            std::unordered_set<uint8_t> m_assignedPlayerNumbers;
 
             // Level loader data
             RType::ECS::LevelData m_levelData;

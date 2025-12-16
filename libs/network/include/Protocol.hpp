@@ -29,7 +29,7 @@ namespace network {
         DISCONNECT = 0x17,
         PLAYER_LEFT = 0x18,
         COUNTDOWN = 0x19,
-        ERROR_MSG = 0x1F, // @haloys i renamed to avoid Windows macro conflict
+        ERROR_MSG = 0x1F,
     };
 
     // ==================== GAME PROTOCOL (UDP) ====================
@@ -105,6 +105,16 @@ namespace network {
         uint32_t timestamp = 0;  // Client timestamp (ms)
     };
 
+    // Power-up flags for EntityState (bitfield)
+    enum PowerUpFlags : uint8_t {
+        POWERUP_NONE = 0,
+        POWERUP_FIRE_RATE_BOOST = 1 << 0,  // 0x01
+        POWERUP_SPREAD_SHOT = 1 << 1,       // 0x02
+        POWERUP_LASER_BEAM = 1 << 2,        // 0x04
+        POWERUP_SHIELD = 1 << 3,            // 0x08
+        POWERUP_FORCE_POD = 1 << 4,         // 0x10
+    };
+
     // Entity state in STATE packet
     struct EntityState {
         uint32_t entityId = 0;
@@ -116,6 +126,11 @@ namespace network {
         uint8_t health = 0;
         uint8_t flags = 0;      // Custom flags per entity type
         uint64_t ownerHash = 0; // Player hash for PLAYER entities (for client-side prediction)
+        uint32_t score = 0;
+        uint8_t powerUpFlags = 0;
+        uint8_t speedMultiplier = 10;
+        uint8_t weaponType = 0;
+        uint8_t fireRate = 20;
     };
 
     // STATE packet (Server → Client)
@@ -126,7 +141,6 @@ namespace network {
         uint16_t entityCount = 0;  // Number of entities following
         float scrollOffset = 0.0f; // Background scroll offset
     };
-    // Followed by: EntityState[entityCount]
 
     // PING packet
     struct PingPacket {

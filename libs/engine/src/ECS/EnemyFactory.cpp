@@ -22,15 +22,15 @@ namespace RType {
             };
 
             const std::array<EnemyData, 5> ENEMY_DATA_TABLE = {{// BASIC
-                                                                {Math::Color(1.0f, 1.0f, 1.0f, 1.0f), "../assets/spaceships/nave2.png", 100.0f, 100, 10, 100},
+                                                                {Math::Color(1.0f, 1.0f, 1.0f, 1.0f), "../assets/spaceships/nave2.png", 100.0f, 100, 10, 500},
                                                                 // FAST
-                                                                {Math::Color(1.0f, 0.3f, 0.3f, 1.0f), "../assets/spaceships/nave2_red.png", 200.0f, 50, 5, 150},
+                                                                {Math::Color(1.0f, 0.3f, 0.3f, 1.0f), "../assets/spaceships/nave2_red.png", 200.0f, 50, 5, 500},
                                                                 // TANK
-                                                                {Math::Color(0.3f, 0.3f, 1.0f, 1.0f), "../assets/spaceships/nave2_blue.png", 50.0f, 200, 20, 200},
+                                                                {Math::Color(0.3f, 0.3f, 1.0f, 1.0f), "../assets/spaceships/nave2_blue.png", 50.0f, 200, 20, 500},
                                                                 // BOSS
-                                                                {Math::Color(1.0f, 0.0f, 1.0f, 1.0f), "../assets/spaceships/nave2.png", 75.0f, 1000, 50, 1000},
+                                                                {Math::Color(1.0f, 0.0f, 1.0f, 1.0f), "../assets/spaceships/nave2.png", 75.0f, 1000, 50, 500},
                                                                 // FORMATION
-                                                                {Math::Color(0.5f, 0.5f, 0.5f, 1.0f), "../assets/spaceships/nave2.png", 100.0f, 100, 10, 100}}};
+                                                                {Math::Color(0.5f, 0.5f, 0.5f, 1.0f), "../assets/spaceships/nave2.png", 100.0f, 100, 10, 500}}};
 
             const EnemyData& GetEnemyData(EnemyType type) {
                 size_t index = static_cast<size_t>(type);

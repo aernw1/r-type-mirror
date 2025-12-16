@@ -15,6 +15,9 @@ namespace RType {
 
             void Update(Registry& registry, float deltaTime) override;
         private:
+            void CreateSpreadShot(Registry& registry, Entity shooter, const Position& pos, int damage);
+            void CreateLaserShot(Registry& registry, Entity shooter, const Position& pos, int damage);
+
             Renderer::SpriteId m_bulletSprite;
         };
     }
