@@ -1,50 +1,50 @@
-# R-Type Engine - Developer Documentation
+# R-Type Engine & ECS - Developer Documentation
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Architecture](#architecture)
-3. [Core Components](#core-components)
-   - [Engine](#engine)
-   - [Module System](#module-system)
-   - [ECS (Entity Component System)](#ecs-entity-component-system)
-4. [Class Diagrams](#class-diagrams)
-5. [Creating a Module](#creating-a-module)
-6. [Using the ECS](#using-the-ecs)
-7. [Build System](#build-system)
-8. [API Reference](#api-reference)
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Core Engine](#core-engine)
+- [Module System](#module-system)
+- [ECS Fundamentals](#ecs-fundamentals)
+- [Registry API](#registry-api)
+- [Components](#components)
+- [Systems](#systems)
+- [SparseArray](#sparsearray)
+- [Quick Start Guide](#quick-start-guide)
+- [Best Practices](#best-practices)
 
 ---
 
 ## Overview
 
-The R-Type Engine is a modular game engine built with C++17. It features:
+The R-Type Engine is a modular, data-oriented game engine built with C++17. It features:
 
 - **Plugin-based architecture**: Load modules dynamically at runtime
-- **Entity Component System (ECS)**: Data-oriented design for game objects
+- **Entity Component System (ECS)**: Data-oriented design for efficient game object management
 - **Cross-platform**: Works on Linux, macOS, and Windows
+- **Type-safe**: Template-based component and system registration
 
 ### Project Structure
 
 ```
-engine/
+libs/engine/
 ├── include/
 │   ├── Core/
-│   │   ├── Engine.hpp        # Main engine class
+│   │   ├── Engine.hpp        # Main engine coordinator
 │   │   ├── Module.hpp        # IModule interface
 │   │   ├── ModuleLoader.hpp  # Dynamic plugin loader
 │   │   └── Logger.hpp        # Logging utility
 │   └── ECS/
-│       ├── Entity.hpp        # Entity type definition
-│       ├── Component.hpp     # Component definitions
-│       ├── SparseArray.hpp   # Sparse array container for components
-│       └── Registry.hpp      # ECS registry
+│       ├── Entity.hpp        # Entity type (uint32_t)
+│       ├── Component.hpp     # All component definitions
+│       ├── SparseArray.hpp   # Component storage container
+│       ├── Registry.hpp      # ECS registry
+│       ├── ISystem.hpp       # System interface
+│       └── *System.hpp       # Game logic systems
 └── src/
     ├── Core/
-    │   ├── Engine.cpp
-    │   └── ModuleLoader.cpp
     └── ECS/
-        └── Registry.cpp
 ```
 
 ---
@@ -54,82 +54,105 @@ engine/
 The engine follows a layered architecture:
 
 ```
-┌─────────────────────────────────────────┐
-│            GAME / APPLICATION           │
-│         (Uses engine as library)        │
-└─────────────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────┐
-│              ENGINE CORE                │
-│   ┌─────────┐  ┌─────────┐  ┌───────┐  │
-│   │ Engine  │  │ Module  │  │  ECS  │  │
-│   │         │  │ Loader  │  │       │  │
-│   └─────────┘  └─────────┘  └───────┘  │
-└─────────────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────┐
-│              MODULES/PLUGINS            │
-│  ┌──────────┐ ┌─────────┐ ┌─────────┐  │
-│  │ Renderer │ │ Physics │ │  Audio  │  │
-│  └──────────┘ └─────────┘ └─────────┘  │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│      GAME APPLICATION               │
+│   (Uses engine as static library)   │
+└─────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────┐
+│         ENGINE CORE                 │
+│  ┌──────────┐  ┌─────────────────┐ │
+│  │  Engine  │  │     Registry    │ │
+│  │          │  │   (ECS Manager) │ │
+│  └──────────┘  └─────────────────┘ │
+│  ┌──────────┐  ┌─────────────────┐ │
+│  │ Module   │  │     Systems     │ │
+│  │ Loader   │  │   (Game Logic)  │ │
+│  └──────────┘  └─────────────────┘ │
+└─────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────┐
+│      MODULES / PLUGINS              │
+│  ┌──────────┐ ┌─────────┐ ┌──────┐ │
+│  │ Renderer │ │ Physics │ │Audio │ │
+│  └──────────┘ └─────────┘ └──────┘ │
+└─────────────────────────────────────┘
 ```
 
 ---
 
-## Core Components
+## Core Engine
 
-### Engine
+The `Engine` class is the central coordinator that manages modules, plugins, and the ECS registry.
 
-The `Engine` class is the central coordinator that manages:
-- Module lifecycle (registration, initialization, shutdown)
-- Plugin loading/unloading
-- Access to the ECS Registry
-
-#### Basic Usage
+### Basic Usage
 
 ```cpp
 #include <Core/Engine.hpp>
+#include <ECS/Registry.hpp>
 
 int main() {
+    // Create engine with default config
     RType::Core::EngineConfig config;
     config.pluginPath = "./plugins";
-
+    
     auto engine = std::make_unique<RType::Core::Engine>(config);
-
-    // Load plugins
-    engine->LoadPlugin("plugins/libRenderer.so");
-
-    // Initialize all modules
-    engine->Initialize();
-
+    
+    // Load plugins (optional)
+    engine->LoadPlugin("plugins/libSFMLRenderer.so");
+    
+    // Register built-in modules
+    engine->RegisterModule(std::make_unique<MyModule>());
+    
+    // Initialize all modules (in priority order)
+    if (!engine->Initialize()) {
+        RType::Core::Logger::Error("Engine initialization failed");
+        return 1;
+    }
+    
     // Access the ECS registry
     auto& registry = engine->GetRegistry();
-
-    // Shutdown
+    
+    // Register systems
+    engine->RegisterSystem(std::make_unique<RType::ECS::MovementSystem>());
+    
+    // Game loop
+    while (running) {
+        float deltaTime = getDeltaTime();
+        engine->UpdateSystems(deltaTime);
+        // ... render, etc.
+    }
+    
+    // Shutdown (modules shutdown in reverse priority order)
     engine->Shutdown();
-
     return 0;
 }
 ```
 
-#### EngineConfig
+### Engine API
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `pluginPath` | `std::string` | `"./plugins"` | Directory for plugin search |
+| Method | Description |
+|--------|-------------|
+| `Initialize()` | Initialize all registered modules (returns false on failure) |
+| `Shutdown()` | Shutdown all modules in reverse priority order |
+| `LoadPlugin(path)` | Load a plugin from shared library (.so/.dll/.dylib) |
+| `UnloadPlugin(name)` | Unload a plugin by name |
+| `RegisterModule<T>(module)` | Register a built-in module |
+| `GetModule<T>()` | Get module by type (searches built-in and plugins) |
+| `GetModuleByName(name)` | Get module by name string |
+| `GetRegistry()` | Access the ECS registry |
+| `RegisterSystem<T>(system)` | Register an ECS system |
+| `UpdateSystems(deltaTime)` | Update all registered systems |
 
 ---
 
-### Module System
+## Module System
 
-Modules are the building blocks of the engine. They can be:
-- **Built-in**: Compiled with the engine
-- **Plugins**: Loaded dynamically from shared libraries (.so/.dll)
+Modules are the building blocks of the engine. They can be built-in (compiled with engine) or plugins (loaded dynamically).
 
-#### IModule Interface
+### IModule Interface
 
 All modules must implement `IModule`:
 
@@ -147,9 +170,9 @@ public:
 };
 ```
 
-#### Module Priority
+### Module Priority
 
-Modules are initialized in priority order (lowest value first):
+Modules initialize in priority order (lowest value first):
 
 | Priority | Value | Use Case |
 |----------|-------|----------|
@@ -158,107 +181,347 @@ Modules are initialized in priority order (lowest value first):
 | `Normal` | 2 | Audio, Input |
 | `Low` | 3 | Non-essential features |
 
-Shutdown occurs in **reverse** priority order.
+**Shutdown occurs in reverse priority order.**
 
-#### Plugin Export Functions
+### Creating a Module
+
+```cpp
+// MyModule.hpp
+#pragma once
+#include <Core/Module.hpp>
+#include <Core/Engine.hpp>
+
+class MyModule : public RType::Core::IModule {
+public:
+    const char* GetName() const override { return "MyModule"; }
+    
+    RType::Core::ModulePriority GetPriority() const override {
+        return RType::Core::ModulePriority::Normal;
+    }
+    
+    bool Initialize(RType::Core::Engine* engine) override {
+        m_engine = engine;
+        RType::Core::Logger::Info("MyModule initialized");
+        return true;
+    }
+    
+    void Shutdown() override {
+        RType::Core::Logger::Info("MyModule shutdown");
+    }
+    
+    void Update(float deltaTime) override {
+        // Per-frame update
+    }
+    
+private:
+    RType::Core::Engine* m_engine = nullptr;
+};
+```
+
+### Plugin Export Functions
 
 Plugins must export these C functions:
 
 ```cpp
 extern "C" {
-    RTYPE_MODULE_EXPORT RType::Core::IModule* CreateModule();
-    RTYPE_MODULE_EXPORT void DestroyModule(RType::Core::IModule* module);
+    RTYPE_MODULE_EXPORT RType::Core::IModule* CreateModule() {
+        return new MyModule();
+    }
+    
+    RTYPE_MODULE_EXPORT void DestroyModule(RType::Core::IModule* module) {
+        delete module;
+    }
 }
 ```
 
-The `extern "C"` prevents C++ name mangling, allowing `dlsym()` to find the functions.
-
-#### RTYPE_MODULE_EXPORT Macro
-
-This macro ensures symbols are exported correctly on all platforms:
-
-```cpp
-#ifdef _WIN32
-#define RTYPE_MODULE_EXPORT __declspec(dllexport)
-#else
-#define RTYPE_MODULE_EXPORT __attribute__((visibility("default")))
-#endif
-```
-
-#### Function Pointer Types
-
-The module loader uses these types internally:
-
-```cpp
-using CreateModuleFunc = IModule* (*)();
-using DestroyModuleFunc = void (*)(IModule*);
-```
-
-#### Platform-Specific Plugin Extensions
-
-| Platform | Extension | Load Function |
-|----------|-----------|---------------|
-| Linux | `.so` | `dlopen()` |
-| macOS | `.dylib` or `.so` | `dlopen()` |
-| Windows | `.dll` | `LoadLibrary()` |
+The `extern "C"` prevents C++ name mangling, allowing `dlsym()`/`GetProcAddress()` to find the functions.
 
 ---
 
-### ECS (Entity Component System)
+## ECS Fundamentals
 
-The ECS provides a data-oriented approach to game object management.
+The Entity Component System provides a data-oriented approach to game object management.
 
-#### Concepts
+### Core Concepts
 
-- **Entity**: A unique identifier (uint32_t)
-- **Component**: Plain data struct attached to entities
-- **Registry**: Manages entities and their components
+- **Entity**: A unique identifier (`uint32_t`). Represents a game object.
+- **Component**: Plain data struct attached to entities. Contains no logic.
+- **System**: Logic that processes entities with specific component combinations.
+- **Registry**: Central manager that stores entities and their components.
 
-#### Entity
+### Entity
 
 ```cpp
 using Entity = uint32_t;
 constexpr Entity NULL_ENTITY = 0;
 ```
 
-#### Built-in Components
+Entities are just IDs. They have no data or behavior themselves.
+
+---
+
+## Registry API
+
+The `Registry` manages all entities and components.
+
+### Entity Management
 
 ```cpp
-struct Position {
-    float x = 0.0f;
-    float y = 0.0f;
+// Create entity
+Entity player = registry.CreateEntity();
+
+// Check if entity exists
+if (registry.IsEntityAlive(player)) {
+    // Entity is valid
+}
+
+// Destroy entity (removes all components)
+registry.DestroyEntity(player);
+
+// Get total entity count
+size_t count = registry.GetEntityCount();
+```
+
+### Component Management
+
+```cpp
+// Add component (by copy)
+registry.AddComponent(player, RType::ECS::Position{100.0f, 200.0f});
+
+// Add component (by move)
+auto velocity = RType::ECS::Velocity{5.0f, 0.0f};
+registry.AddComponent(player, std::move(velocity));
+
+// Add component (default constructed)
+registry.AddComponent<RType::ECS::Health>(player);
+
+// Get component (non-const)
+auto& position = registry.GetComponent<RType::ECS::Position>(player);
+position.x = 150.0f;
+
+// Get component (const)
+const auto& health = registry.GetComponent<RType::ECS::Health>(player);
+
+// Check if entity has component
+if (registry.HasComponent<RType::ECS::Position>(player)) {
+    // Safe to access
+}
+
+// Remove component
+registry.RemoveComponent<RType::ECS::Velocity>(player);
+
+// Get all entities with a component
+auto entities = registry.GetEntitiesWithComponent<RType::ECS::Position>();
+for (Entity e : entities) {
+    // Process entities with Position
+}
+```
+
+### Error Handling
+
+- `GetComponent<T>(entity)` throws `std::runtime_error` if component doesn't exist
+- `AddComponent<T>(entity)` throws if entity is `NULL_ENTITY` or doesn't exist
+- Always check with `HasComponent<T>()` before accessing
+
+**Best Practice:**
+```cpp
+if (registry.HasComponent<Position>(entity)) {
+    auto& pos = registry.GetComponent<Position>(entity);
+    // Safe to use
+}
+```
+
+---
+
+## Components
+
+Components are plain data structs that inherit from `IComponent`. They contain **no logic**.
+
+### Built-in Components
+
+The engine provides many built-in components:
+
+```cpp
+// Transform
+struct Position { float x, y; };
+struct Velocity { float dx, dy; };
+
+// Rendering
+struct Drawable {
+    Renderer::SpriteId spriteId;
+    Math::Vector2 scale{1.0f, 1.0f};
+    float rotation = 0.0f;
+    int layer = 0;
 };
 
-struct Velocity {
-    float dx = 0.0f;
-    float dy = 0.0f;
+// Gameplay
+struct Health { int current, max; };
+struct Player { uint8_t playerNumber; uint64_t playerHash; };
+struct Enemy { EnemyType type; uint32_t id; };
+struct Bullet { Entity owner; };
+struct PowerUp { PowerUpType type; uint32_t id; };
+
+// Physics
+struct BoxCollider { float width, height; };
+struct CircleCollider { float radius; };
+struct CollisionLayer { uint16_t layer; uint16_t mask; };
+
+// And many more...
+```
+
+### Creating Custom Components
+
+```cpp
+// In Component.hpp or your own header
+struct MyCustomComponent : public RType::ECS::IComponent {
+    int value = 0;
+    std::string name;
+    
+    MyCustomComponent() = default;
+    MyCustomComponent(int v, const std::string& n) 
+        : value(v), name(n) {}
+};
+
+// Usage
+registry.AddComponent(entity, MyCustomComponent{42, "test"});
+```
+
+### Component Guidelines
+
+- ✅ Use plain structs with public members
+- ✅ Provide default constructor
+- ✅ Keep components small and focused
+- ✅ No virtual functions (unless inheriting from IComponent)
+- ❌ Don't put logic in components
+- ❌ Don't store pointers to other entities (use `Entity` IDs instead)
+
+---
+
+## Systems
+
+Systems contain the game logic. They process entities with specific component combinations.
+
+### ISystem Interface
+
+```cpp
+class ISystem {
+public:
+    virtual ~ISystem() = default;
+    virtual void Update(Registry& registry, float deltaTime) = 0;
+    virtual const char* GetName() const = 0;
+    virtual bool Initialize(Registry& registry) { return true; }
+    virtual void Shutdown() {}
 };
 ```
 
-#### Registry Methods
+### Creating a System
 
-| Method | Description |
-|--------|-------------|
-| `CreateEntity()` | Create a new entity |
-| `DestroyEntity(entity)` | Destroy an entity |
-| `IsEntityAlive(entity)` | Check if entity exists |
-| `AddComponent<T>(entity, component)` | Add component to entity |
-| `GetComponent<T>(entity)` | Get component from entity |
-| `HasComponent<T>(entity)` | Check if entity has component |
-| `RemoveComponent<T>(entity)` | Remove component from entity |
-| `GetEntitiesWithComponent<T>()` | Get all entities with component |
-| `GetEntityCount()` | Get total entity count |
+```cpp
+// MovementSystem.hpp
+#pragma once
+#include "ECS/ISystem.hpp"
 
-#### SparseArray
+namespace RType::ECS {
+    class MovementSystem : public ISystem {
+    public:
+        void Update(Registry& registry, float deltaTime) override;
+        const char* GetName() const override { return "MovementSystem"; }
+    };
+}
 
-The `SparseArray` is a container used internally by the Registry to store components efficiently. It's a sparse array where the **index directly corresponds to an Entity ID**.
+// MovementSystem.cpp
+#include "ECS/MovementSystem.hpp"
+#include "ECS/Component.hpp"
 
-**Key Features:**
-- Direct index access: `O(1)` access by entity ID
-- Cache-friendly: Data stored contiguously in memory
-- Holes allowed: Indices can be empty (`std::nullopt`)
+void MovementSystem::Update(Registry& registry, float deltaTime) {
+    // Get all entities with Velocity
+    auto entities = registry.GetEntitiesWithComponent<Velocity>();
+    
+    for (Entity entity : entities) {
+        // Check if entity also has Position
+        if (!registry.HasComponent<Position>(entity)) {
+            continue;
+        }
+        
+        // Update position based on velocity
+        auto& position = registry.GetComponent<Position>(entity);
+        const auto& velocity = registry.GetComponent<Velocity>(entity);
+        
+        position.x += velocity.dx * deltaTime;
+        position.y += velocity.dy * deltaTime;
+    }
+}
+```
 
-**Structure:**
+### Registering Systems
+
+```cpp
+// In your game initialization
+auto engine = std::make_unique<RType::Core::Engine>();
+
+engine->RegisterSystem(std::make_unique<RType::ECS::MovementSystem>());
+engine->RegisterSystem(std::make_unique<RType::ECS::RenderingSystem>());
+engine->RegisterSystem(std::make_unique<RType::ECS::CollisionSystem>());
+
+engine->Initialize();
+
+// In game loop
+while (running) {
+    float deltaTime = getDeltaTime();
+    engine->UpdateSystems(deltaTime);  // Updates all systems
+}
+```
+
+### System Patterns
+
+**Query Multiple Components:**
+```cpp
+void MySystem::Update(Registry& registry, float deltaTime) {
+    // Get entities with first component
+    auto entities = registry.GetEntitiesWithComponent<ComponentA>();
+    
+    for (Entity e : entities) {
+        // Check for additional components
+        if (registry.HasComponent<ComponentB>(e) && 
+            registry.HasComponent<ComponentC>(e)) {
+            
+            auto& a = registry.GetComponent<ComponentA>(e);
+            auto& b = registry.GetComponent<ComponentB>(e);
+            auto& c = registry.GetComponent<ComponentC>(e);
+            
+            // Process...
+        }
+    }
+}
+```
+
+**Create/Modify Entities:**
+```cpp
+void SpawnSystem::Update(Registry& registry, float deltaTime) {
+    if (shouldSpawn) {
+        Entity enemy = registry.CreateEntity();
+        registry.AddComponent(enemy, Position{100.0f, 50.0f});
+        registry.AddComponent(enemy, Velocity{0.0f, 50.0f});
+        registry.AddComponent(enemy, Enemy{EnemyType::BASIC, nextId++});
+    }
+}
+```
+
+---
+
+## SparseArray
+
+`SparseArray` is the internal container used by the Registry to store components efficiently.
+
+### Concept
+
+A sparse array is a vector where the **index directly corresponds to an Entity ID**. This provides:
+- **O(1)** direct access by entity ID
+- **Cache-friendly** sequential iteration
+- **Holes allowed** (indices can be empty via `std::nullopt`)
+
+### Structure
+
 ```cpp
 template <typename Component>
 class SparseArray {
@@ -267,7 +530,8 @@ class SparseArray {
 };
 ```
 
-**Visual Example:**
+### Visual Example
+
 ```
 Entities: 0, 2, 5 have Position components
 
@@ -277,10 +541,9 @@ Data:  │{x,y}│null│{x,y}│null│null│{x,y}│
        └────┴────┴────┴────┴────┴────┘
 ```
 
-**Basic Usage:**
-```cpp
-#include <ECS/SparseArray.hpp>
+### Usage
 
+```cpp
 SparseArray<Position> positions;
 
 // Insert component at entity ID 5
@@ -293,339 +556,105 @@ if (pos_opt.has_value()) {
     pos.x = 100.0f;
 }
 
-// Emplace (more efficient, constructs in-place)
+// Emplace (constructs in-place, more efficient)
 positions.emplace_at(7, 30.0f, 40.0f);
 
 // Erase
 positions.erase(5);
+
+// Iterate
+for (size_t i = 0; i < positions.size(); ++i) {
+    if (positions[i].has_value()) {
+        Entity e = static_cast<Entity>(i);
+        Position& pos = positions[i].value();
+        // Process...
+    }
+}
 ```
-
-**Main Methods:**
-
-| Method | Description |
-|--------|-------------|
-| `insert_at(pos, component)` | Insert component by copy |
-| `insert_at(pos, std::move(component))` | Insert component by move |
-| `emplace_at(pos, args...)` | Construct component in-place |
-| `operator[](idx)` | Direct access (resizes if needed) |
-| `erase(pos)` | Remove component at index |
-| `size()` | Return vector size |
-| `begin() / end()` | Iterators for range-based loops |
-
-**When to use:**
-- Sequential entity IDs (0, 1, 2, 3...)
-- Components present on most entities
-- Need frequent iterations (cache-friendly)
-
-**Note:** The Registry uses `SparseArray` internally. You typically don't need to use it directly unless implementing custom component storage.
 
 ---
 
-## Class Diagrams
+## Quick Start Guide
 
-### Complete Architecture
-
-```mermaid
-classDiagram
-    class IModule {
-        <<interface>>
-        +GetName() const char*
-        +GetPriority() ModulePriority
-        +Initialize(Engine* engine) bool
-        +Shutdown() void
-        +Update(float deltaTime) void
-        +ShouldUpdateInRenderThread() bool
-        +IsOverridable() bool
-    }
-
-    class ModulePriority {
-        <<enumeration>>
-        Critical = 0
-        High = 1
-        Normal = 2
-        Low = 3
-    }
-
-    class Engine {
-        -m_config: EngineConfig
-        -m_moduleLoader: ModuleLoader
-        -m_builtinModules: map~type_index, IModule~
-        -m_sortedModules: vector~IModule*~
-        -m_registry: Registry
-        -m_initialized: bool
-        +Engine(config: EngineConfig)
-        +Initialize() bool
-        +Shutdown() void
-        +LoadPlugin(path: string) IModule*
-        +UnloadPlugin(name: string) bool
-        +RegisterModule~T~(module: unique_ptr~T~) void
-        +GetModule~T~() T*
-        +GetModuleByName(name: string) IModule*
-        +GetAllModules() vector~IModule*~
-        +GetRegistry() Registry&
-    }
-
-    class ModuleLoader {
-        -m_loadedPlugins: map~string, PluginInfo~
-        +LoadPlugin(path: string) IModule*
-        +UnloadPlugin(name: string) bool
-        +UnloadAllPlugins() void
-        +GetPlugin(name: string) IModule*
-        +GetAllPlugins() vector~IModule*~
-        +IsPluginLoaded(name: string) bool
-        +GetPluginCount() size_t
-    }
-
-    class PluginInfo {
-        +name: string
-        +path: string
-        +handle: LibraryHandle
-        +module: IModule*
-        +destroyFunc: DestroyModuleFunc
-    }
-
-    class EngineConfig {
-        +pluginPath: string
-    }
-
-    class Registry {
-        -m_nextEntityID: Entity
-        -m_entityCount: size_t
-        -m_aliveEntities: set~Entity~
-        -m_componentPools: map~ComponentID, IComponentPool~
-        +CreateEntity() Entity
-        +DestroyEntity(entity: Entity) void
-        +IsEntityAlive(entity: Entity) bool
-        +AddComponent~T~(entity, component) T&
-        +GetComponent~T~(entity) T&
-        +HasComponent~T~(entity) bool
-        +RemoveComponent~T~(entity) void
-        +GetEntitiesWithComponent~T~() vector~Entity~
-        +GetEntityCount() size_t
-    }
-
-    class IComponentPool {
-        <<interface>>
-        +Has(entity: Entity) bool
-        +Remove(entity: Entity) void
-    }
-
-    class ComponentPool~T~ {
-        -m_components: map~Entity, T~
-        +Add(entity, component) T&
-        +Get(entity) T&
-        +Has(entity) bool
-        +Remove(entity) void
-        +GetEntities() vector~Entity~
-    }
-
-    class Entity {
-        <<typedef>>
-        uint32_t
-    }
-
-    Engine --> ModuleLoader : uses
-    Engine --> IModule : manages
-    Engine --> Registry : contains
-    ModuleLoader --> PluginInfo : stores
-    PluginInfo --> IModule : contains
-    IModule --> ModulePriority : has
-    Registry --> IComponentPool : manages
-    IComponentPool <|-- ComponentPool~T~ : implements
-    ComponentPool~T~ --> Entity : stores
-```
-
-### Example Module Interfaces (To Be Implemented)
-
-These interfaces are **suggestions** for modules to be implemented by your team:
-
-```mermaid
-classDiagram
-    class IModule {
-        <<interface>>
-    }
-
-    class IRenderer {
-        <<interface>>
-        +Initialize(config: RenderConfig) bool
-        +Shutdown() void
-        +BeginFrame() void
-        +EndFrame() void
-        +Clear(color: Color) void
-        +DrawSprite(sprite, transform) void
-        +DrawText(text, font, transform) void
-    }
-
-    class IPhysics {
-        <<interface>>
-        +Initialize() bool
-        +Shutdown() void
-        +Update(deltaTime: float) void
-        +CreateBody(def: BodyDef) Body*
-        +DestroyBody(body: Body*) void
-        +SetGravity(gravity: Vector2) void
-    }
-
-    class IAudio {
-        <<interface>>
-        +Initialize() bool
-        +Shutdown() void
-        +PlaySound(id: string) void
-        +PlayMusic(id: string) void
-        +StopAll() void
-        +SetVolume(volume: float) void
-    }
-
-    IModule <|-- IRenderer : extends
-    IModule <|-- IPhysics : extends
-    IModule <|-- IAudio : extends
-```
-
-> **Note**: These interfaces are not included in the engine. You need to create these based on your specific requirements and the graphics/audio/physics libraries you choose (SFML, SDL2, Raylib, Box2D, etc.).
-
----
-
-## Creating a Module
-
-### Step 1: Create the Header
+### 1. Create an Entity with Components
 
 ```cpp
-// modules/MyRenderer/include/MyRenderer.hpp
-#pragma once
-
-#include <Core/Module.hpp>
 #include <Core/Engine.hpp>
-#include <Core/Logger.hpp>
+#include <ECS/Component.hpp>
 
-class MyRendererModule : public RType::Core::IModule {
+auto& registry = engine->GetRegistry();
+
+// Create player entity
+Entity player = registry.CreateEntity();
+
+// Add components
+registry.AddComponent(player, RType::ECS::Position{400.0f, 300.0f});
+registry.AddComponent(player, RType::ECS::Velocity{0.0f, 0.0f});
+registry.AddComponent(player, RType::ECS::Health{100, 100});
+registry.AddComponent(player, RType::ECS::Player{1, 0x1234, true});
+```
+
+### 2. Create a System
+
+```cpp
+// MySystem.hpp
+class MySystem : public RType::ECS::ISystem {
 public:
-    MyRendererModule() = default;
-    ~MyRendererModule() override = default;
-
-    const char* GetName() const override { return "MyRenderer"; }
-
-    RType::Core::ModulePriority GetPriority() const override {
-        return RType::Core::ModulePriority::High;
+    void Update(RType::ECS::Registry& registry, float deltaTime) override {
+        auto entities = registry.GetEntitiesWithComponent<RType::ECS::Position>();
+        for (Entity e : entities) {
+            auto& pos = registry.GetComponent<RType::ECS::Position>(e);
+            // Update logic...
+        }
     }
-
-    bool Initialize(RType::Core::Engine* engine) override;
-    void Shutdown() override;
-    void Update(float deltaTime) override;
-
-    // Custom methods for your module
-    void BeginFrame();
-    void EndFrame();
-    void DrawSprite(/* params */);
-
-private:
-    RType::Core::Engine* m_engine = nullptr;
-    // Your renderer-specific members
+    const char* GetName() const override { return "MySystem"; }
 };
 ```
 
-### Step 2: Implement the Module
+### 3. Register and Run
 
 ```cpp
-// modules/MyRenderer/src/MyRenderer.cpp
-#include "MyRenderer.hpp"
+engine->RegisterSystem(std::make_unique<MySystem>());
+engine->Initialize();
 
-bool MyRendererModule::Initialize(RType::Core::Engine* engine) {
-    m_engine = engine;
-
-    RType::Core::Logger::Info("MyRenderer initializing...");
-
-    // Initialize your rendering backend (SFML, SDL, etc.)
-    // ...
-
-    RType::Core::Logger::Info("MyRenderer initialized");
-    return true;
-}
-
-void MyRendererModule::Shutdown() {
-    RType::Core::Logger::Info("MyRenderer shutting down...");
-
-    // Cleanup resources
-    // ...
-}
-
-void MyRendererModule::Update(float deltaTime) {
-    // Per-frame update if needed
-    (void)deltaTime;
-}
-
-void MyRendererModule::BeginFrame() {
-    // Start rendering
-}
-
-void MyRendererModule::EndFrame() {
-    // Present to screen
-}
-
-// Plugin export functions
-extern "C" {
-    RTYPE_MODULE_EXPORT RType::Core::IModule* CreateModule() {
-        return new MyRendererModule();
-    }
-
-    RTYPE_MODULE_EXPORT void DestroyModule(RType::Core::IModule* module) {
-        delete module;
-    }
+// Game loop
+while (running) {
+    engine->UpdateSystems(deltaTime);
 }
 ```
 
-### Step 3: Create CMakeLists.txt
-
-```cmake
-# modules/MyRenderer/CMakeLists.txt
-cmake_minimum_required(VERSION 3.17)
-project(MyRenderer)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Find your dependencies (e.g., SFML, SDL2)
-# find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
-
-add_library(MyRenderer SHARED
-    src/MyRenderer.cpp
-)
-
-target_include_directories(MyRenderer PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-target_link_libraries(MyRenderer PRIVATE
-    rtype_engine_core
-    # ${SFML_LIBRARIES}
-)
-
-set_target_properties(MyRenderer PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins
-)
-```
-
-### Step 4: Use the Module
+### 4. Complete Example
 
 ```cpp
 #include <Core/Engine.hpp>
+#include <ECS/MovementSystem.hpp>
+#include <ECS/Component.hpp>
 
 int main() {
     auto engine = std::make_unique<RType::Core::Engine>();
-
-    // Load your module
-    engine->LoadPlugin("plugins/libMyRenderer.so");
-
+    
+    // Register systems
+    engine->RegisterSystem(std::make_unique<RType::ECS::MovementSystem>());
+    
     // Initialize
     engine->Initialize();
-
-    // Get your module
-    auto* renderer = engine->GetModuleByName("MyRenderer");
-    // Or cast to your type:
-    // auto* myRenderer = dynamic_cast<MyRendererModule*>(renderer);
-
-    // Use the engine...
-
+    auto& registry = engine->GetRegistry();
+    
+    // Create entities
+    Entity player = registry.CreateEntity();
+    registry.AddComponent(player, RType::ECS::Position{100.0f, 200.0f});
+    registry.AddComponent(player, RType::ECS::Velocity{50.0f, 0.0f});
+    
+    // Game loop
+    float deltaTime = 0.016f; // ~60 FPS
+    for (int i = 0; i < 100; ++i) {
+        engine->UpdateSystems(deltaTime);
+        
+        // Check updated position
+        const auto& pos = registry.GetComponent<RType::ECS::Position>(player);
+        RType::Core::Logger::Info("Player position: ({}, {})", pos.x, pos.y);
+    }
+    
     engine->Shutdown();
     return 0;
 }
@@ -633,294 +662,144 @@ int main() {
 
 ---
 
-## Using the ECS
+## Best Practices
 
-### Creating Entities and Components
+### Component Design
 
-```cpp
-#include <ECS/Registry.hpp>
+1. **Keep components small and focused**
+   ```cpp
+   // ✅ Good: Single responsibility
+   struct Position { float x, y; };
+   struct Velocity { float dx, dy; };
+   
+   // ❌ Bad: Too much data in one component
+   struct Transform { float x, y, dx, dy, rotation, scale; };
+   ```
 
-// Define custom components
-struct Health {
-    int current = 100;
-    int max = 100;
-};
+2. **Use Entity IDs, not pointers**
+   ```cpp
+   // ✅ Good
+   struct Bullet { Entity owner; };
+   
+   // ❌ Bad
+   struct Bullet { Entity* owner; };
+   ```
 
-struct Sprite {
-    std::string texturePath;
-    int width = 0;
-    int height = 0;
-};
+3. **Provide sensible defaults**
+   ```cpp
+   struct Health {
+       int current = 100;
+       int max = 100;
+   };
+   ```
 
-void example(RType::ECS::Registry& registry) {
-    // Create entity
-    auto entity = registry.CreateEntity();
+### System Design
 
-    // Add components
-    registry.AddComponent(entity, RType::ECS::Position{100.0f, 200.0f});
-    registry.AddComponent(entity, RType::ECS::Velocity{1.0f, 0.0f});
-    registry.AddComponent(entity, Health{100, 100});
-    registry.AddComponent(entity, Sprite{"player.png", 32, 32});
+1. **Process entities efficiently**
+   ```cpp
+   // ✅ Good: Get entities with most selective component first
+   auto entities = registry.GetEntitiesWithComponent<RareComponent>();
+   for (Entity e : entities) {
+       if (registry.HasComponent<CommonComponent>(e)) {
+           // Process...
+       }
+   }
+   ```
 
-    // Check component
-    if (registry.HasComponent<Health>(entity)) {
-        auto& health = registry.GetComponent<Health>(entity);
-        health.current -= 10;
-    }
+2. **Don't modify component pools during iteration**
+   ```cpp
+   // ❌ Bad: Modifying while iterating
+   for (Entity e : entities) {
+       registry.DestroyEntity(e);  // Can cause issues
+   }
+   
+   // ✅ Good: Collect first, then modify
+   std::vector<Entity> toDestroy;
+   for (Entity e : entities) {
+       if (shouldDestroy) {
+           toDestroy.push_back(e);
+       }
+   }
+   for (Entity e : toDestroy) {
+       registry.DestroyEntity(e);
+   }
+   ```
 
-    // Remove component
-    registry.RemoveComponent<Sprite>(entity);
+3. **Use const references when possible**
+   ```cpp
+   // ✅ Good
+   const auto& velocity = registry.GetComponent<Velocity>(entity);
+   
+   // Only use non-const when modifying
+   auto& position = registry.GetComponent<Position>(entity);
+   ```
 
-    // Destroy entity
-    registry.DestroyEntity(entity);
-}
-```
+### Performance Tips
 
-### Iterating Over Entities
+1. **Batch component access**: Get all entities once, then iterate
+2. **Cache component references**: Don't call `GetComponent()` multiple times per entity
+3. **Use `HasComponent()` before `GetComponent()`** to avoid exceptions
+4. **Consider component layout**: Group frequently accessed components together
 
-```cpp
-void UpdateMovement(RType::ECS::Registry& registry, float deltaTime) {
-    // Get all entities with Position
-    auto entities = registry.GetEntitiesWithComponent<RType::ECS::Position>();
-
-    for (auto entity : entities) {
-        // Check if also has Velocity
-        if (registry.HasComponent<RType::ECS::Velocity>(entity)) {
-            auto& pos = registry.GetComponent<RType::ECS::Position>(entity);
-            auto& vel = registry.GetComponent<RType::ECS::Velocity>(entity);
-
-            pos.x += vel.dx * deltaTime;
-            pos.y += vel.dy * deltaTime;
-        }
-    }
-}
-```
-
-### Accessing Registry from Module
-
-```cpp
-bool MyModule::Initialize(RType::Core::Engine* engine) {
-    m_engine = engine;
-
-    // Access registry
-    auto& registry = engine->GetRegistry();
-
-    // Create game entities
-    auto player = registry.CreateEntity();
-    registry.AddComponent(player, RType::ECS::Position{400.0f, 300.0f});
-
-    return true;
-}
-```
-
----
-
-## Build System
-
-### Directory Structure
-
-```
-RType/
-├── CMakeLists.txt          # Root CMake
-├── engine/
-│   ├── CMakeLists.txt      # Engine CMake
-│   ├── include/
-│   └── src/
-│       ├── ECS/
-│       │   └── CMakeLists.txt
-│       └── Core/
-│           └── CMakeLists.txt
-└── modules/
-    └── MyRenderer/
-        └── CMakeLists.txt
-```
-
-### Building
-
-```bash
-mkdir build && cd build
-cmake ..
-make
-```
-
-### Output
-
-```
-build/
-├── r-type              # Main executable
-├── lib/
-│   ├── librtype_ecs.a
-│   └── librtype_core.a
-└── plugins/
-    └── libMyRenderer.so
-```
-
----
-
-## Error Handling
-
-### Plugin Loading Errors
-
-When `LoadPlugin()` fails, it returns `nullptr` and logs an error:
+### Error Handling
 
 ```cpp
-IModule* module = engine->LoadPlugin("plugins/libMyPlugin.so");
-if (!module) {
-    // Plugin failed to load - check logs for details
-    // Common causes:
-    // - File not found
-    // - Missing CreateModule/DestroyModule functions
-    // - Unresolved symbols in the plugin
-}
-```
-
-### Module Initialization Errors
-
-When a module's `Initialize()` returns `false`, the engine stops initialization:
-
-```cpp
-if (!engine->Initialize()) {
-    // A module failed to initialize
-    // Check logs for which module failed
-    Logger::Error("Engine initialization failed");
-}
-```
-
-### ECS Errors
-
-| Operation | Error Condition | Behavior |
-|-----------|----------------|----------|
-| `GetComponent<T>(entity)` | Entity doesn't have component | Undefined behavior (check with `HasComponent` first) |
-| `DestroyEntity(entity)` | Entity already destroyed | No-op (safe to call) |
-| `RemoveComponent<T>(entity)` | Entity doesn't have component | No-op (safe to call) |
-
-**Best practice**: Always check before accessing:
-
-```cpp
+// Always check before accessing
 if (registry.HasComponent<Health>(entity)) {
     auto& health = registry.GetComponent<Health>(entity);
-    // Safe to use
+    health.current -= damage;
+}
+
+// Or use try-catch for critical paths
+try {
+    auto& pos = registry.GetComponent<Position>(entity);
+    // Use pos...
+} catch (const std::runtime_error& e) {
+    Logger::Error("Failed to get Position: {}", e.what());
 }
 ```
 
 ---
 
-## API Reference
+## API Reference Summary
 
 ### RType::Core::Engine
 
-```cpp
-class Engine {
-public:
-    explicit Engine(const EngineConfig& config = EngineConfig{});
-    ~Engine();
-
-    // Lifecycle
-    bool Initialize();
-    void Shutdown();
-
-    // Plugin management
-    IModule* LoadPlugin(const std::string& pluginPath);
-    bool UnloadPlugin(const std::string& pluginName);
-
-    // Module management
-    template<typename T> void RegisterModule(std::unique_ptr<T> module);
-    template<typename T> T* GetModule();
-    IModule* GetModuleByName(const std::string& name);
-    std::vector<IModule*> GetAllModules() const;
-
-    // ECS access
-    ECS::Registry& GetRegistry();
-    const ECS::Registry& GetRegistry() const;
-};
-```
-
-### RType::Core::IModule
-
-```cpp
-class IModule {
-public:
-    virtual ~IModule() = default;
-
-    virtual const char* GetName() const = 0;
-    virtual ModulePriority GetPriority() const = 0;
-    virtual bool Initialize(Engine* engine) = 0;
-    virtual void Shutdown() = 0;
-    virtual void Update(float deltaTime) = 0;
-    virtual bool ShouldUpdateInRenderThread() const { return false; }
-    virtual bool IsOverridable() const { return true; }
-};
-```
-
-### RType::Core::Logger
-
-```cpp
-enum class LogLevel {
-    Debug,      // Detailed debug information
-    Info,       // General information
-    Warning,    // Warning messages
-    Error,      // Error messages
-    Critical    // Critical errors (application may crash)
-};
-
-class Logger {
-public:
-    static void SetLogLevel(LogLevel level);
-
-    template<typename... Args>
-    static void Debug(const std::string& format, Args&&... args);
-
-    template<typename... Args>
-    static void Info(const std::string& format, Args&&... args);
-
-    template<typename... Args>
-    static void Warning(const std::string& format, Args&&... args);
-
-    template<typename... Args>
-    static void Error(const std::string& format, Args&&... args);
-
-    template<typename... Args>
-    static void Critical(const std::string& format, Args&&... args);
-};
-
-// Usage: Logger::Info("Player {} has {} health", playerId, health);
-```
+- `Initialize()` → `bool`
+- `Shutdown()` → `void`
+- `LoadPlugin(path)` → `IModule*`
+- `RegisterModule<T>(module)` → `void`
+- `GetModule<T>()` → `T*`
+- `GetRegistry()` → `Registry&`
+- `RegisterSystem<T>(system)` → `void`
+- `UpdateSystems(deltaTime)` → `void`
 
 ### RType::ECS::Registry
 
-```cpp
-class Registry {
-public:
-    Registry();
-    ~Registry() = default;
+- `CreateEntity()` → `Entity`
+- `DestroyEntity(entity)` → `void`
+- `IsEntityAlive(entity)` → `bool`
+- `AddComponent<T>(entity, component)` → `T&`
+- `GetComponent<T>(entity)` → `T&` / `const T&`
+- `HasComponent<T>(entity)` → `bool`
+- `RemoveComponent<T>(entity)` → `void`
+- `GetEntitiesWithComponent<T>()` → `std::vector<Entity>`
+- `GetEntityCount()` → `size_t`
 
-    // Entity management
-    Entity CreateEntity();
-    void DestroyEntity(Entity entity);
-    bool IsEntityAlive(Entity entity) const;
-    size_t GetEntityCount() const;
+### RType::Core::Logger
 
-    // Component management
-    template<typename T> T& AddComponent(Entity entity, T&& component = T{});
-    template<typename T> T& GetComponent(Entity entity);
-    template<typename T> const T& GetComponent(Entity entity) const;
-    template<typename T> bool HasComponent(Entity entity) const;
-    template<typename T> void RemoveComponent(Entity entity);
-    template<typename T> std::vector<Entity> GetEntitiesWithComponent() const;
-};
-```
+- `Logger::Debug(format, ...)`
+- `Logger::Info(format, ...)`
+- `Logger::Warning(format, ...)`
+- `Logger::Error(format, ...)`
+- `Logger::Critical(format, ...)`
 
 ---
 
-## Contributing
+## Additional Resources
 
-When adding new features to the engine:
-
-1. **Update this documentation** with any new classes or methods
-2. **Add diagrams** for complex systems
-3. **Include code examples** for new APIs
-4. **Update the API Reference** section
+- Check `CODING_STYLE.md` for code style guidelines
+- Review existing systems in `libs/engine/include/ECS/*System.hpp` for examples
+- Examine component definitions in `libs/engine/include/ECS/Component.hpp`
 
 ---
-
-*Last updated: November 2024*
