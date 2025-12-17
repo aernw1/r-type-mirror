@@ -111,11 +111,11 @@ namespace RType {
                 border.position.y -= 4.0f;
                 border.size.x += 8.0f;
                 border.size.y += 8.0f;
-                m_renderer->DrawRectangle(border, Renderer::Color(0.02f, 0.08f, 0.18f, 0.85f));
-                m_renderer->DrawRectangle(m_scorePanelRect, Renderer::Color(0.0f, 0.0f, 0.0f, 0.55f));
+                m_renderer->DrawRectangle(border, Renderer::Color(0.0f, 0.0f, 0.0f, 0.90f));
+                m_renderer->DrawRectangle(m_scorePanelRect, Renderer::Color(0.0f, 0.0f, 0.0f, 0.62f));
                 Renderer::Rectangle headerRect = m_scorePanelRect;
                 headerRect.size.y = m_scorePanelHeaderHeight;
-                m_renderer->DrawRectangle(headerRect, Renderer::Color(0.05f, 0.12f, 0.25f, 0.75f));
+                m_renderer->DrawRectangle(headerRect, Renderer::Color(0.0f, 0.0f, 0.0f, 0.72f));
                 Renderer::Rectangle sep = m_scorePanelRect;
                 sep.position.y += m_scorePanelHeaderHeight;
                 sep.size.y = 2.0f;
