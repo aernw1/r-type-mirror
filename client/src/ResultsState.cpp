@@ -42,10 +42,27 @@ namespace RType {
                 m_fontSmall = m_renderer->LoadFont("../assets/fonts/PressStart2P-Regular.ttf", 14);
             }
 
-            m_bgTexture = m_renderer->LoadTexture("assets/backgrounds/1.jpg");
+            m_bgTexture = m_renderer->LoadTexture("assets/backgrounds/game over/preview.png");
             if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
-                m_bgTexture = m_renderer->LoadTexture("../assets/backgrounds/1.jpg");
+                m_bgTexture = m_renderer->LoadTexture("../assets/backgrounds/game over/preview.png");
             }
+            if (m_bgTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_bgSprite = m_renderer->CreateSprite(m_bgTexture, {});
+                m_bgTextureSize = m_renderer->GetTextureSize(m_bgTexture);
+            } else {
+                m_bgTexture = m_renderer->LoadTexture("assets/backgrounds/1.jpg");
+                if (m_bgTexture == Renderer::INVALID_TEXTURE_ID) {
+                    m_bgTexture = m_renderer->LoadTexture("../assets/backgrounds/1.jpg");
+                }
+                if (m_bgTexture != Renderer::INVALID_TEXTURE_ID) {
+                    m_bgSprite = m_renderer->CreateSprite(m_bgTexture, {});
+                    m_bgTextureSize = m_renderer->GetTextureSize(m_bgTexture);
+                }
+            }
+
+            
+            m_enterPressed = m_renderer->IsKeyPressed(Renderer::Key::Enter);
+            m_escapePressed = m_renderer->IsKeyPressed(Renderer::Key::Escape);
 
             std::sort(m_scores.begin(), m_scores.end(),
                       [](const auto& a, const auto& b) { return a.second > b.second; });
@@ -78,7 +95,8 @@ namespace RType {
             }
         }
 
-        void ResultsState::Update(float /*dt*/) {
+        void ResultsState::Update(float dt) {
+            (void)dt;
         }
 
         void ResultsState::Draw() {
@@ -88,16 +106,14 @@ namespace RType {
         }
 
         void ResultsState::createUI() {
-            if (m_bgTexture != Renderer::INVALID_TEXTURE_ID) {
+            if (m_bgSprite != Renderer::INVALID_SPRITE_ID) {
                 m_bgEntity = m_registry.CreateEntity();
                 m_registry.AddComponent<Position>(m_bgEntity, Position{0.0f, 0.0f});
 
-                Renderer::SpriteId spriteId = m_renderer->CreateSprite(m_bgTexture, {});
-                Drawable drawable(spriteId, -10);
+                Drawable drawable(m_bgSprite, -10);
 
-                Renderer::Vector2 texSize = m_renderer->GetTextureSize(m_bgTexture);
-                if (texSize.x > 0 && texSize.y > 0) {
-                    drawable.scale = {1280.0f / texSize.x, 720.0f / texSize.y};
+                if (m_bgTextureSize.x > 0 && m_bgTextureSize.y > 0) {
+                    drawable.scale = {1280.0f / m_bgTextureSize.x, 720.0f / m_bgTextureSize.y};
                 }
 
                 m_registry.AddComponent<Drawable>(m_bgEntity, std::move(drawable));
