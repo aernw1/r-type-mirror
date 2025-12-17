@@ -52,6 +52,9 @@ namespace RType {
             Renderer::FontId m_fontSmall = Renderer::INVALID_FONT_ID;
 
             Renderer::TextureId m_bgTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_bgSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::Vector2 m_bgTextureSize{0.0f, 0.0f};
+
             RType::ECS::Entity m_bgEntity = RType::ECS::NULL_ENTITY;
 
             bool m_enterPressed = false;
