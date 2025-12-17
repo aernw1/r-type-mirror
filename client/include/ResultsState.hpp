@@ -57,6 +57,16 @@ namespace RType {
 
             RType::ECS::Entity m_bgEntity = RType::ECS::NULL_ENTITY;
 
+            bool m_drawScorePanel = false;
+            Renderer::Rectangle m_scorePanelRect{};
+            float m_scorePanelHeaderHeight = 44.0f;
+            float m_scorePanelRowStartY = 0.0f;
+            float m_scorePanelRowStepY = 36.0f;
+            size_t m_scorePanelRowCount = 0;
+            float m_colRankX = 0.0f;
+            float m_colNameX = 0.0f;
+            float m_colScoreX = 0.0f;
+
             bool m_enterPressed = false;
             bool m_escapePressed = false;
         };

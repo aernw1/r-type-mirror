@@ -11,6 +11,8 @@
 
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 
 using namespace RType::ECS;
 
@@ -102,6 +104,38 @@ namespace RType {
         void ResultsState::Draw() {
             m_renderer->Clear({0.05f, 0.05f, 0.12f, 1.0f});
             m_renderingSystem->Update(m_registry, 0.0f);
+
+            if (m_drawScorePanel) {
+                Renderer::Rectangle border = m_scorePanelRect;
+                border.position.x -= 4.0f;
+                border.position.y -= 4.0f;
+                border.size.x += 8.0f;
+                border.size.y += 8.0f;
+                m_renderer->DrawRectangle(border, Renderer::Color(0.02f, 0.08f, 0.18f, 0.85f));
+                m_renderer->DrawRectangle(m_scorePanelRect, Renderer::Color(0.0f, 0.0f, 0.0f, 0.55f));
+                Renderer::Rectangle headerRect = m_scorePanelRect;
+                headerRect.size.y = m_scorePanelHeaderHeight;
+                m_renderer->DrawRectangle(headerRect, Renderer::Color(0.05f, 0.12f, 0.25f, 0.75f));
+                Renderer::Rectangle sep = m_scorePanelRect;
+                sep.position.y += m_scorePanelHeaderHeight;
+                sep.size.y = 2.0f;
+                m_renderer->DrawRectangle(sep, Renderer::Color(0.20f, 0.60f, 1.00f, 0.45f));
+
+                for (size_t i = 0; i < m_scorePanelRowCount; ++i) {
+                    Renderer::Rectangle rowRect;
+                    rowRect.position = Renderer::Vector2(m_scorePanelRect.position.x + 12.0f,
+                                                         m_scorePanelRowStartY + static_cast<float>(i) * m_scorePanelRowStepY - 16.0f);
+                    rowRect.size = Renderer::Vector2(m_scorePanelRect.size.x - 24.0f, m_scorePanelRowStepY);
+                    float a = (i % 2 == 0) ? 0.10f : 0.06f;
+                    m_renderer->DrawRectangle(rowRect, Renderer::Color(0.02f, 0.08f, 0.18f, a));
+                }
+
+                Renderer::Rectangle hintStrip;
+                hintStrip.position = Renderer::Vector2(0.0f, 630.0f);
+                hintStrip.size = Renderer::Vector2(1280.0f, 60.0f);
+                m_renderer->DrawRectangle(hintStrip, Renderer::Color(0.0f, 0.0f, 0.0f, 0.30f));
+            }
+
             m_textSystem->Update(m_registry, 0.0f);
         }
 
@@ -123,41 +157,101 @@ namespace RType {
                 return;
             }
 
+            const float screenW = 1280.0f;
+            const float panelW = 920.0f;
+            const float panelH = 430.0f;
+            const float panelX = (screenW - panelW) * 0.5f;
+            const float panelY = 185.0f;
+
+            m_drawScorePanel = true;
+            m_scorePanelRect.position = Renderer::Vector2(panelX, panelY);
+            m_scorePanelRect.size = Renderer::Vector2(panelW, panelH);
+            m_scorePanelRowStepY = 36.0f;
+            m_scorePanelRowStartY = panelY + m_scorePanelHeaderHeight + 46.0f;
+
+            m_colRankX = panelX + 70.0f;
+            m_colNameX = panelX + 170.0f;
+            m_colScoreX = panelX + panelW - 130.0f;
+
             Entity titleEntity = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(titleEntity, Position{640.0f, 90.0f});
             TextLabel titleLabel("RESULTS", m_fontLarge, 40);
             titleLabel.centered = true;
-            titleLabel.color = {1.0f, 0.08f, 0.58f, 1.0f};
+            titleLabel.color = {0.10f, 0.45f, 1.00f, 1.0f};
             m_registry.AddComponent<TextLabel>(titleEntity, std::move(titleLabel));
 
             Entity subtitleEntity = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(subtitleEntity, Position{640.0f, 140.0f});
             TextLabel subtitle("Final scores", m_fontSmall != Renderer::INVALID_FONT_ID ? m_fontSmall : m_fontMedium, 16);
             subtitle.centered = true;
-            subtitle.color = {0.5f, 0.86f, 1.0f, 0.9f};
+            subtitle.color = {0.20f, 0.60f, 1.00f, 0.95f};
             m_registry.AddComponent<TextLabel>(subtitleEntity, std::move(subtitle));
 
-            float startY = 220.0f;
-            float stepY = 38.0f;
+            // Table header
+            {
+                Entity headerRank = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(headerRank, Position{m_colRankX, panelY + 26.0f});
+                TextLabel hRank("RANK", m_fontSmall != Renderer::INVALID_FONT_ID ? m_fontSmall : m_fontMedium, 14);
+                hRank.centered = true;
+                hRank.color = {0.75f, 0.88f, 1.00f, 0.95f};
+                m_registry.AddComponent<TextLabel>(headerRank, std::move(hRank));
+
+                Entity headerName = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(headerName, Position{m_colNameX, panelY + 26.0f});
+                TextLabel hName("NAME", m_fontSmall != Renderer::INVALID_FONT_ID ? m_fontSmall : m_fontMedium, 14);
+                hName.centered = false;
+                hName.color = {0.75f, 0.88f, 1.00f, 0.95f};
+                m_registry.AddComponent<TextLabel>(headerName, std::move(hName));
+
+                Entity headerScore = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(headerScore, Position{m_colScoreX, panelY + 26.0f});
+                TextLabel hScore("SCORE", m_fontSmall != Renderer::INVALID_FONT_ID ? m_fontSmall : m_fontMedium, 14);
+                hScore.centered = true;
+                hScore.color = {0.75f, 0.88f, 1.00f, 0.95f};
+                m_registry.AddComponent<TextLabel>(headerScore, std::move(hScore));
+            }
+
             size_t maxLines = std::min<size_t>(m_scores.size(), 8);
+            m_scorePanelRowCount = maxLines;
 
             for (size_t i = 0; i < maxLines; i++) {
                 const auto& [name, score] = m_scores[i];
-                Entity line = m_registry.CreateEntity();
-                m_registry.AddComponent<Position>(line, Position{640.0f, startY + static_cast<float>(i) * stepY});
 
-                std::string text = std::to_string(i + 1) + ". " + name + "  " + std::to_string(score);
-                TextLabel label(text, m_fontMedium != Renderer::INVALID_FONT_ID ? m_fontMedium : m_fontLarge, 20);
-                label.centered = true;
-                label.color = {0.9f, 0.95f, 1.0f, 1.0f};
-                m_registry.AddComponent<TextLabel>(line, std::move(label));
+                const float y = m_scorePanelRowStartY + static_cast<float>(i) * m_scorePanelRowStepY;
+
+                Entity rankEnt = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(rankEnt, Position{m_colRankX, y});
+                TextLabel rankLabel(std::to_string(i + 1), m_fontMedium != Renderer::INVALID_FONT_ID ? m_fontMedium : m_fontLarge, 18);
+                rankLabel.centered = true;
+                rankLabel.color = {0.75f, 0.88f, 1.00f, 1.0f};
+                m_registry.AddComponent<TextLabel>(rankEnt, std::move(rankLabel));
+
+                Entity nameEnt = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(nameEnt, Position{m_colNameX, y});
+                std::string displayName = name;
+                if (displayName.size() > 18) {
+                    displayName = displayName.substr(0, 18);
+                }
+                TextLabel nameLabel(displayName, m_fontMedium != Renderer::INVALID_FONT_ID ? m_fontMedium : m_fontLarge, 18);
+                nameLabel.centered = false;
+                nameLabel.color = {0.90f, 0.95f, 1.00f, 1.0f};
+                m_registry.AddComponent<TextLabel>(nameEnt, std::move(nameLabel));
+
+                Entity scoreEnt = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(scoreEnt, Position{m_colScoreX, y});
+                std::ostringstream ss;
+                ss << std::setw(8) << std::setfill('0') << score;
+                TextLabel scoreLabel(ss.str(), m_fontMedium != Renderer::INVALID_FONT_ID ? m_fontMedium : m_fontLarge, 18);
+                scoreLabel.centered = true;
+                scoreLabel.color = {0.75f, 0.88f, 1.00f, 1.0f};
+                m_registry.AddComponent<TextLabel>(scoreEnt, std::move(scoreLabel));
             }
 
             Entity hint = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(hint, Position{640.0f, 650.0f});
             TextLabel hintLabel("Press ENTER to return to lobby", m_fontSmall != Renderer::INVALID_FONT_ID ? m_fontSmall : m_fontMedium, 14);
             hintLabel.centered = true;
-            hintLabel.color = {0.5f, 0.86f, 1.0f, 0.85f};
+            hintLabel.color = {0.20f, 0.60f, 1.00f, 0.95f};
             m_registry.AddComponent<TextLabel>(hint, std::move(hintLabel));
         }
 
