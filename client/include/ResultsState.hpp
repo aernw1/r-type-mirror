@@ -66,8 +66,6 @@ namespace RType {
             float m_colRankX = 0.0f;
             float m_colNameX = 0.0f;
             float m_colScoreX = 0.0f;
-
-            bool m_enterPressed = false;
             bool m_escapePressed = false;
         };
 
