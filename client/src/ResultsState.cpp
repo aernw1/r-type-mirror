@@ -19,10 +19,7 @@ using namespace RType::ECS;
 namespace RType {
     namespace Client {
 
-        ResultsState::ResultsState(GameStateMachine& machine,
-                                   GameContext& context,
-                                   std::vector<std::pair<std::string, uint32_t>> scores)
-            : m_machine(machine), m_context(context), m_scores(std::move(scores)) {
+        ResultsState::ResultsState(GameStateMachine& machine, GameContext& context, std::vector<std::pair<std::string, uint32_t>> scores) : m_machine(machine), m_context(context), m_scores(std::move(scores)) {
             m_renderer = context.renderer;
             m_renderingSystem = std::make_unique<RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<TextRenderingSystem>(m_renderer.get());
@@ -61,12 +58,9 @@ namespace RType {
                     m_bgTextureSize = m_renderer->GetTextureSize(m_bgTexture);
                 }
             }
-
-            
             m_escapePressed = m_renderer->IsKeyPressed(Renderer::Key::Escape);
 
-            std::sort(m_scores.begin(), m_scores.end(),
-                      [](const auto& a, const auto& b) { return a.second > b.second; });
+            std::sort(m_scores.begin(), m_scores.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
 
             createUI();
         }
@@ -115,8 +109,7 @@ namespace RType {
 
                 for (size_t i = 0; i < m_scorePanelRowCount; ++i) {
                     Renderer::Rectangle rowRect;
-                    rowRect.position = Renderer::Vector2(m_scorePanelRect.position.x + 12.0f,
-                                                         m_scorePanelRowStartY + static_cast<float>(i) * m_scorePanelRowStepY - 16.0f);
+                    rowRect.position = Renderer::Vector2(m_scorePanelRect.position.x + 12.0f, m_scorePanelRowStartY + static_cast<float>(i) * m_scorePanelRowStepY - 16.0f);
                     rowRect.size = Renderer::Vector2(m_scorePanelRect.size.x - 24.0f, m_scorePanelRowStepY);
                     float a = (i % 2 == 0) ? 0.10f : 0.06f;
                     m_renderer->DrawRectangle(rowRect, Renderer::Color(0.02f, 0.08f, 0.18f, a));
@@ -179,7 +172,6 @@ namespace RType {
             subtitle.color = {0.20f, 0.60f, 1.00f, 0.95f};
             m_registry.AddComponent<TextLabel>(subtitleEntity, std::move(subtitle));
 
-            // Table header
             {
                 Entity headerRank = m_registry.CreateEntity();
                 m_registry.AddComponent<Position>(headerRank, Position{m_colRankX, panelY + 26.0f});
