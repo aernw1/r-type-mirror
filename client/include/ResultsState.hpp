@@ -52,9 +52,20 @@ namespace RType {
             Renderer::FontId m_fontSmall = Renderer::INVALID_FONT_ID;
 
             Renderer::TextureId m_bgTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_bgSprite = Renderer::INVALID_SPRITE_ID;
+            Renderer::Vector2 m_bgTextureSize{0.0f, 0.0f};
+
             RType::ECS::Entity m_bgEntity = RType::ECS::NULL_ENTITY;
 
-            bool m_enterPressed = false;
+            bool m_drawScorePanel = false;
+            Renderer::Rectangle m_scorePanelRect{};
+            float m_scorePanelHeaderHeight = 44.0f;
+            float m_scorePanelRowStartY = 0.0f;
+            float m_scorePanelRowStepY = 36.0f;
+            size_t m_scorePanelRowCount = 0;
+            float m_colRankX = 0.0f;
+            float m_colNameX = 0.0f;
+            float m_colScoreX = 0.0f;
             bool m_escapePressed = false;
         };
 

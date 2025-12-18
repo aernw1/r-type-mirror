@@ -148,6 +148,7 @@ namespace network {
     void LobbyClient::handlePlayerJoin(Deserializer& d) {
         PlayerInfo p;
         p.number = d.readU8();
+        p.hash = d.readU64();
         std::string name = d.readString(PLAYER_NAME_SIZE);
         std::strncpy(p.name, name.c_str(), PLAYER_NAME_SIZE - 1);
 
