@@ -1,6 +1,9 @@
 #include "editor/EditorUIManager.hpp"
+#include "editor/EditorConstants.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include <sstream>
+
+using namespace RType::Client::EditorConstants;
 
 namespace RType {
     namespace Client {
@@ -22,21 +25,21 @@ namespace RType {
 
         void EditorUIManager::InitializePalette() {
             m_entries.clear();
-            float cursorY = 80.0f;
+            float cursorY = UI::PALETTE_START_Y;
             m_activeSelection = EditorPaletteSelection{};
 
             createCategoryLabel("TOOLS", cursorY);
-            cursorY += m_buttonHeight;
+            cursorY += UI::PALETTE_BUTTON_HEIGHT;
             PaletteEntry selectEntry;
             selectEntry.label = "SELECT";
             selectEntry.mode = EditorMode::SELECT;
             selectEntry.entityType = EditorEntityType::OBSTACLE;
             createPaletteButton(selectEntry, cursorY);
-            cursorY += m_buttonHeight * 1.5f;
+            cursorY += UI::PALETTE_BUTTON_HEIGHT * 1.5f;
 
             auto createSection = [&](const std::string& label, EditorEntityType type, EditorMode mode) {
                 createCategoryLabel(label, cursorY);
-                cursorY += m_buttonHeight;
+                cursorY += UI::PALETTE_BUTTON_HEIGHT;
                 const auto& resources = m_assets.GetResources(type);
                 for (const auto* resource : resources) {
                     PaletteEntry entry;
@@ -46,9 +49,9 @@ namespace RType {
                     entry.subtype = resource->definition.id;
                     entry.resource = resource;
                     createPaletteButton(entry, cursorY);
-                    cursorY += m_buttonHeight;
+                    cursorY += UI::PALETTE_BUTTON_HEIGHT;
                 }
-                cursorY += m_buttonHeight * 0.5f;
+                cursorY += UI::PALETTE_BUTTON_HEIGHT * 0.5f;
             };
 
             createSection("ENEMIES", EditorEntityType::ENEMY, EditorMode::PLACE_ENEMY);
@@ -64,32 +67,32 @@ namespace RType {
         void EditorUIManager::InitializePropertiesPanel() {
             m_propertyFields.clear();
 
-            float headerY = 90.0f;
+            float headerY = UI::PROPERTY_PANEL_START_Y;
             m_propertiesHeader = m_registry.CreateEntity();
             m_trackedEntities.push_back(m_propertiesHeader);
-            m_registry.AddComponent(m_propertiesHeader, ECS::Position{m_propertyPanelX, headerY});
+            m_registry.AddComponent(m_propertiesHeader, ECS::Position{UI::PROPERTY_PANEL_X, headerY});
 
             ECS::TextLabel headerLabel("PROPERTIES", m_fontMedium, 18);
             headerLabel.centered = false;
-            headerLabel.color = {0.4f, 0.86f, 0.9f, 1.0f};
+            headerLabel.color = Colors::UI_HEADER;
             m_registry.AddComponent(m_propertiesHeader, std::move(headerLabel));
 
             m_selectedInfoEntity = m_registry.CreateEntity();
             m_trackedEntities.push_back(m_selectedInfoEntity);
-            m_registry.AddComponent(m_selectedInfoEntity, ECS::Position{m_propertyPanelX, headerY + 32.0f});
+            m_registry.AddComponent(m_selectedInfoEntity, ECS::Position{UI::PROPERTY_PANEL_X, headerY + 32.0f});
 
             ECS::TextLabel infoLabel("No entity selected", m_fontSmall, 14);
             infoLabel.centered = false;
-            infoLabel.color = {0.75f, 0.75f, 0.8f, 1.0f};
+            infoLabel.color = Colors::UI_TEXT;
             m_registry.AddComponent(m_selectedInfoEntity, std::move(infoLabel));
 
             m_propertyHintEntity = m_registry.CreateEntity();
             m_trackedEntities.push_back(m_propertyHintEntity);
-            m_registry.AddComponent(m_propertyHintEntity, ECS::Position{m_propertyPanelX, headerY + 240.0f});
+            m_registry.AddComponent(m_propertyHintEntity, ECS::Position{UI::PROPERTY_PANEL_X, headerY + 240.0f});
 
             ECS::TextLabel hintLabel("Tab cycle | ↑↓ adjust | 0-9 set | Backspace delete", m_fontSmall, 11);
             hintLabel.centered = false;
-            hintLabel.color = {0.5f, 0.86f, 1.0f, 0.7f};
+            hintLabel.color = Colors::UI_HINT;
             m_registry.AddComponent(m_propertyHintEntity, std::move(hintLabel));
 
             const std::vector<std::pair<std::string, EditableProperty>> propertyRows = {
@@ -108,24 +111,24 @@ namespace RType {
 
                 field.nameEntity = m_registry.CreateEntity();
                 m_trackedEntities.push_back(field.nameEntity);
-                m_registry.AddComponent(field.nameEntity, ECS::Position{m_propertyPanelX, rowY});
+                m_registry.AddComponent(field.nameEntity, ECS::Position{UI::PROPERTY_PANEL_X, rowY});
 
                 ECS::TextLabel nameLabel(label, m_fontSmall, 13);
                 nameLabel.centered = false;
-                nameLabel.color = {0.75f, 0.75f, 0.8f, 1.0f};
+                nameLabel.color = Colors::UI_TEXT;
                 m_registry.AddComponent(field.nameEntity, std::move(nameLabel));
 
                 field.valueEntity = m_registry.CreateEntity();
                 m_trackedEntities.push_back(field.valueEntity);
-                m_registry.AddComponent(field.valueEntity, ECS::Position{m_propertyPanelX + 140.0f, rowY});
+                m_registry.AddComponent(field.valueEntity, ECS::Position{UI::PROPERTY_PANEL_X + UI::PROPERTY_VALUE_OFFSET_X, rowY});
 
                 ECS::TextLabel valueLabel("--", m_fontSmall, 13);
                 valueLabel.centered = false;
-                valueLabel.color = {0.5f, 0.5f, 0.5f, 0.7f};
+                valueLabel.color = Colors::UI_TEXT;
                 m_registry.AddComponent(field.valueEntity, std::move(valueLabel));
 
                 m_propertyFields.push_back(field);
-                rowY += 28.0f;
+                rowY += UI::PROPERTY_ROW_HEIGHT;
             }
         }
 
@@ -239,22 +242,22 @@ namespace RType {
         }
 
         void EditorUIManager::createCategoryLabel(const std::string& label, float y) {
-            float textX = m_panelLeft + 10.0f;
+            float textX = UI::PALETTE_PANEL_LEFT + 10.0f;
             ECS::Entity entity = m_registry.CreateEntity();
             m_trackedEntities.push_back(entity);
             m_registry.AddComponent(entity, ECS::Position{textX, y});
 
             ECS::TextLabel textLabel(label, m_fontSmall, 12);
             textLabel.centered = false;
-            textLabel.color = {0.4f, 0.86f, 0.9f, 1.0f};
+            textLabel.color = Colors::UI_HEADER;
             m_registry.AddComponent(entity, std::move(textLabel));
         }
 
         void EditorUIManager::createPaletteButton(PaletteEntry entry, float y) {
-            entry.bounds.position = {m_panelLeft, y - (m_buttonHeight / 2.0f)};
-            entry.bounds.size = {m_panelWidth, m_buttonHeight};
+            entry.bounds.position = {UI::PALETTE_PANEL_LEFT, y - (UI::PALETTE_BUTTON_HEIGHT / 2.0f)};
+            entry.bounds.size = {UI::PALETTE_PANEL_WIDTH, UI::PALETTE_BUTTON_HEIGHT};
 
-            float textX = m_panelLeft + 10.0f;
+            float textX = UI::PALETTE_PANEL_LEFT + 10.0f;
             ECS::Entity entity = m_registry.CreateEntity();
             m_trackedEntities.push_back(entity);
             m_registry.AddComponent(entity, ECS::Position{textX, y});

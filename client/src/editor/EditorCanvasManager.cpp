@@ -6,8 +6,11 @@
 */
 
 #include "editor/EditorCanvasManager.hpp"
+#include "editor/EditorConstants.hpp"
 #include <cmath>
 #include <algorithm>
+
+using namespace RType::Client::EditorConstants;
 
 namespace RType {
     namespace Client {
@@ -18,8 +21,8 @@ namespace RType {
         }
 
         void EditorCanvasManager::HandleCameraInput() {
-            const float panSpeed = 500.0f;
-            const float zoomSpeed = 0.1f;
+            const float panSpeed = Camera::PAN_SPEED;
+            const float zoomSpeed = Camera::ZOOM_SPEED;
 
             if (m_renderer->IsKeyPressed(Renderer::Key::Up) && !m_upKeyPressed) {
                 m_upKeyPressed = true;

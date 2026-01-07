@@ -53,9 +53,6 @@ namespace RType {
             std::unique_ptr<EditorAssetLibrary> m_assetLibrary;
             std::unique_ptr<EditorUIManager> m_uiManager;
             std::unique_ptr<EditorEntityManager> m_entityManager;
-            // std::unique_ptr<EditorUIManager> m_uiManager;
-            // std::unique_ptr<EditorEntityManager> m_entityManager;
-            // std::unique_ptr<EditorFileManager> m_fileManager;
 
             // Fonts
             Renderer::FontId m_fontSmall = Renderer::INVALID_FONT_ID;
@@ -63,7 +60,7 @@ namespace RType {
 
             // UI entities for cleanup
             std::vector<RType::ECS::Entity> m_entities;
-            RType::ECS::Entity m_statusBarEntity = RType::ECS::NULL_ENTITY;
+            std::vector<RType::ECS::Entity> m_statusBarEntities;
 
             // Input state
             bool m_escapeKeyPressed = false;

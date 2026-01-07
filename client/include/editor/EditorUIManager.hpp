@@ -68,12 +68,6 @@ namespace RType {
             ECS::Entity m_propertiesHeader = ECS::NULL_ENTITY;
             ECS::Entity m_selectedInfoEntity = ECS::NULL_ENTITY;
             ECS::Entity m_propertyHintEntity = ECS::NULL_ENTITY;
-
-            float m_panelLeft = 40.0f;
-            float m_panelWidth = 220.0f;
-            float m_buttonHeight = 22.0f;
-            float m_propertyPanelX = 980.0f;
-            float m_propertyPanelWidth = 260.0f;
         };
 
     }

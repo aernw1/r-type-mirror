@@ -9,6 +9,7 @@
 #include "editor/EditorCanvasManager.hpp"
 #include "editor/EditorUIManager.hpp"
 #include "editor/EditorEntityManager.hpp"
+#include "editor/EditorConstants.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "Core/Logger.hpp"
@@ -16,6 +17,8 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+
+using namespace RType::Client::EditorConstants;
 
 namespace RType {
     namespace Client {
@@ -45,16 +48,21 @@ namespace RType {
                 m_fontMedium = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 16);
             }
 
-            m_statusBarEntity = m_registry.CreateEntity();
-            m_entities.push_back(m_statusBarEntity);
-            m_registry.AddComponent(m_statusBarEntity, ECS::Position{10.0f, 10.0f});
+            for (int i = 0; i < 3; ++i) {
+                ECS::Entity statusEntity = m_registry.CreateEntity();
+                m_entities.push_back(statusEntity);
+                m_statusBarEntities.push_back(statusEntity);
 
-            ECS::TextLabel statusLabel;
-            statusLabel.text = "camera: (0, 0)\nzoom: 1.0x\nmouse: (0, 0)\n";
-            statusLabel.fontId = m_fontSmall;
-            statusLabel.characterSize = 10;
-            statusLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
-            m_registry.AddComponent(m_statusBarEntity, std::move(statusLabel));
+                float yPos = UI::STATUS_BAR_Y + (i * UI::STATUS_BAR_LINE_HEIGHT);
+                m_registry.AddComponent(statusEntity, ECS::Position{UI::STATUS_BAR_X, yPos});
+
+                ECS::TextLabel statusLabel;
+                statusLabel.text = "";
+                statusLabel.fontId = m_fontSmall;
+                statusLabel.characterSize = 10;
+                statusLabel.color = Colors::UI_TEXT;
+                m_registry.AddComponent(statusEntity, std::move(statusLabel));
+            }
 
             m_canvasManager = std::make_unique<EditorCanvasManager>(m_renderer.get());
             m_assetLibrary = std::make_unique<EditorAssetLibrary>(m_renderer.get());
@@ -151,25 +159,40 @@ namespace RType {
         void EditorState::Update(float dt) {
             (void)dt;
 
-            if (m_canvasManager && m_registry.IsEntityAlive(m_statusBarEntity)) {
-                const auto& camera = m_canvasManager->GetCamera();
-                Math::Vector2 mouseScreen = m_renderer->GetMousePosition();
-                Math::Vector2 mouseWorld = m_canvasManager->ScreenToWorld(mouseScreen);
-                m_lastMouseWorld = mouseWorld;
+            if (!m_canvasManager || m_statusBarEntities.size() < 3) {
+                return;
+            }
 
+            const auto& camera = m_canvasManager->GetCamera();
+            Math::Vector2 mouseScreen = m_renderer->GetMousePosition();
+            Math::Vector2 mouseWorld = m_canvasManager->ScreenToWorld(mouseScreen);
+            m_lastMouseWorld = mouseWorld;
+
+            auto formatLine = [](int index, const auto&... args) {
                 std::ostringstream oss;
                 oss << std::fixed << std::setprecision(1);
-                oss << "camera: (" << camera.x << ", " << camera.y << ")\n";
-                oss << "zoom: " << camera.zoom << "x\n";
-                oss << "mouse: (" << mouseWorld.x << ", " << mouseWorld.y << ")\n";
+                (oss << ... << args);
+                return oss.str();
+            };
 
-                auto& statusLabel = m_registry.GetComponent<ECS::TextLabel>(m_statusBarEntity);
-                statusLabel.text = oss.str();
+            if (m_registry.IsEntityAlive(m_statusBarEntities[0])) {
+                auto& label0 = m_registry.GetComponent<ECS::TextLabel>(m_statusBarEntities[0]);
+                label0.text = formatLine(0, "camera: (", camera.x, ", ", camera.y, ")");
+            }
+
+            if (m_registry.IsEntityAlive(m_statusBarEntities[1])) {
+                auto& label1 = m_registry.GetComponent<ECS::TextLabel>(m_statusBarEntities[1]);
+                label1.text = formatLine(1, "zoom: ", camera.zoom, "x");
+            }
+
+            if (m_registry.IsEntityAlive(m_statusBarEntities[2])) {
+                auto& label2 = m_registry.GetComponent<ECS::TextLabel>(m_statusBarEntities[2]);
+                label2.text = formatLine(2, "mouse: (", mouseWorld.x, ", ", mouseWorld.y, ")");
             }
         }
 
         void EditorState::Draw() {
-            m_renderer->Clear({0.1f, 0.1f, 0.15f, 1.0f});
+            m_renderer->Clear(Colors::BACKGROUND);
 
             if (m_canvasManager) {
                 m_canvasManager->ApplyCamera();
@@ -307,10 +330,10 @@ namespace RType {
                 entity->y = value;
                 break;
             case EditableProperty::SCALE_WIDTH:
-                entity->scaleWidth = std::max(10.0f, value);
+                entity->scaleWidth = std::max(PropertySteps::MIN_SCALE, value);
                 break;
             case EditableProperty::SCALE_HEIGHT:
-                entity->scaleHeight = std::max(10.0f, value);
+                entity->scaleHeight = std::max(PropertySteps::MIN_SCALE, value);
                 break;
             case EditableProperty::LAYER:
                 entity->layer = static_cast<int>(value);
@@ -362,18 +385,18 @@ namespace RType {
             switch (property) {
             case EditableProperty::POSITION_X:
             case EditableProperty::POSITION_Y:
-                return 25.0f;
+                return PropertySteps::POSITION_STEP;
             case EditableProperty::SCALE_WIDTH:
             case EditableProperty::SCALE_HEIGHT:
-                return 10.0f;
+                return PropertySteps::SCALE_STEP;
             case EditableProperty::LAYER:
-                return 1.0f;
+                return PropertySteps::LAYER_STEP;
             case EditableProperty::SCROLL_SPEED:
-                return 5.0f;
+                return PropertySteps::SCROLL_SPEED_STEP;
             case EditableProperty::COUNT:
                 break;
             }
-            return 1.0f;
+            return PropertySteps::LAYER_STEP;
         }
 
         void EditorState::updatePropertyPanel() {
@@ -389,7 +412,7 @@ namespace RType {
         }
 
         void EditorState::handleNumberInput(Renderer::Key key) {
-            if (m_propertyInputBuffer.size() >= 8) {
+            if (m_propertyInputBuffer.size() >= Input::MAX_INPUT_BUFFER_SIZE) {
                 return;
             }
 

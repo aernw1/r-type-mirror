@@ -72,7 +72,6 @@ namespace RType {
             float y = 360.0f;
             float zoom = 1.0f;
 
-            // Camera bounds
             float minX = -1000.0f;
             float maxX = 15000.0f;
             float minY = -500.0f;
