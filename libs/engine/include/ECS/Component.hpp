@@ -110,6 +110,10 @@ namespace RType {
                 : type(enemyType), id(enemyId) {}
         };
 
+        struct Boss : public IComponent {
+            Boss() = default;
+        };
+
         struct Health : public IComponent {
             int current = 100;
             int max = 100;

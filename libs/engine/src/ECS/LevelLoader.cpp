@@ -141,6 +141,27 @@ namespace RType {
                     level.playerSpawns.push_back({100.0f, 680.0f});
                 }
 
+                if (j.contains("boss")) {
+                    const auto& bossJson = j["boss"];
+                    BossDef boss;
+                    boss.texture = bossJson.value("texture", "");
+
+                    if (bossJson.contains("position")) {
+                        boss.x = bossJson["position"].value("x", 0.0f);
+                        boss.y = bossJson["position"].value("y", 0.0f);
+                    } else {
+                        boss.x = bossJson.value("x", 0.0f);
+                        boss.y = bossJson.value("y", 0.0f);
+                    }
+
+                    boss.width = bossJson.value("width", 200.0f);
+                    boss.height = bossJson.value("height", 200.0f);
+                    boss.health = bossJson.value("health", 1000);
+                    boss.scrollSpeed = bossJson.value("scrollSpeed", -300.0f);
+
+                    level.boss = boss;
+                }
+
                 Core::Logger::Info("Loaded level '{}' with {} obstacles, {} enemies, {} player spawns",
                                    level.name.empty() ? "unnamed" : level.name,
                                    level.obstacles.size(),
@@ -226,11 +247,13 @@ namespace RType {
 
             CreateServerObstacles(registry, level.obstacles, entities, obstacleIdCounter);
             CreateServerEnemies(registry, level.enemies, entities);
+            CreateServerBoss(registry, level.boss, entities);
 
-            Core::Logger::Info("Created server entities: {} obstacle visuals, {} obstacle colliders, {} enemies",
+            Core::Logger::Info("Created server entities: {} obstacle visuals, {} obstacle colliders, {} enemies, boss: {}",
                                entities.obstacleVisuals.size(),
                                entities.obstacleColliders.size(),
-                               entities.enemies.size());
+                               entities.enemies.size(),
+                               entities.boss != NULL_ENTITY ? "yes" : "no");
 
             return entities;
         }
@@ -390,6 +413,39 @@ namespace RType {
                 Entity enemy = EnemyFactory::CreateEnemy(registry, type, en.x, en.y, nullptr);
                 entities.enemies.push_back(enemy);
             }
+        }
+
+        void LevelLoader::CreateServerBoss(
+            Registry& registry,
+            const std::optional<BossDef>& bossOpt,
+            CreatedEntities& entities) {
+            if (!bossOpt.has_value()) {
+                return;
+            }
+
+            const BossDef& boss = bossOpt.value();
+
+            Entity bossEntity = registry.CreateEntity();
+
+            registry.AddComponent<Boss>(bossEntity, Boss{});
+
+            registry.AddComponent<Position>(bossEntity, Position{boss.x, boss.y});
+
+            registry.AddComponent<Velocity>(bossEntity, Velocity{0.0f, 0.0f});
+
+            registry.AddComponent<Health>(bossEntity, Health{boss.health});
+
+            registry.AddComponent<BoxCollider>(bossEntity, BoxCollider{boss.width, boss.height});
+
+            registry.AddComponent<Scrollable>(bossEntity, Scrollable{boss.scrollSpeed});
+
+            registry.AddComponent<CollisionLayer>(bossEntity,
+                CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
+
+            entities.boss = bossEntity;
+
+            Core::Logger::Info("Created boss entity at position ({}, {}) with {} health",
+                boss.x, boss.y, boss.health);
         }
 
     }
