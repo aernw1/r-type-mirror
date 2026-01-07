@@ -9,6 +9,8 @@
 
 #include "GameStateMachine.hpp"
 #include "editor/EditorTypes.hpp"
+#include "editor/EditorUIManager.hpp"
+#include "editor/EditorEntityManager.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
@@ -46,6 +48,8 @@ namespace RType {
             std::unique_ptr<RType::ECS::TextRenderingSystem> m_textSystem;
 
             std::unique_ptr<EditorCanvasManager> m_canvasManager;
+            std::unique_ptr<EditorUIManager> m_uiManager;
+            std::unique_ptr<EditorEntityManager> m_entityManager;
             // std::unique_ptr<EditorUIManager> m_uiManager;
             // std::unique_ptr<EditorEntityManager> m_entityManager;
             // std::unique_ptr<EditorFileManager> m_fileManager;
@@ -60,9 +64,11 @@ namespace RType {
 
             // Input state
             bool m_escapeKeyPressed = false;
+            bool m_leftMousePressed = false;
 
             // Editor state
-            EditorMode m_mode = EditorMode::SELECT;
+            EditorPaletteSelection m_selection;
+            Math::Vector2 m_lastMouseWorld{0.0f, 0.0f};
             std::string m_currentLevelPath;
             bool m_hasUnsavedChanges = false;
         };

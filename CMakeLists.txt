@@ -48,6 +48,8 @@ add_executable(r-type_client
     client/src/ResultsState.cpp
     client/src/EditorState.cpp
     client/src/editor/EditorCanvasManager.cpp
+    client/src/editor/EditorUIManager.cpp
+    client/src/editor/EditorEntityManager.cpp
 )
 target_include_directories(r-type_client PRIVATE
     ${CMAKE_SOURCE_DIR}/client/include

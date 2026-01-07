@@ -77,5 +77,11 @@ namespace RType {
             Math::Color gridColor{0.3f, 0.3f, 0.3f, 0.5f};
         };
 
+        struct EditorPaletteSelection {
+            EditorMode mode = EditorMode::SELECT;
+            EditorEntityType entityType = EditorEntityType::OBSTACLE;
+            std::string subtype;
+        };
+
     }
 }

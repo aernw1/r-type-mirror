@@ -7,6 +7,8 @@
 
 #include "EditorState.hpp"
 #include "editor/EditorCanvasManager.hpp"
+#include "editor/EditorUIManager.hpp"
+#include "editor/EditorEntityManager.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "Core/Logger.hpp"
@@ -54,6 +56,10 @@ namespace RType {
             m_registry.AddComponent(m_statusBarEntity, std::move(statusLabel));
 
             m_canvasManager = std::make_unique<EditorCanvasManager>(m_renderer.get());
+            m_entityManager = std::make_unique<EditorEntityManager>(m_renderer.get());
+            m_uiManager = std::make_unique<EditorUIManager>(m_renderer.get(), m_registry, m_entities, m_fontSmall, m_fontMedium);
+            m_uiManager->InitializePalette();
+            m_selection = m_uiManager->GetActiveSelection();
 
             Core::Logger::Info("[EditorState] Level editor initialized");
         }
@@ -94,6 +100,39 @@ namespace RType {
             if (m_canvasManager) {
                 m_canvasManager->HandleCameraInput();
             }
+
+            Math::Vector2 mouseScreen = m_renderer->GetMousePosition();
+            if (m_uiManager) {
+                m_uiManager->UpdateHover(mouseScreen);
+            }
+
+            bool isLeftPressed = m_renderer->IsMouseButtonPressed(Renderer::IRenderer::MouseButton::Left);
+            if (isLeftPressed && !m_leftMousePressed) {
+                bool consumedByUI = false;
+
+                if (m_uiManager) {
+                    auto selection = m_uiManager->HandleClick(mouseScreen);
+                    if (selection.has_value()) {
+                        m_selection = selection.value();
+                        consumedByUI = true;
+                    }
+                }
+
+                if (!consumedByUI && m_canvasManager && m_entityManager) {
+                    if (m_selection.mode != EditorMode::SELECT) {
+                        Math::Vector2 mouseWorld = m_canvasManager->ScreenToWorld(mouseScreen);
+                        m_entityManager->PlaceEntity(m_selection.entityType, m_selection.subtype, mouseWorld);
+                        m_hasUnsavedChanges = true;
+
+                        m_selection.mode = EditorMode::SELECT;
+                        m_selection.subtype.clear();
+                        if (m_uiManager) {
+                            m_uiManager->SetActiveSelection(m_selection);
+                        }
+                    }
+                }
+            }
+            m_leftMousePressed = isLeftPressed;
         }
 
         void EditorState::Update(float dt) {
@@ -103,6 +142,7 @@ namespace RType {
                 const auto& camera = m_canvasManager->GetCamera();
                 Math::Vector2 mouseScreen = m_renderer->GetMousePosition();
                 Math::Vector2 mouseWorld = m_canvasManager->ScreenToWorld(mouseScreen);
+                m_lastMouseWorld = mouseWorld;
 
                 std::ostringstream oss;
                 oss << std::fixed << std::setprecision(1);
@@ -121,6 +161,13 @@ namespace RType {
             if (m_canvasManager) {
                 m_canvasManager->ApplyCamera();
                 m_canvasManager->DrawGrid();
+                if (m_entityManager) {
+                    m_entityManager->DrawEntities();
+                    m_entityManager->DrawPlacementPreview(m_selection.mode,
+                                                          m_selection.entityType,
+                                                          m_selection.subtype,
+                                                          m_lastMouseWorld);
+                }
 
                 m_renderer->ResetCamera();
             }
