@@ -160,6 +160,29 @@ namespace RType {
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         std::cout << "[GameState] Created ENEMY entity " << entityState.entityId << " type " << static_cast<int>(enemyType) << std::endl;
+                    } else if (type == network::EntityType::BOSS) {
+                        Renderer::SpriteId bossSprite = Renderer::INVALID_SPRITE_ID;
+                        auto spriteIt = m_levelAssets.sprites.find("boss_dragon");
+                        if (spriteIt != m_levelAssets.sprites.end()) {
+                            bossSprite = spriteIt->second;
+                        }
+
+                        if (bossSprite == Renderer::INVALID_SPRITE_ID) {
+                            Core::Logger::Warning("[GameState] Missing boss sprite (entity {})", entityState.entityId);
+                            continue;
+                        }
+
+                        auto newEntity = m_registry.CreateEntity();
+                        m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                        m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+                        m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 1000});
+
+                        auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(bossSprite, 5));
+                        drawable.scale = {3.0f, 3.0f};
+                        drawable.origin = Math::Vector2(0.0f, 0.0f);
+
+                        m_networkEntityMap[entityState.entityId] = newEntity;
+                        std::cout << "[GameState] Created BOSS entity " << entityState.entityId << std::endl;
                     } else if (type == network::EntityType::BULLET) {
                         auto newEntity = m_registry.CreateEntity();
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
