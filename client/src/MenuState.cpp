@@ -8,6 +8,7 @@
 #include "MenuState.hpp"
 #include "LobbyState.hpp"
 #include "EditorState.hpp"
+#include "editor/EditorCanvasManager.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include <iostream>

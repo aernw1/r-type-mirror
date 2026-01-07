@@ -45,8 +45,7 @@ namespace RType {
             std::unique_ptr<RType::ECS::RenderingSystem> m_renderingSystem;
             std::unique_ptr<RType::ECS::TextRenderingSystem> m_textSystem;
 
-            // Editor subsystems (to be implemented in later phases)
-            // std::unique_ptr<EditorCanvasManager> m_canvasManager;
+            std::unique_ptr<EditorCanvasManager> m_canvasManager;
             // std::unique_ptr<EditorUIManager> m_uiManager;
             // std::unique_ptr<EditorEntityManager> m_entityManager;
             // std::unique_ptr<EditorFileManager> m_fileManager;
@@ -57,6 +56,7 @@ namespace RType {
 
             // UI entities for cleanup
             std::vector<RType::ECS::Entity> m_entities;
+            RType::ECS::Entity m_statusBarEntity = RType::ECS::NULL_ENTITY;
 
             // Input state
             bool m_escapeKeyPressed = false;
