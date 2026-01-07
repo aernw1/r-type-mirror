@@ -2,36 +2,41 @@
 ** EPITECH PROJECT, 2025
 ** R-Type
 ** File description:
-** MenuState
+** EditorState
 */
 
 #pragma once
 
 #include "GameStateMachine.hpp"
+#include "editor/EditorTypes.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
 #include "Renderer/IRenderer.hpp"
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace RType {
     namespace Client {
 
-        class MenuState : public IState {
+        class EditorCanvasManager;
+        class EditorUIManager;
+        class EditorEntityManager;
+        class EditorFileManager;
+
+        class EditorState : public IState {
         public:
-            MenuState(GameStateMachine& machine, GameContext& context);
-            ~MenuState() override = default;
+            EditorState(GameStateMachine& machine, GameContext& context);
+            ~EditorState() override = default;
 
             void Init() override;
             void Cleanup() override;
             void HandleInput() override;
             void Update(float dt) override;
             void Draw() override;
-        private:
-            void createUI();
-            void updateAnimations(float dt);
 
+        private:
             GameStateMachine& m_machine;
             GameContext& m_context;
 
@@ -40,23 +45,26 @@ namespace RType {
             std::unique_ptr<RType::ECS::RenderingSystem> m_renderingSystem;
             std::unique_ptr<RType::ECS::TextRenderingSystem> m_textSystem;
 
-            Renderer::FontId m_fontLarge = Renderer::INVALID_FONT_ID;
-            Renderer::FontId m_fontMedium = Renderer::INVALID_FONT_ID;
+            // Editor subsystems (to be implemented in later phases)
+            // std::unique_ptr<EditorCanvasManager> m_canvasManager;
+            // std::unique_ptr<EditorUIManager> m_uiManager;
+            // std::unique_ptr<EditorEntityManager> m_entityManager;
+            // std::unique_ptr<EditorFileManager> m_fileManager;
+
+            // Fonts
             Renderer::FontId m_fontSmall = Renderer::INVALID_FONT_ID;
-            Renderer::TextureId m_bgTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::FontId m_fontMedium = Renderer::INVALID_FONT_ID;
 
+            // UI entities for cleanup
             std::vector<RType::ECS::Entity> m_entities;
-            RType::ECS::Entity m_titleEntity = RType::ECS::NULL_ENTITY;
-            RType::ECS::Entity m_playTextEntity = RType::ECS::NULL_ENTITY;
-            RType::ECS::Entity m_editorTextEntity = RType::ECS::NULL_ENTITY;
-            RType::ECS::Entity m_subtitleEntity = RType::ECS::NULL_ENTITY;
 
-            bool m_playKeyPressed = false;
-            bool m_eKeyPressed = false;
+            // Input state
             bool m_escapeKeyPressed = false;
 
-            float m_animTime = 0.0f;
-            float m_titlePulse = 0.0f;
+            // Editor state
+            EditorMode m_mode = EditorMode::SELECT;
+            std::string m_currentLevelPath;
+            bool m_hasUnsavedChanges = false;
         };
 
     }

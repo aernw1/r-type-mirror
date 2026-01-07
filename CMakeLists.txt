@@ -46,6 +46,7 @@ add_executable(r-type_client
     client/src/LobbyState.cpp
     client/src/GameState.cpp
     client/src/ResultsState.cpp
+    client/src/EditorState.cpp
 )
 target_include_directories(r-type_client PRIVATE
     ${CMAKE_SOURCE_DIR}/client/include
