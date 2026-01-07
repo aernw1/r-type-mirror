@@ -7,6 +7,7 @@
 
 #include "MenuState.hpp"
 #include "LobbyState.hpp"
+#include "EditorState.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include <iostream>
@@ -104,6 +105,14 @@ namespace RType {
             playLabel.centered = true;
             m_registry.AddComponent(m_playTextEntity, std::move(playLabel));
 
+            m_editorTextEntity = m_registry.CreateEntity();
+            m_entities.push_back(m_editorTextEntity);
+            m_registry.AddComponent(m_editorTextEntity, Position{640.0f, 440.0f});
+            TextLabel editorLabel("PRESS E FOR LEVEL EDITOR", m_fontSmall, 16);
+            editorLabel.color = {0.5f, 1.0f, 0.5f, 0.85f};
+            editorLabel.centered = true;
+            m_registry.AddComponent(m_editorTextEntity, std::move(editorLabel));
+
             Entity controlsText = m_registry.CreateEntity();
             m_entities.push_back(controlsText);
             m_registry.AddComponent(controlsText, Position{640.0f, 480.0f});
@@ -150,6 +159,17 @@ namespace RType {
 
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
                 m_playKeyPressed = false;
+            }
+
+            if (m_renderer->IsKeyPressed(Renderer::Key::E) && !m_eKeyPressed) {
+                m_eKeyPressed = true;
+
+                std::cout << "[MenuState] Opening Level Editor..." << std::endl;
+
+                m_machine.PushState(std::make_unique<EditorState>(m_machine, m_context));
+
+            } else if (!m_renderer->IsKeyPressed(Renderer::Key::E)) {
+                m_eKeyPressed = false;
             }
         }
 
