@@ -6,6 +6,7 @@
 */
 
 #include "GameServer.hpp"
+#include "ECS/BossSystem.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <fstream>
@@ -53,6 +54,7 @@ namespace network {
         m_socket.set_option(sendOption);
 
         m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
+        m_bossSystem = std::make_unique<RType::ECS::BossSystem>();
         m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
         m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
         m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
@@ -413,6 +415,7 @@ namespace network {
         m_scrollOffset += SCROLL_SPEED * dt;
 
         m_scrollingSystem->Update(m_registry, dt);
+        m_bossSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
 
         // Powerup systems (server-side only)
@@ -441,7 +444,9 @@ namespace network {
 
         auto now = std::chrono::steady_clock::now();
         float elapsed = std::chrono::duration<float>(now - m_lastSpawnTime).count();
-        if (elapsed >= m_enemySpawnInterval) {
+
+        // Don't spawn normal enemies when boss is active
+        if (elapsed >= m_enemySpawnInterval && !IsBossActive()) {
             SpawnEnemy();
             m_lastSpawnTime = now;
         }
@@ -898,6 +903,39 @@ namespace network {
             index = 0;
         }
         return s_enemyStats[index];
+    }
+
+    bool GameServer::IsBossActive() const {
+        auto bosses = m_registry.GetEntitiesWithComponent<RType::ECS::Boss>();
+
+        static bool lastState = false;
+        bool currentState = false;
+
+        for (auto bossEntity : bosses) {
+            if (!m_registry.IsEntityAlive(bossEntity)) {
+                continue;
+            }
+
+            if (m_registry.HasComponent<RType::ECS::Health>(bossEntity) &&
+                !m_registry.HasComponent<RType::ECS::Scrollable>(bossEntity)) {
+                const auto& health = m_registry.GetComponent<RType::ECS::Health>(bossEntity);
+                if (health.current > 0) {
+                    currentState = true;
+                    break;
+                }
+            }
+        }
+
+        if (currentState != lastState) {
+            if (currentState) {
+                std::cout << "[GameServer] Boss is now ACTIVE - enemy spawning DISABLED" << std::endl;
+            } else {
+                std::cout << "[GameServer] Boss is DEFEATED - enemy spawning RESUMED" << std::endl;
+            }
+            lastState = currentState;
+        }
+
+        return currentState;
     }
 
 }

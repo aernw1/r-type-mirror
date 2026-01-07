@@ -18,6 +18,7 @@
 #include "ECS/PlayerCollisionResponseSystem.hpp"
 #include "ECS/ObstacleCollisionResponseSystem.hpp"
 #include "ECS/ScrollingSystem.hpp"
+#include "ECS/BossSystem.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/ScoreSystem.hpp"
@@ -118,6 +119,7 @@ namespace network {
         void SpawnPlayer(uint64_t hash, float x, float y);
         void SpawnEnemy();
         void SpawnEnemyBullet(uint32_t enemyId, float x, float y);
+        bool IsBossActive() const;
         void SpawnBullet(uint64_t ownerHash, float x, float y);
         void UpdateBullets(float dt);
         void UpdateEnemies(float dt);
@@ -137,6 +139,7 @@ namespace network {
 
         RType::ECS::Registry m_registry;
         std::unique_ptr<RType::ECS::ScrollingSystem> m_scrollingSystem;
+        std::unique_ptr<RType::ECS::BossSystem> m_bossSystem;
         std::unique_ptr<RType::ECS::MovementSystem> m_movementSystem;
         std::unique_ptr<RType::ECS::CollisionDetectionSystem> m_collisionDetectionSystem;
         std::unique_ptr<RType::ECS::BulletCollisionResponseSystem> m_bulletResponseSystem;
