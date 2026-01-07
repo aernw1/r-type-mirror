@@ -94,9 +94,15 @@ namespace network {
             std::cout << "Loading level from: " << m_levelPath << std::endl;
             auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
             std::cout << "Level JSON loaded: " << levelData.obstacles.size() << " obstacle definitions found" << std::endl;
+            std::cout << "Boss in level data: " << (levelData.boss.has_value() ? "YES" : "NO") << std::endl;
+            if (levelData.boss.has_value()) {
+                std::cout << "Boss position: (" << levelData.boss->x << ", " << levelData.boss->y << ")" << std::endl;
+            }
 
             auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
-            std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, " << createdEntities.enemies.size() << " enemy entities created" << std::endl;
+            std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, "
+                      << createdEntities.enemies.size() << " enemy entities, boss: "
+                      << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "CREATED" : "NOT CREATED") << std::endl;
 
             size_t obstaclesWithColliders = 0;
             for (auto obsEntity : createdEntities.obstacleColliders) {
@@ -705,15 +711,44 @@ namespace network {
             GameEntity entity;
             entity.id = static_cast<uint32_t>(enemyEntity);
             entity.type = EntityType::ENEMY;
+            entity.flags = static_cast<uint8_t>(enemy.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
             entity.vy = vel.dy;
             entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
-            entity.flags = static_cast<uint8_t>(enemy.type);
             entity.ownerHash = 0;
             entity.score = 0;
             m_entities.push_back(entity);
+        }
+
+        auto bosses = m_registry.GetEntitiesWithComponent<Boss>();
+        for (auto bossEntity : bosses) {
+            if (!m_registry.IsEntityAlive(bossEntity) ||
+                !m_registry.HasComponent<Position>(bossEntity) ||
+                !m_registry.HasComponent<Velocity>(bossEntity) ||
+                !m_registry.HasComponent<Health>(bossEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(bossEntity);
+            const auto& vel = m_registry.GetComponent<Velocity>(bossEntity);
+            const auto& health = m_registry.GetComponent<Health>(bossEntity);
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(bossEntity);
+            entity.type = EntityType::BOSS;
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = vel.dx;
+            entity.vy = vel.dy;
+            entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
+            entity.flags = 0;
+            entity.ownerHash = 0;
+            entity.score = 0;
+            m_entities.push_back(entity);
+
+            std::cout << "[SERVER] Sending BOSS entity " << entity.id << " at (" << entity.x << ", " << entity.y << ")" << std::endl;
         }
 
         auto bullets = m_registry.GetEntitiesWithComponent<Bullet>();
