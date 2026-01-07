@@ -1,15 +1,18 @@
 #include "editor/EditorUIManager.hpp"
 #include "ECS/Components/TextLabel.hpp"
+#include <sstream>
 
 namespace RType {
     namespace Client {
 
         EditorUIManager::EditorUIManager(Renderer::IRenderer* renderer,
+                                         EditorAssetLibrary& assets,
                                          ECS::Registry& registry,
                                          std::vector<ECS::Entity>& trackedEntities,
                                          Renderer::FontId fontSmall,
                                          Renderer::FontId fontMedium)
             : m_renderer(renderer)
+            , m_assets(assets)
             , m_registry(registry)
             , m_trackedEntities(trackedEntities)
             , m_fontSmall(fontSmall)
@@ -19,12 +22,11 @@ namespace RType {
 
         void EditorUIManager::InitializePalette() {
             m_entries.clear();
-            float cursorY = 90.0f;
+            float cursorY = 80.0f;
             m_activeSelection = EditorPaletteSelection{};
 
             createCategoryLabel("TOOLS", cursorY);
             cursorY += m_buttonHeight;
-
             PaletteEntry selectEntry;
             selectEntry.label = "SELECT";
             selectEntry.mode = EditorMode::SELECT;
@@ -32,87 +34,99 @@ namespace RType {
             createPaletteButton(selectEntry, cursorY);
             cursorY += m_buttonHeight * 1.5f;
 
-            createCategoryLabel("ENEMIES", cursorY);
-            cursorY += m_buttonHeight;
-
-            const std::vector<std::pair<std::string, std::string>> enemyButtons = {
-                {"BASIC", "BASIC"},
-                {"FAST", "FAST"},
-                {"TANK", "TANK"},
-                {"BOSS", "BOSS"},
-                {"FORMATION", "FORMATION"},
+            auto createSection = [&](const std::string& label, EditorEntityType type, EditorMode mode) {
+                createCategoryLabel(label, cursorY);
+                cursorY += m_buttonHeight;
+                const auto& resources = m_assets.GetResources(type);
+                for (const auto* resource : resources) {
+                    PaletteEntry entry;
+                    entry.label = resource->definition.displayName;
+                    entry.mode = mode;
+                    entry.entityType = type;
+                    entry.subtype = resource->definition.id;
+                    entry.resource = resource;
+                    createPaletteButton(entry, cursorY);
+                    cursorY += m_buttonHeight;
+                }
+                cursorY += m_buttonHeight * 0.5f;
             };
 
-            for (const auto& [label, subtype] : enemyButtons) {
-                PaletteEntry entry;
-                entry.label = "ENEMY - " + label;
-                entry.mode = EditorMode::PLACE_ENEMY;
-                entry.entityType = EditorEntityType::ENEMY;
-                entry.subtype = subtype;
-                createPaletteButton(entry, cursorY);
-                cursorY += m_buttonHeight;
-            }
-
-            cursorY += m_buttonHeight * 0.5f;
-            createCategoryLabel("OBSTACLES", cursorY);
-            cursorY += m_buttonHeight;
-
-            for (int idx = 1; idx <= 4; ++idx) {
-                PaletteEntry entry;
-                entry.label = "OBSTACLE " + std::to_string(idx);
-                entry.mode = EditorMode::PLACE_OBSTACLE;
-                entry.entityType = EditorEntityType::OBSTACLE;
-                entry.subtype = "obstacle" + std::to_string(idx);
-                createPaletteButton(entry, cursorY);
-                cursorY += m_buttonHeight;
-            }
-
-            cursorY += m_buttonHeight * 0.5f;
-            createCategoryLabel("POWERUPS", cursorY);
-            cursorY += m_buttonHeight;
-
-            const std::vector<std::pair<std::string, std::string>> powerButtons = {
-                {"FIRE RATE", "FIRE_RATE_BOOST"},
-                {"SPREAD", "SPREAD_SHOT"},
-                {"LASER", "LASER_BEAM"},
-                {"SHIELD", "SHIELD"},
-                {"SPEED", "SPEED_BOOST"},
-                {"FORCE POD", "FORCE_POD"},
-            };
-
-            for (const auto& [label, subtype] : powerButtons) {
-                PaletteEntry entry;
-                entry.label = "POWERUP - " + label;
-                entry.mode = EditorMode::PLACE_POWERUP;
-                entry.entityType = EditorEntityType::POWERUP;
-                entry.subtype = subtype;
-                createPaletteButton(entry, cursorY);
-                cursorY += m_buttonHeight;
-            }
-
-            cursorY += m_buttonHeight * 0.5f;
-            createCategoryLabel("SPAWNS", cursorY);
-            cursorY += m_buttonHeight;
-
-            PaletteEntry spawnEntry;
-            spawnEntry.label = "PLAYER SPAWN";
-            spawnEntry.mode = EditorMode::PLACE_PLAYER_SPAWN;
-            spawnEntry.entityType = EditorEntityType::PLAYER_SPAWN;
-            spawnEntry.subtype = "PLAYER";
-            createPaletteButton(spawnEntry, cursorY);
-            cursorY += m_buttonHeight * 1.5f;
-
-            createCategoryLabel("BACKGROUND", cursorY);
-            cursorY += m_buttonHeight;
-
-            PaletteEntry bgEntry;
-            bgEntry.label = "SPACE BACKGROUND";
-            bgEntry.mode = EditorMode::PLACE_BACKGROUND;
-            bgEntry.entityType = EditorEntityType::BACKGROUND;
-            bgEntry.subtype = "space";
-            createPaletteButton(bgEntry, cursorY);
+            createSection("ENEMIES", EditorEntityType::ENEMY, EditorMode::PLACE_ENEMY);
+            createSection("OBSTACLES", EditorEntityType::OBSTACLE, EditorMode::PLACE_OBSTACLE);
+            createSection("POWERUPS", EditorEntityType::POWERUP, EditorMode::PLACE_POWERUP);
+            createSection("PLAYER SPAWNS", EditorEntityType::PLAYER_SPAWN, EditorMode::PLACE_PLAYER_SPAWN);
+            createSection("BACKGROUNDS", EditorEntityType::BACKGROUND, EditorMode::PLACE_BACKGROUND);
 
             SetActiveSelection(m_activeSelection);
+            InitializePropertiesPanel();
+        }
+
+        void EditorUIManager::InitializePropertiesPanel() {
+            m_propertyFields.clear();
+
+            float headerY = 90.0f;
+            m_propertiesHeader = m_registry.CreateEntity();
+            m_trackedEntities.push_back(m_propertiesHeader);
+            m_registry.AddComponent(m_propertiesHeader, ECS::Position{m_propertyPanelX, headerY});
+
+            ECS::TextLabel headerLabel("PROPERTIES", m_fontMedium, 18);
+            headerLabel.centered = false;
+            headerLabel.color = {0.4f, 0.86f, 0.9f, 1.0f};
+            m_registry.AddComponent(m_propertiesHeader, std::move(headerLabel));
+
+            m_selectedInfoEntity = m_registry.CreateEntity();
+            m_trackedEntities.push_back(m_selectedInfoEntity);
+            m_registry.AddComponent(m_selectedInfoEntity, ECS::Position{m_propertyPanelX, headerY + 32.0f});
+
+            ECS::TextLabel infoLabel("No entity selected", m_fontSmall, 14);
+            infoLabel.centered = false;
+            infoLabel.color = {0.75f, 0.75f, 0.8f, 1.0f};
+            m_registry.AddComponent(m_selectedInfoEntity, std::move(infoLabel));
+
+            m_propertyHintEntity = m_registry.CreateEntity();
+            m_trackedEntities.push_back(m_propertyHintEntity);
+            m_registry.AddComponent(m_propertyHintEntity, ECS::Position{m_propertyPanelX, headerY + 240.0f});
+
+            ECS::TextLabel hintLabel("Tab cycle | ↑↓ adjust | 0-9 set | Backspace delete", m_fontSmall, 11);
+            hintLabel.centered = false;
+            hintLabel.color = {0.5f, 0.86f, 1.0f, 0.7f};
+            m_registry.AddComponent(m_propertyHintEntity, std::move(hintLabel));
+
+            const std::vector<std::pair<std::string, EditableProperty>> propertyRows = {
+                {"POS X", EditableProperty::POSITION_X},
+                {"POS Y", EditableProperty::POSITION_Y},
+                {"WIDTH", EditableProperty::SCALE_WIDTH},
+                {"HEIGHT", EditableProperty::SCALE_HEIGHT},
+                {"LAYER", EditableProperty::LAYER},
+                {"SCROLL", EditableProperty::SCROLL_SPEED},
+            };
+
+            float rowY = headerY + 80.0f;
+            for (const auto& [label, property] : propertyRows) {
+                PropertyField field;
+                field.property = property;
+
+                field.nameEntity = m_registry.CreateEntity();
+                m_trackedEntities.push_back(field.nameEntity);
+                m_registry.AddComponent(field.nameEntity, ECS::Position{m_propertyPanelX, rowY});
+
+                ECS::TextLabel nameLabel(label, m_fontSmall, 13);
+                nameLabel.centered = false;
+                nameLabel.color = {0.75f, 0.75f, 0.8f, 1.0f};
+                m_registry.AddComponent(field.nameEntity, std::move(nameLabel));
+
+                field.valueEntity = m_registry.CreateEntity();
+                m_trackedEntities.push_back(field.valueEntity);
+                m_registry.AddComponent(field.valueEntity, ECS::Position{m_propertyPanelX + 140.0f, rowY});
+
+                ECS::TextLabel valueLabel("--", m_fontSmall, 13);
+                valueLabel.centered = false;
+                valueLabel.color = {0.5f, 0.5f, 0.5f, 0.7f};
+                m_registry.AddComponent(field.valueEntity, std::move(valueLabel));
+
+                m_propertyFields.push_back(field);
+                rowY += 28.0f;
+            }
         }
 
         void EditorUIManager::UpdateHover(Math::Vector2 mouseScreen) {
@@ -150,6 +164,80 @@ namespace RType {
             refreshPaletteVisuals();
         }
 
+        void EditorUIManager::UpdatePropertyPanel(const EditorEntityData* selected,
+                                                  EditableProperty activeProperty,
+                                                  const std::string& inputBuffer) {
+            std::string infoText = "No entity selected";
+            if (selected) {
+                std::ostringstream oss;
+                oss << "Type: ";
+                switch (selected->type) {
+                case EditorEntityType::ENEMY:
+                    oss << "Enemy (" << (selected->enemyType.empty() ? "BASIC" : selected->enemyType) << ")";
+                    break;
+                case EditorEntityType::POWERUP:
+                    oss << "PowerUp (" << (selected->powerUpType.empty() ? "DEFAULT" : selected->powerUpType) << ")";
+                    break;
+                case EditorEntityType::PLAYER_SPAWN:
+                    oss << "Player Spawn";
+                    break;
+                case EditorEntityType::BACKGROUND:
+                    oss << "Background";
+                    break;
+                case EditorEntityType::OBSTACLE:
+                default:
+                    oss << "Obstacle";
+                    break;
+                }
+                infoText = oss.str();
+            }
+
+            if (m_selectedInfoEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(m_selectedInfoEntity)) {
+                auto& label = m_registry.GetComponent<ECS::TextLabel>(m_selectedInfoEntity);
+                label.text = infoText;
+            }
+
+            for (auto& field : m_propertyFields) {
+                if (!m_registry.IsEntityAlive(field.valueEntity)) {
+                    continue;
+                }
+
+                auto& valueLabel = m_registry.GetComponent<ECS::TextLabel>(field.valueEntity);
+                if (!selected) {
+                    valueLabel.text = "--";
+                    valueLabel.color = {0.5f, 0.5f, 0.5f, 0.7f};
+                    continue;
+                }
+
+                float value = 0.0f;
+                switch (field.property) {
+                case EditableProperty::POSITION_X: value = selected->x; break;
+                case EditableProperty::POSITION_Y: value = selected->y; break;
+                case EditableProperty::SCALE_WIDTH: value = selected->scaleWidth; break;
+                case EditableProperty::SCALE_HEIGHT: value = selected->scaleHeight; break;
+                case EditableProperty::LAYER: value = static_cast<float>(selected->layer); break;
+                case EditableProperty::SCROLL_SPEED: value = selected->scrollSpeed; break;
+                case EditableProperty::COUNT: break;
+                }
+
+                if (!inputBuffer.empty() && field.property == activeProperty) {
+                    valueLabel.text = inputBuffer;
+                } else {
+                    std::ostringstream oss;
+                    oss.setf(std::ios::fixed);
+                    oss.precision(field.property == EditableProperty::LAYER ? 0 : 1);
+                    oss << value;
+                    valueLabel.text = oss.str();
+                }
+
+                if (field.property == activeProperty) {
+                    valueLabel.color = {1.0f, 0.85f, 0.35f, 1.0f};
+                } else {
+                    valueLabel.color = {0.95f, 0.95f, 0.95f, 1.0f};
+                }
+            }
+        }
+
         void EditorUIManager::createCategoryLabel(const std::string& label, float y) {
             float textX = m_panelLeft + 10.0f;
             ECS::Entity entity = m_registry.CreateEntity();
@@ -171,7 +259,12 @@ namespace RType {
             m_trackedEntities.push_back(entity);
             m_registry.AddComponent(entity, ECS::Position{textX, y});
 
-            ECS::TextLabel label(entry.label, m_fontSmall, 13);
+            std::string labelText = entry.label;
+            if (entry.resource) {
+                labelText = entry.resource->definition.displayName;
+            }
+
+            ECS::TextLabel label(labelText, m_fontSmall, 13);
             label.centered = false;
             label.color = {0.75f, 0.75f, 0.8f, 1.0f};
             m_registry.AddComponent(entity, std::move(label));

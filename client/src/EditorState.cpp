@@ -15,6 +15,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
 namespace RType {
     namespace Client {
@@ -56,10 +57,14 @@ namespace RType {
             m_registry.AddComponent(m_statusBarEntity, std::move(statusLabel));
 
             m_canvasManager = std::make_unique<EditorCanvasManager>(m_renderer.get());
-            m_entityManager = std::make_unique<EditorEntityManager>(m_renderer.get());
-            m_uiManager = std::make_unique<EditorUIManager>(m_renderer.get(), m_registry, m_entities, m_fontSmall, m_fontMedium);
+            m_assetLibrary = std::make_unique<EditorAssetLibrary>(m_renderer.get());
+            m_assetLibrary->Initialize();
+
+            m_entityManager = std::make_unique<EditorEntityManager>(m_renderer.get(), m_registry, *m_assetLibrary);
+            m_uiManager = std::make_unique<EditorUIManager>(m_renderer.get(), *m_assetLibrary, m_registry, m_entities, m_fontSmall, m_fontMedium);
             m_uiManager->InitializePalette();
             m_selection = m_uiManager->GetActiveSelection();
+            updatePropertyPanel();
 
             Core::Logger::Info("[EditorState] Level editor initialized");
         }
@@ -97,13 +102,15 @@ namespace RType {
                 m_escapeKeyPressed = false;
             }
 
-            if (m_canvasManager) {
-                m_canvasManager->HandleCameraInput();
-            }
+            bool blockCameraInput = handlePropertyEditing();
 
             Math::Vector2 mouseScreen = m_renderer->GetMousePosition();
             if (m_uiManager) {
                 m_uiManager->UpdateHover(mouseScreen);
+            }
+
+            if (m_canvasManager && !blockCameraInput) {
+                m_canvasManager->HandleCameraInput();
             }
 
             bool isLeftPressed = m_renderer->IsMouseButtonPressed(Renderer::IRenderer::MouseButton::Left);
@@ -115,20 +122,26 @@ namespace RType {
                     if (selection.has_value()) {
                         m_selection = selection.value();
                         consumedByUI = true;
+                        clearValueInput();
                     }
                 }
 
                 if (!consumedByUI && m_canvasManager && m_entityManager) {
+                    Math::Vector2 mouseWorld = m_canvasManager->ScreenToWorld(mouseScreen);
                     if (m_selection.mode != EditorMode::SELECT) {
-                        Math::Vector2 mouseWorld = m_canvasManager->ScreenToWorld(mouseScreen);
-                        m_entityManager->PlaceEntity(m_selection.entityType, m_selection.subtype, mouseWorld);
-                        m_hasUnsavedChanges = true;
+                        if (m_entityManager->PlaceEntity(m_selection, mouseWorld)) {
+                            m_hasUnsavedChanges = true;
+                            clearValueInput();
 
-                        m_selection.mode = EditorMode::SELECT;
-                        m_selection.subtype.clear();
-                        if (m_uiManager) {
-                            m_uiManager->SetActiveSelection(m_selection);
+                            m_selection.mode = EditorMode::SELECT;
+                            m_selection.subtype.clear();
+                            if (m_uiManager) {
+                                m_uiManager->SetActiveSelection(m_selection);
+                            }
+                            updatePropertyPanel();
                         }
+                    } else {
+                        handleSelectionAt(mouseWorld);
                     }
                 }
             }
@@ -161,19 +174,255 @@ namespace RType {
             if (m_canvasManager) {
                 m_canvasManager->ApplyCamera();
                 m_canvasManager->DrawGrid();
-                if (m_entityManager) {
-                    m_entityManager->DrawEntities();
-                    m_entityManager->DrawPlacementPreview(m_selection.mode,
-                                                          m_selection.entityType,
-                                                          m_selection.subtype,
-                                                          m_lastMouseWorld);
-                }
+            }
 
-                m_renderer->ResetCamera();
+            if (m_entityManager) {
+                m_entityManager->DrawPlacementPreview(m_selection.mode,
+                                                      m_selection.entityType,
+                                                      m_selection.subtype,
+                                                      m_lastMouseWorld);
+                m_entityManager->DrawSelectionOutline();
             }
 
             m_renderingSystem->Update(m_registry, 0.0f);
+
+            if (m_canvasManager) {
+                m_renderer->ResetCamera();
+            }
+
             m_textSystem->Update(m_registry, 0.0f);
+        }
+
+        void EditorState::handleSelectionAt(const Math::Vector2& mouseWorld) {
+            if (!m_entityManager) {
+                return;
+            }
+
+            if (!m_entityManager->SelectAt(mouseWorld)) {
+                m_entityManager->ClearSelection();
+            }
+
+            m_activeProperty = EditableProperty::POSITION_X;
+            clearValueInput();
+            updatePropertyPanel();
+        }
+
+        bool EditorState::handlePropertyEditing() {
+            if (!m_entityManager || !m_entityManager->GetSelectedEntity()) {
+                return false;
+            }
+
+            auto handleKeyPress = [this](Renderer::Key key, bool& stateFlag, auto&& action) {
+                if (m_renderer->IsKeyPressed(key)) {
+                    if (!stateFlag) {
+                        action();
+                        stateFlag = true;
+                    }
+                } else {
+                    stateFlag = false;
+                }
+            };
+
+            bool consumedDirectional = m_renderer->IsKeyPressed(Renderer::Key::Up) ||
+                m_renderer->IsKeyPressed(Renderer::Key::Down);
+
+            handleKeyPress(Renderer::Key::Tab, m_tabKeyPressed, [this]() {
+                cycleProperty();
+            });
+
+            handleKeyPress(Renderer::Key::Up, m_propUpPressed, [this]() {
+                applyPropertyDelta(getPropertyStep(m_activeProperty));
+            });
+            handleKeyPress(Renderer::Key::Down, m_propDownPressed, [this]() {
+                applyPropertyDelta(-getPropertyStep(m_activeProperty));
+            });
+
+            const Renderer::Key digitKeys[10] = {
+                Renderer::Key::Num0, Renderer::Key::Num1, Renderer::Key::Num2, Renderer::Key::Num3, Renderer::Key::Num4,
+                Renderer::Key::Num5, Renderer::Key::Num6, Renderer::Key::Num7, Renderer::Key::Num8, Renderer::Key::Num9
+            };
+
+            for (int i = 0; i < 10; ++i) {
+                if (m_renderer->IsKeyPressed(digitKeys[i])) {
+                    if (!m_numberKeyPressed[static_cast<size_t>(i)]) {
+                        handleNumberInput(digitKeys[i]);
+                        m_numberKeyPressed[static_cast<size_t>(i)] = true;
+                    }
+                } else {
+                    m_numberKeyPressed[static_cast<size_t>(i)] = false;
+                }
+            }
+
+            handleKeyPress(Renderer::Key::Backspace, m_backspacePressed, [this]() {
+                if (!m_propertyInputBuffer.empty()) {
+                    m_propertyInputBuffer.pop_back();
+                    if (m_propertyInputBuffer.empty()) {
+                        updatePropertyPanel();
+                    } else {
+                        setPropertyValue(std::stof(m_propertyInputBuffer));
+                    }
+                } else {
+                    deleteSelectedEntity();
+                }
+            });
+
+            handleKeyPress(Renderer::Key::Enter, m_enterPressed, [this]() {
+                clearValueInput();
+                updatePropertyPanel();
+            });
+
+            return consumedDirectional;
+        }
+
+        void EditorState::cycleProperty() {
+            int current = static_cast<int>(m_activeProperty);
+            current = (current + 1) % static_cast<int>(EditableProperty::COUNT);
+            m_activeProperty = static_cast<EditableProperty>(current);
+            clearValueInput();
+            updatePropertyPanel();
+        }
+
+        void EditorState::applyPropertyDelta(float delta) {
+            auto* entity = m_entityManager ? m_entityManager->GetSelectedEntity() : nullptr;
+            if (!entity) {
+                return;
+            }
+
+            float newValue = getPropertyValue(*entity, m_activeProperty) + delta;
+            setPropertyValue(newValue);
+            clearValueInput();
+        }
+
+        void EditorState::setPropertyValue(float value) {
+            auto* entity = m_entityManager ? m_entityManager->GetSelectedEntity() : nullptr;
+            if (!entity) {
+                return;
+            }
+
+            switch (m_activeProperty) {
+            case EditableProperty::POSITION_X:
+                entity->x = value;
+                break;
+            case EditableProperty::POSITION_Y:
+                entity->y = value;
+                break;
+            case EditableProperty::SCALE_WIDTH:
+                entity->scaleWidth = std::max(10.0f, value);
+                break;
+            case EditableProperty::SCALE_HEIGHT:
+                entity->scaleHeight = std::max(10.0f, value);
+                break;
+            case EditableProperty::LAYER:
+                entity->layer = static_cast<int>(value);
+                break;
+            case EditableProperty::SCROLL_SPEED:
+                entity->scrollSpeed = value;
+                break;
+            case EditableProperty::COUNT:
+                break;
+            }
+
+            m_hasUnsavedChanges = true;
+
+            if (m_entityManager) {
+                entity->colliders.clear();
+                ECS::ColliderDef collider;
+                collider.x = entity->x - entity->scaleWidth / 2.0f;
+                collider.y = entity->y - entity->scaleHeight / 2.0f;
+                collider.width = entity->scaleWidth;
+                collider.height = entity->scaleHeight;
+                entity->colliders.push_back(collider);
+                m_entityManager->SyncEntity(*entity);
+            }
+
+            updatePropertyPanel();
+        }
+
+        float EditorState::getPropertyValue(const EditorEntityData& entity, EditableProperty property) const {
+            switch (property) {
+            case EditableProperty::POSITION_X:
+                return entity.x;
+            case EditableProperty::POSITION_Y:
+                return entity.y;
+            case EditableProperty::SCALE_WIDTH:
+                return entity.scaleWidth;
+            case EditableProperty::SCALE_HEIGHT:
+                return entity.scaleHeight;
+            case EditableProperty::LAYER:
+                return static_cast<float>(entity.layer);
+            case EditableProperty::SCROLL_SPEED:
+                return entity.scrollSpeed;
+            case EditableProperty::COUNT:
+                break;
+            }
+            return 0.0f;
+        }
+
+        float EditorState::getPropertyStep(EditableProperty property) const {
+            switch (property) {
+            case EditableProperty::POSITION_X:
+            case EditableProperty::POSITION_Y:
+                return 25.0f;
+            case EditableProperty::SCALE_WIDTH:
+            case EditableProperty::SCALE_HEIGHT:
+                return 10.0f;
+            case EditableProperty::LAYER:
+                return 1.0f;
+            case EditableProperty::SCROLL_SPEED:
+                return 5.0f;
+            case EditableProperty::COUNT:
+                break;
+            }
+            return 1.0f;
+        }
+
+        void EditorState::updatePropertyPanel() {
+            if (!m_uiManager) {
+                return;
+            }
+            const EditorEntityData* selected = m_entityManager ? m_entityManager->GetSelectedEntity() : nullptr;
+            m_uiManager->UpdatePropertyPanel(selected, m_activeProperty, m_propertyInputBuffer);
+        }
+
+        void EditorState::clearValueInput() {
+            m_propertyInputBuffer.clear();
+        }
+
+        void EditorState::handleNumberInput(Renderer::Key key) {
+            if (m_propertyInputBuffer.size() >= 8) {
+                return;
+            }
+
+            char digit = '0';
+            switch (key) {
+            case Renderer::Key::Num0: digit = '0'; break;
+            case Renderer::Key::Num1: digit = '1'; break;
+            case Renderer::Key::Num2: digit = '2'; break;
+            case Renderer::Key::Num3: digit = '3'; break;
+            case Renderer::Key::Num4: digit = '4'; break;
+            case Renderer::Key::Num5: digit = '5'; break;
+            case Renderer::Key::Num6: digit = '6'; break;
+            case Renderer::Key::Num7: digit = '7'; break;
+            case Renderer::Key::Num8: digit = '8'; break;
+            case Renderer::Key::Num9: digit = '9'; break;
+            default:
+                return;
+            }
+
+            m_propertyInputBuffer.push_back(digit);
+            setPropertyValue(std::stof(m_propertyInputBuffer));
+        }
+
+        void EditorState::deleteSelectedEntity() {
+            if (!m_entityManager) {
+                return;
+            }
+
+            if (m_entityManager->DeleteSelected()) {
+                m_hasUnsavedChanges = true;
+                clearValueInput();
+                updatePropertyPanel();
+            }
         }
 
     }

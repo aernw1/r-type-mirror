@@ -33,9 +33,21 @@ namespace RType {
             PLACE_BACKGROUND
         };
 
+        enum class EditableProperty {
+            POSITION_X,
+            POSITION_Y,
+            SCALE_WIDTH,
+            SCALE_HEIGHT,
+            LAYER,
+            SCROLL_SPEED,
+            COUNT
+        };
+
         struct EditorEntityData {
             ECS::Entity entity = ECS::NULL_ENTITY;
             EditorEntityType type = EditorEntityType::OBSTACLE;
+            std::vector<ECS::Entity> colliderEntities;
+            std::string presetId;
 
             // Common properties
             float x = 0.0f;
