@@ -14,16 +14,16 @@ namespace RType {
         namespace EditorConstants {
 
             namespace UI {
-                constexpr float PALETTE_PANEL_LEFT = 40.0f;
+                constexpr float PALETTE_PANEL_LEFT = 10.0f;
                 constexpr float PALETTE_PANEL_WIDTH = 220.0f;
                 constexpr float PALETTE_BUTTON_HEIGHT = 22.0f;
                 constexpr float PALETTE_START_Y = 80.0f;
 
-                constexpr float PROPERTY_PANEL_X = 980.0f;
-                constexpr float PROPERTY_PANEL_WIDTH = 260.0f;
+                constexpr float PROPERTY_PANEL_X = 920.0f;
+                constexpr float PROPERTY_PANEL_WIDTH = 340.0f;
                 constexpr float PROPERTY_PANEL_START_Y = 90.0f;
                 constexpr float PROPERTY_ROW_HEIGHT = 28.0f;
-                constexpr float PROPERTY_VALUE_OFFSET_X = 140.0f;
+                constexpr float PROPERTY_VALUE_OFFSET_X = 100.0f;
 
                 constexpr float STATUS_BAR_X = 10.0f;
                 constexpr float STATUS_BAR_Y = 10.0f;
@@ -69,6 +69,17 @@ namespace RType {
                 constexpr float LAYER_STEP = 1.0f;
                 constexpr float SCROLL_SPEED_STEP = 5.0f;
                 constexpr float MIN_SCALE = 10.0f;
+            }
+
+            namespace Collider {
+                constexpr float HANDLE_SIZE = 8.0f;
+                constexpr float MIN_COLLIDER_SIZE = 10.0f;
+                constexpr float COLLIDER_LINE_THICKNESS = 2.0f;
+                constexpr float SNAP_DISTANCE = 5.0f;
+
+                inline const Math::Color COLLIDER_NORMAL{0.0f, 1.0f, 0.0f, 0.6f};
+                inline const Math::Color COLLIDER_SELECTED{1.0f, 0.5f, 0.0f, 0.8f};
+                inline const Math::Color COLLIDER_HANDLE{1.0f, 1.0f, 0.0f, 1.0f};
             }
 
             namespace Input {

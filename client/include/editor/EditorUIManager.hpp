@@ -24,6 +24,7 @@ namespace RType {
 
             void InitializePalette();
             void InitializePropertiesPanel();
+            void InitializeColliderPanel();
             void UpdateHover(Math::Vector2 mouseScreen);
             std::optional<EditorPaletteSelection> HandleClick(Math::Vector2 mouseScreen);
             void SetActiveSelection(const EditorPaletteSelection& selection);
@@ -31,6 +32,7 @@ namespace RType {
             void UpdatePropertyPanel(const EditorEntityData* selected,
                                      EditableProperty activeProperty,
                                      const std::string& inputBuffer);
+            void UpdateColliderPanel(const EditorEntityData* selected, int selectedColliderIndex);
 
         private:
             struct PaletteEntry {
@@ -68,6 +70,10 @@ namespace RType {
             ECS::Entity m_propertiesHeader = ECS::NULL_ENTITY;
             ECS::Entity m_selectedInfoEntity = ECS::NULL_ENTITY;
             ECS::Entity m_propertyHintEntity = ECS::NULL_ENTITY;
+
+            ECS::Entity m_colliderPanelHeader = ECS::NULL_ENTITY;
+            ECS::Entity m_colliderCountEntity = ECS::NULL_ENTITY;
+            ECS::Entity m_colliderHintEntity = ECS::NULL_ENTITY;
         };
 
     }

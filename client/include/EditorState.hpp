@@ -80,6 +80,7 @@ namespace RType {
             std::string m_currentLevelPath;
             bool m_hasUnsavedChanges = false;
 
+
             void handleSelectionAt(const Math::Vector2& mouseWorld);
             bool handlePropertyEditing();
             void cycleProperty();

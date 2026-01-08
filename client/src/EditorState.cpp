@@ -199,15 +199,20 @@ namespace RType {
                 m_canvasManager->DrawGrid();
             }
 
+            m_renderingSystem->Update(m_registry, 0.0f);
+
             if (m_entityManager) {
+                m_entityManager->DrawSelectionOutline();
+
+                if (m_entityManager->GetSelectedEntity()) {
+                    m_entityManager->DrawColliders(m_entityManager->GetSelectedColliderIndex());
+                }
+
                 m_entityManager->DrawPlacementPreview(m_selection.mode,
                                                       m_selection.entityType,
                                                       m_selection.subtype,
                                                       m_lastMouseWorld);
-                m_entityManager->DrawSelectionOutline();
             }
-
-            m_renderingSystem->Update(m_registry, 0.0f);
 
             if (m_canvasManager) {
                 m_renderer->ResetCamera();
@@ -400,11 +405,12 @@ namespace RType {
         }
 
         void EditorState::updatePropertyPanel() {
-            if (!m_uiManager) {
+            if (!m_uiManager || !m_entityManager) {
                 return;
             }
-            const EditorEntityData* selected = m_entityManager ? m_entityManager->GetSelectedEntity() : nullptr;
+            const EditorEntityData* selected = m_entityManager->GetSelectedEntity();
             m_uiManager->UpdatePropertyPanel(selected, m_activeProperty, m_propertyInputBuffer);
+            m_uiManager->UpdateColliderPanel(selected, m_entityManager->GetSelectedColliderIndex());
         }
 
         void EditorState::clearValueInput() {
@@ -447,6 +453,7 @@ namespace RType {
                 updatePropertyPanel();
             }
         }
+
 
     }
 }

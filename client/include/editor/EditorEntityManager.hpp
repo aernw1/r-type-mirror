@@ -19,10 +19,19 @@ namespace RType {
                                       const std::string& identifier,
                                       const Math::Vector2& worldPos) const;
             void DrawSelectionOutline() const;
+            void DrawColliders(int selectedColliderIndex = -1) const;
+            void DrawColliderHandles(int colliderIndex) const;
 
             bool SelectAt(const Math::Vector2& worldPos);
             void ClearSelection();
             bool DeleteSelected();
+
+            ColliderHandle GetColliderHandleAt(const Math::Vector2& worldPos) const;
+            void AddCollider(const Math::Vector2& worldPos);
+            bool RemoveCollider(int colliderIndex);
+            void ResizeCollider(int colliderIndex, ColliderHandle::Type handleType, const Math::Vector2& worldPos);
+            int GetSelectedColliderIndex() const { return m_selectedColliderIndex; }
+            void SetSelectedCollider(int index) { m_selectedColliderIndex = index; }
 
             const std::vector<EditorEntityData>& GetEntities() const { return m_entities; }
             EditorEntityData* GetSelectedEntity();
@@ -41,11 +50,18 @@ namespace RType {
             bool pointInside(const EditorEntityData& entity, const Math::Vector2& worldPos) const;
             void drawOutline(const EditorEntityData& entity) const;
 
+            void drawCollider(const ECS::ColliderDef& collider, const Math::Color& color) const;
+            void drawHandle(const Math::Vector2& pos) const;
+            Math::Rectangle getColliderRect(const ECS::ColliderDef& collider) const;
+            bool pointInRect(const Math::Vector2& point, const Math::Rectangle& rect) const;
+
             Renderer::IRenderer* m_renderer;
             RType::ECS::Registry& m_registry;
             EditorAssetLibrary& m_assets;
             std::vector<EditorEntityData> m_entities;
             int m_selectedIndex = -1;
+            int m_selectedColliderIndex = -1;
+            Math::Vector2 m_dragStart{0.0f, 0.0f};
         };
 
     }

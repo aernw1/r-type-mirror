@@ -62,6 +62,38 @@ namespace RType {
 
             SetActiveSelection(m_activeSelection);
             InitializePropertiesPanel();
+            InitializeColliderPanel();
+        }
+
+        void EditorUIManager::InitializeColliderPanel() {
+            float startY = UI::PROPERTY_PANEL_START_Y + 320.0f;
+
+            m_colliderPanelHeader = m_registry.CreateEntity();
+            m_trackedEntities.push_back(m_colliderPanelHeader);
+            m_registry.AddComponent(m_colliderPanelHeader, ECS::Position{UI::PROPERTY_PANEL_X, startY});
+
+            ECS::TextLabel headerLabel("COLLIDERS", m_fontMedium, 18);
+            headerLabel.centered = false;
+            headerLabel.color = Colors::UI_HEADER;
+            m_registry.AddComponent(m_colliderPanelHeader, std::move(headerLabel));
+
+            m_colliderCountEntity = m_registry.CreateEntity();
+            m_trackedEntities.push_back(m_colliderCountEntity);
+            m_registry.AddComponent(m_colliderCountEntity, ECS::Position{UI::PROPERTY_PANEL_X, startY + 32.0f});
+
+            ECS::TextLabel countLabel("No colliders", m_fontSmall, 13);
+            countLabel.centered = false;
+            countLabel.color = Colors::UI_TEXT;
+            m_registry.AddComponent(m_colliderCountEntity, std::move(countLabel));
+
+            m_colliderHintEntity = m_registry.CreateEntity();
+            m_trackedEntities.push_back(m_colliderHintEntity);
+            m_registry.AddComponent(m_colliderHintEntity, ECS::Position{UI::PROPERTY_PANEL_X, startY + 120.0f});
+
+            ECS::TextLabel hintLabel("Shown in green", m_fontSmall, 11);
+            hintLabel.centered = false;
+            hintLabel.color = Colors::UI_HINT;
+            m_registry.AddComponent(m_colliderHintEntity, std::move(hintLabel));
         }
 
         void EditorUIManager::InitializePropertiesPanel() {
@@ -90,7 +122,7 @@ namespace RType {
             m_trackedEntities.push_back(m_propertyHintEntity);
             m_registry.AddComponent(m_propertyHintEntity, ECS::Position{UI::PROPERTY_PANEL_X, headerY + 240.0f});
 
-            ECS::TextLabel hintLabel("Tab cycle | ↑↓ adjust | 0-9 set | Backspace delete", m_fontSmall, 11);
+            ECS::TextLabel hintLabel("Tab | ↑↓ | 0-9 | Backspace", m_fontSmall, 11);
             hintLabel.centered = false;
             hintLabel.color = Colors::UI_HINT;
             m_registry.AddComponent(m_propertyHintEntity, std::move(hintLabel));
@@ -303,6 +335,36 @@ namespace RType {
                     label.color = {0.75f, 0.75f, 0.8f, 1.0f};
                 }
             }
+        }
+
+        void EditorUIManager::UpdateColliderPanel(const EditorEntityData* selected, int selectedColliderIndex) {
+            if (!m_registry.IsEntityAlive(m_colliderCountEntity)) {
+                return;
+            }
+
+            auto& countLabel = m_registry.GetComponent<ECS::TextLabel>(m_colliderCountEntity);
+
+            if (!selected || selected->colliders.empty()) {
+                countLabel.text = "No colliders";
+                countLabel.color = Colors::UI_TEXT;
+                return;
+            }
+
+            std::ostringstream oss;
+            oss << selected->colliders.size() << " collider";
+            if (selected->colliders.size() > 1) {
+                oss << "s";
+            }
+
+            if (selectedColliderIndex >= 0 && selectedColliderIndex < static_cast<int>(selected->colliders.size())) {
+                const auto& collider = selected->colliders[static_cast<size_t>(selectedColliderIndex)];
+                oss << "\n\nSelected: #" << selectedColliderIndex;
+                oss << "\nPos: (" << static_cast<int>(collider.x) << ", " << static_cast<int>(collider.y) << ")";
+                oss << "\nSize: " << static_cast<int>(collider.width) << "x" << static_cast<int>(collider.height);
+            }
+
+            countLabel.text = oss.str();
+            countLabel.color = Colors::UI_TEXT;
         }
 
     }

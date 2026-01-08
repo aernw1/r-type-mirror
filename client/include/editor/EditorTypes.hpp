@@ -30,7 +30,8 @@ namespace RType {
             PLACE_OBSTACLE,
             PLACE_POWERUP,
             PLACE_PLAYER_SPAWN,
-            PLACE_BACKGROUND
+            PLACE_BACKGROUND,
+            EDIT_COLLIDERS
         };
 
         enum class EditableProperty {
@@ -40,7 +41,24 @@ namespace RType {
             SCALE_HEIGHT,
             LAYER,
             SCROLL_SPEED,
+            COLLIDER_X,
+            COLLIDER_Y,
+            COLLIDER_WIDTH,
+            COLLIDER_HEIGHT,
             COUNT
+        };
+
+        enum class ColliderEditMode {
+            NONE,
+            ADD,
+            REMOVE,
+            RESIZE,
+            MOVE
+        };
+
+        struct ColliderHandle {
+            int colliderIndex = -1;
+            enum class Type { NONE, BODY, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT } type = Type::NONE;
         };
 
         struct EditorEntityData {

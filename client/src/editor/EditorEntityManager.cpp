@@ -1,7 +1,11 @@
 #include "editor/EditorEntityManager.hpp"
+#include "editor/EditorConstants.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include <algorithm>
+#include <cmath>
+
+using namespace RType::Client::EditorConstants;
 
 namespace RType {
     namespace Client {
@@ -270,6 +274,197 @@ namespace RType {
             default:
                 return {0.6f, 0.7f, 0.95f, 1.0f};
             }
+        }
+
+        void EditorEntityManager::DrawColliders(int selectedColliderIndex) const {
+            const auto* entity = GetSelectedEntity();
+            if (!entity || !m_renderer) {
+                return;
+            }
+
+            for (size_t i = 0; i < entity->colliders.size(); ++i) {
+                const auto& collider = entity->colliders[i];
+                bool isSelected = (static_cast<int>(i) == selectedColliderIndex);
+                Math::Color color = isSelected ? Collider::COLLIDER_SELECTED : Collider::COLLIDER_NORMAL;
+                drawCollider(collider, color);
+            }
+        }
+
+        void EditorEntityManager::DrawColliderHandles(int colliderIndex) const {
+            const auto* entity = GetSelectedEntity();
+            if (!entity || !m_renderer || colliderIndex < 0 || colliderIndex >= static_cast<int>(entity->colliders.size())) {
+                return;
+            }
+
+            const auto& collider = entity->colliders[static_cast<size_t>(colliderIndex)];
+            const float hs = Collider::HANDLE_SIZE / 2.0f;
+
+            drawHandle({collider.x, collider.y});
+            drawHandle({collider.x + collider.width, collider.y});
+            drawHandle({collider.x, collider.y + collider.height});
+            drawHandle({collider.x + collider.width, collider.y + collider.height});
+        }
+
+        ColliderHandle EditorEntityManager::GetColliderHandleAt(const Math::Vector2& worldPos) const {
+            const auto* entity = GetSelectedEntity();
+            if (!entity) {
+                return {};
+            }
+
+            const float hs = Collider::HANDLE_SIZE / 2.0f;
+
+            for (size_t i = 0; i < entity->colliders.size(); ++i) {
+                const auto& collider = entity->colliders[i];
+
+                Math::Rectangle tlHandle = BuildRect(collider.x - hs, collider.y - hs, Collider::HANDLE_SIZE, Collider::HANDLE_SIZE);
+                Math::Rectangle trHandle = BuildRect(collider.x + collider.width - hs, collider.y - hs, Collider::HANDLE_SIZE, Collider::HANDLE_SIZE);
+                Math::Rectangle blHandle = BuildRect(collider.x - hs, collider.y + collider.height - hs, Collider::HANDLE_SIZE, Collider::HANDLE_SIZE);
+                Math::Rectangle brHandle = BuildRect(collider.x + collider.width - hs, collider.y + collider.height - hs, Collider::HANDLE_SIZE, Collider::HANDLE_SIZE);
+
+                if (pointInRect(worldPos, tlHandle)) {
+                    return {static_cast<int>(i), ColliderHandle::Type::TOP_LEFT};
+                }
+                if (pointInRect(worldPos, trHandle)) {
+                    return {static_cast<int>(i), ColliderHandle::Type::TOP_RIGHT};
+                }
+                if (pointInRect(worldPos, blHandle)) {
+                    return {static_cast<int>(i), ColliderHandle::Type::BOTTOM_LEFT};
+                }
+                if (pointInRect(worldPos, brHandle)) {
+                    return {static_cast<int>(i), ColliderHandle::Type::BOTTOM_RIGHT};
+                }
+
+                Math::Rectangle bodyRect = getColliderRect(collider);
+                if (pointInRect(worldPos, bodyRect)) {
+                    return {static_cast<int>(i), ColliderHandle::Type::BODY};
+                }
+            }
+
+            return {};
+        }
+
+        void EditorEntityManager::AddCollider(const Math::Vector2& worldPos) {
+            auto* entity = GetSelectedEntity();
+            if (!entity) {
+                return;
+            }
+
+            ECS::ColliderDef newCollider;
+            newCollider.x = worldPos.x - 25.0f;
+            newCollider.y = worldPos.y - 25.0f;
+            newCollider.width = 50.0f;
+            newCollider.height = 50.0f;
+
+            entity->colliders.push_back(newCollider);
+            SyncEntity(*entity);
+
+            m_selectedColliderIndex = static_cast<int>(entity->colliders.size()) - 1;
+        }
+
+        bool EditorEntityManager::RemoveCollider(int colliderIndex) {
+            auto* entity = GetSelectedEntity();
+            if (!entity || colliderIndex < 0 || colliderIndex >= static_cast<int>(entity->colliders.size())) {
+                return false;
+            }
+
+            entity->colliders.erase(entity->colliders.begin() + colliderIndex);
+            SyncEntity(*entity);
+
+            if (m_selectedColliderIndex == colliderIndex) {
+                m_selectedColliderIndex = -1;
+            } else if (m_selectedColliderIndex > colliderIndex) {
+                m_selectedColliderIndex--;
+            }
+
+            return true;
+        }
+
+        void EditorEntityManager::ResizeCollider(int colliderIndex, ColliderHandle::Type handleType, const Math::Vector2& worldPos) {
+            auto* entity = GetSelectedEntity();
+            if (!entity || colliderIndex < 0 || colliderIndex >= static_cast<int>(entity->colliders.size())) {
+                return;
+            }
+
+            auto& collider = entity->colliders[static_cast<size_t>(colliderIndex)];
+            const float minSize = Collider::MIN_COLLIDER_SIZE;
+
+            float originalRight = collider.x + collider.width;
+            float originalBottom = collider.y + collider.height;
+
+            switch (handleType) {
+            case ColliderHandle::Type::TOP_LEFT:
+                collider.x = std::min(worldPos.x, originalRight - minSize);
+                collider.y = std::min(worldPos.y, originalBottom - minSize);
+                collider.width = originalRight - collider.x;
+                collider.height = originalBottom - collider.y;
+                break;
+
+            case ColliderHandle::Type::TOP_RIGHT:
+                collider.y = std::min(worldPos.y, originalBottom - minSize);
+                collider.width = std::max(worldPos.x - collider.x, minSize);
+                collider.height = originalBottom - collider.y;
+                break;
+
+            case ColliderHandle::Type::BOTTOM_LEFT:
+                collider.x = std::min(worldPos.x, originalRight - minSize);
+                collider.width = originalRight - collider.x;
+                collider.height = std::max(worldPos.y - collider.y, minSize);
+                break;
+
+            case ColliderHandle::Type::BOTTOM_RIGHT:
+                collider.width = std::max(worldPos.x - collider.x, minSize);
+                collider.height = std::max(worldPos.y - collider.y, minSize);
+                break;
+
+            case ColliderHandle::Type::BODY: {
+                Math::Vector2 delta = {worldPos.x - m_dragStart.x, worldPos.y - m_dragStart.y};
+                collider.x += delta.x;
+                collider.y += delta.y;
+                m_dragStart = worldPos;
+                break;
+            }
+
+            case ColliderHandle::Type::NONE:
+                break;
+            }
+
+            SyncEntity(*entity);
+        }
+
+        void EditorEntityManager::drawCollider(const ECS::ColliderDef& collider, const Math::Color& color) const {
+            Math::Rectangle colliderRect = BuildRect(collider.x, collider.y, collider.width, collider.height);
+
+            Math::Color fillColor = color;
+            fillColor.a = 0.2f;
+            m_renderer->DrawRectangle(colliderRect, fillColor);
+
+            const float thickness = Collider::COLLIDER_LINE_THICKNESS;
+            Math::Rectangle top = BuildRect(collider.x, collider.y, collider.width, thickness);
+            Math::Rectangle bottom = BuildRect(collider.x, collider.y + collider.height - thickness, collider.width, thickness);
+            Math::Rectangle left = BuildRect(collider.x, collider.y, thickness, collider.height);
+            Math::Rectangle right = BuildRect(collider.x + collider.width - thickness, collider.y, thickness, collider.height);
+
+            m_renderer->DrawRectangle(top, color);
+            m_renderer->DrawRectangle(bottom, color);
+            m_renderer->DrawRectangle(left, color);
+            m_renderer->DrawRectangle(right, color);
+        }
+
+        void EditorEntityManager::drawHandle(const Math::Vector2& pos) const {
+            const float hs = Collider::HANDLE_SIZE / 2.0f;
+            Math::Rectangle handle = BuildRect(pos.x - hs, pos.y - hs, Collider::HANDLE_SIZE, Collider::HANDLE_SIZE);
+            m_renderer->DrawRectangle(handle, Collider::COLLIDER_HANDLE);
+        }
+
+        Math::Rectangle EditorEntityManager::getColliderRect(const ECS::ColliderDef& collider) const {
+            return BuildRect(collider.x, collider.y, collider.width, collider.height);
+        }
+
+        bool EditorEntityManager::pointInRect(const Math::Vector2& point, const Math::Rectangle& rect) const {
+            return point.x >= rect.position.x &&
+                   point.x <= rect.position.x + rect.size.x &&
+                   point.y >= rect.position.y &&
+                   point.y <= rect.position.y + rect.size.y;
         }
 
     }
