@@ -183,6 +183,9 @@ namespace RType {
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         std::cout << "[GameState] Created BOSS entity " << entityState.entityId << std::endl;
+
+                        m_bossHealthBar.currentHealth = static_cast<int>(entityState.health);
+                        m_bossHealthBar.maxHealth = 1000;
                     } else if (type == network::EntityType::BULLET) {
                         auto newEntity = m_registry.CreateEntity();
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
@@ -466,15 +469,31 @@ namespace RType {
                         }
                     }
 
-                    // Handle boss damage flash
-                    if (type == network::EntityType::BOSS && m_registry.HasComponent<Drawable>(ecsEntity)) {
-                        auto& drawable = m_registry.GetComponent<Drawable>(ecsEntity);
-                        if (entityState.flags == 1) {
-                            // Red tint flash
-                            drawable.tint = {1.0f, 0.3f, 0.3f, 1.0f};
+                    // Handle boss damage flash and health bar update
+                    if (type == network::EntityType::BOSS) {
+                        if (m_registry.HasComponent<Drawable>(ecsEntity)) {
+                            auto& drawable = m_registry.GetComponent<Drawable>(ecsEntity);
+                            if (entityState.flags == 1) {
+                                // Red tint flash
+                                drawable.tint = {1.0f, 0.3f, 0.3f, 1.0f};
+                            } else {
+                                // Normal tint
+                                drawable.tint = {1.0f, 1.0f, 1.0f, 1.0f};
+                            }
+                        }
+
+                        if (!m_bossHealthBar.active && entityState.x < 1920.0f) {
+                            initializeBossHealthBar();
+                            m_bossHealthBar.maxHealth = 100;
+                            m_bossHealthBar.bossNetworkId = entityState.entityId;
+                        }
+
+                        m_bossHealthBar.currentHealth = static_cast<int>(entityState.health);
+
+                        if (m_bossHealthBar.active && entityState.health == 0) {
+                            destroyBossHealthBar();
                         } else {
-                            // Normal tint
-                            drawable.tint = {1.0f, 1.0f, 1.0f, 1.0f};
+                            updateBossHealthBar();
                         }
                     }
 
@@ -494,6 +513,7 @@ namespace RType {
             for (auto it = m_networkEntityMap.begin(); it != m_networkEntityMap.end();) {
                 if (receivedIds.find(it->first) == receivedIds.end()) {
                     auto ecsEntity = it->second;
+                    uint32_t networkId = it->first;
 
                     DestroyPlayerNameLabel(ecsEntity);
 
@@ -519,6 +539,10 @@ namespace RType {
                             m_playersHUD[localPlayerIndex].playerEntity = NULL_ENTITY;
                         }
                         m_localPlayerEntity = NULL_ENTITY;
+                    }
+
+                    if (m_bossHealthBar.active && networkId == m_bossHealthBar.bossNetworkId) {
+                        destroyBossHealthBar();
                     }
 
                     if (m_registry.IsEntityAlive(ecsEntity)) {

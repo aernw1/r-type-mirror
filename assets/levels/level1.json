@@ -967,7 +967,7 @@
         "position": { "x": 14000.0, "y": 200.0 },
         "width": 384.0,
         "height": 564.0,
-        "health": 1000,
+        "health": 10000,
         "scrollSpeed": -300.0
     },
     "enemies": [],
