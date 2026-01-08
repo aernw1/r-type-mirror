@@ -45,6 +45,11 @@ namespace RType {
                     switch (attack.currentPattern) {
                         case BossAttackPattern::FAN_SPRAY:
                             CreateFanSpray(registry, bossEntity, pos.x, pos.y);
+                            attack.currentPattern = BossAttackPattern::BLACK_ORB;
+                            break;
+                        case BossAttackPattern::BLACK_ORB:
+                            CreateBlackOrb(registry, bossEntity, pos.x, pos.y);
+                            attack.currentPattern = BossAttackPattern::FAN_SPRAY;
                             break;
                         case BossAttackPattern::IDLE:
                         default:
@@ -96,6 +101,49 @@ namespace RType {
 
             Core::Logger::Debug("[BossAttackSystem] Created bullet at ({}, {}) angle={} speed={}",
                                x, y, angle, speed);
+        }
+
+        void BossAttackSystem::CreateBlackOrb(Registry& registry, Entity bossEntity, float bossX, float bossY) {
+            Entity orb = registry.CreateEntity();
+            
+            const float spawnX = bossX + 70.0f;
+            const float spawnY = bossY + 160.0f;
+
+            registry.AddComponent<Position>(orb, Position{spawnX, spawnY});
+            
+
+            float vx, vy;
+            int trajectory = rand() % 3;
+            const float speed = 70.0f;
+
+            switch(trajectory) {
+                case 0:
+                    vx = -speed;
+                    vy = 0.0f;
+                    break;
+                case 1:
+                    vx = -speed * 0.657f;
+                    vy = speed * 0.657f;
+                    break;
+                case 2:
+                     vx = -speed;
+                    vy = 30.0f;
+                    break;
+                default:
+                    vx = -speed * 0.707f;
+                    vy = speed * 0.707f;
+                    break;
+            }
+
+            registry.AddComponent<Velocity>(orb, Velocity{vx, vy});
+
+            registry.AddComponent<Bullet>(orb, Bullet{bossEntity});
+
+            registry.AddComponent<BlackOrb>(orb, BlackOrb{900.0f, 110.0f, 1900.0f});
+            registry.AddComponent<ProximityDamage>(orb, ProximityDamage{150.0f, 2.0f, 0.2f});
+
+            Core::Logger::Info("[BossAttackSystem] Created Black Orb at ({}, {}) trajectory={}",
+                              spawnX, spawnY, trajectory);
         }
 
     }
