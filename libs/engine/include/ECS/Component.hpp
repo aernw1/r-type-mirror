@@ -134,6 +134,20 @@ namespace RType {
             BossBullet() = default;
         };
 
+        struct DamageFlash : public IComponent {
+            float duration = 0.1f;
+            float timeRemaining = 0.0f;
+            bool isActive = false;
+
+            DamageFlash() = default;
+            DamageFlash(float flashDuration) : duration(flashDuration) {}
+
+            void Trigger() {
+                isActive = true;
+                timeRemaining = duration;
+            }
+        };
+
         struct Health : public IComponent {
             int current = 100;
             int max = 100;

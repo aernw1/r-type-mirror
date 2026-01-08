@@ -53,6 +53,18 @@ namespace RType {
                     HasEnteredScreen(registry, bossEntity, 1920.0f)) {
                     StopScrollingAndFixPosition(registry, bossEntity, 900.0f);
                 }
+
+                // Update damage flash timer
+                if (registry.HasComponent<DamageFlash>(bossEntity)) {
+                    auto& flash = registry.GetComponent<DamageFlash>(bossEntity);
+                    if (flash.isActive) {
+                        flash.timeRemaining -= deltaTime;
+                        if (flash.timeRemaining <= 0.0f) {
+                            flash.isActive = false;
+                            flash.timeRemaining = 0.0f;
+                        }
+                    }
+                }
             }
         }
 

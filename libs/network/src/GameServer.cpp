@@ -742,6 +742,14 @@ namespace network {
             const auto& vel = m_registry.GetComponent<Velocity>(bossEntity);
             const auto& health = m_registry.GetComponent<Health>(bossEntity);
 
+            uint8_t flags = 0;
+            if (m_registry.HasComponent<RType::ECS::DamageFlash>(bossEntity)) {
+                const auto& flash = m_registry.GetComponent<RType::ECS::DamageFlash>(bossEntity);
+                if (flash.isActive) {
+                    flags = 1;
+                }
+            }
+
             GameEntity entity;
             entity.id = static_cast<uint32_t>(bossEntity);
             entity.type = EntityType::BOSS;
@@ -750,7 +758,7 @@ namespace network {
             entity.vx = vel.dx;
             entity.vy = vel.dy;
             entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
-            entity.flags = 0;
+            entity.flags = flags;
             entity.ownerHash = 0;
             entity.score = 0;
             m_entities.push_back(entity);

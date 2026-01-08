@@ -466,6 +466,18 @@ namespace RType {
                         }
                     }
 
+                    // Handle boss damage flash
+                    if (type == network::EntityType::BOSS && m_registry.HasComponent<Drawable>(ecsEntity)) {
+                        auto& drawable = m_registry.GetComponent<Drawable>(ecsEntity);
+                        if (entityState.flags == 1) {
+                            // Red tint flash
+                            drawable.tint = {1.0f, 0.3f, 0.3f, 1.0f};
+                        } else {
+                            // Normal tint
+                            drawable.tint = {1.0f, 1.0f, 1.0f, 1.0f};
+                        }
+                    }
+
                     if (type == network::EntityType::PLAYER) {
                         ApplyPowerUpStateToPlayer(ecsEntity, entityState);
                     }

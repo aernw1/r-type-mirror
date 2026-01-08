@@ -441,6 +441,8 @@ namespace RType {
 
             registry.AddComponent<BossAttack>(bossEntity, BossAttack{3.0f});
 
+            registry.AddComponent<DamageFlash>(bossEntity, DamageFlash{0.1f});
+
             registry.AddComponent<CollisionLayer>(bossEntity,
                 CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
 
