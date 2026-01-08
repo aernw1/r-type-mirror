@@ -30,9 +30,11 @@ namespace RType {
                 }
 
                 bool hitEnemy = registry.HasComponent<Enemy>(other);
+                bool hitBoss = registry.HasComponent<Boss>(other);
                 bool hitPlayer = registry.HasComponent<Player>(other);
                 bool hitObstacle = registry.HasComponent<Obstacle>(other);
 
+                // Handle enemy damage
                 if (hitEnemy && registry.HasComponent<Health>(other)) {
                     auto& health = registry.GetComponent<Health>(other);
                     const auto& damage = registry.GetComponent<Damage>(bullet);
@@ -43,6 +45,23 @@ namespace RType {
                         const auto& bulletComp = registry.GetComponent<Bullet>(bullet);
                         registry.AddComponent<EnemyKilled>(other,
                                                            EnemyKilled(enemyComp.id, bulletComp.owner));
+                    }
+                }
+
+                // Handle boss damage
+                if (hitBoss && registry.HasComponent<Health>(other)) {
+                    auto& health = registry.GetComponent<Health>(other);
+                    const auto& damage = registry.GetComponent<Damage>(bullet);
+                    health.current -= damage.amount;
+
+                    if (registry.HasComponent<DamageFlash>(other)) {
+                        auto& flash = registry.GetComponent<DamageFlash>(other);
+                        flash.Trigger();
+                    }
+
+                    if (health.current <= 0) {
+                        health.current = 0;
+                        // add bossKilled event For later to transition to new level
                     }
                 }
 
@@ -68,7 +87,7 @@ namespace RType {
                     }
                 }
 
-                if (hitEnemy || hitPlayer || shouldDestroy) {
+                if (hitEnemy || hitBoss || hitPlayer || shouldDestroy) {
                     registry.DestroyEntity(bullet);
                 }
             }
