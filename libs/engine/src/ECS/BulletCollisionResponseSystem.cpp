@@ -59,6 +59,14 @@ namespace RType {
                         flash.Trigger();
                     }
 
+                    const auto& bulletComp = registry.GetComponent<Bullet>(bullet);
+                    if (bulletComp.owner != NULL_ENTITY && registry.IsEntityAlive(bulletComp.owner)) {
+                        if (registry.HasComponent<ScoreValue>(bulletComp.owner)) {
+                            auto& score = registry.GetComponent<ScoreValue>(bulletComp.owner);
+                            score.points += damage.amount * 5;
+                        }
+                    }
+
                     if (health.current <= 0) {
                         health.current = 0;
                         // add bossKilled event For later to transition to new level
