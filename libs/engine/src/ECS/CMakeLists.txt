@@ -24,6 +24,7 @@ set(ECS_SOURCES
     ForcePodSystem.cpp
     ShieldSystem.cpp
     BossSystem.cpp
+    BossAttackSystem.cpp
 )
 
 set(ECS_HEADERS
@@ -58,6 +59,7 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ForcePodSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShieldSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossAttackSystem.hpp
 )
 
 add_library(rtype_ecs STATIC

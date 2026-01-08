@@ -114,6 +114,26 @@ namespace RType {
             Boss() = default;
         };
 
+        enum class BossAttackPattern {
+            IDLE = 0,
+            FAN_SPRAY = 1,
+            DIRECT_SHOT = 2,
+            CIRCLE = 3
+        };
+
+        struct BossAttack : public IComponent {
+            float attackCooldown = 2.0f;
+            float timeSinceLastAttack = 0.0f;
+            BossAttackPattern currentPattern = BossAttackPattern::FAN_SPRAY;
+
+            BossAttack() = default;
+            BossAttack(float cooldown) : attackCooldown(cooldown) {}
+        };
+
+        struct BossBullet : public IComponent {
+            BossBullet() = default;
+        };
+
         struct Health : public IComponent {
             int current = 100;
             int max = 100;

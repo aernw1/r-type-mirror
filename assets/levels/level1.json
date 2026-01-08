@@ -18,6 +18,7 @@
             "enemy-red": "assets/spaceships/enemy-red.png",
             "enemy-blue": "assets/spaceships/enemy-blue.png",
             "bullet": "assets/projectiles/bullet.png",
+            "boss_bullet": "assets/boss/attacks/bullet.png",
             "powerup-spread": "assets/powerups/spread.png",
             "powerup-laser": "assets/powerups/laser.png",
             "powerup-force-pod": "assets/powerups/force_pod.png",
