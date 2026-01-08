@@ -750,6 +750,9 @@ namespace network {
                 }
             }
 
+            float healthPercent = (static_cast<float>(health.current) / static_cast<float>(health.max)) * 100.0f;
+            uint8_t healthValue = static_cast<uint8_t>(std::min(100.0f, std::max(0.0f, healthPercent)));
+
             GameEntity entity;
             entity.id = static_cast<uint32_t>(bossEntity);
             entity.type = EntityType::BOSS;
@@ -757,7 +760,7 @@ namespace network {
             entity.y = pos.y;
             entity.vx = vel.dx;
             entity.vy = vel.dy;
-            entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
+            entity.health = healthValue;
             entity.flags = flags;
             entity.ownerHash = 0;
             entity.score = 0;
