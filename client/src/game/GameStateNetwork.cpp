@@ -188,7 +188,18 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
-                        if (entityState.flags >= 10) {
+                        if (entityState.flags == 13) {
+                            auto bossBulletSpriteIt = m_levelAssets.sprites.find("boss_bullet");
+                            if (bossBulletSpriteIt != m_levelAssets.sprites.end()) {
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bossBulletSpriteIt->second, 12));
+                                d.scale = {2.0f, 2.0f};
+                                d.origin = Math::Vector2(8.0f, 4.0f);
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing boss bullet sprite (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags >= 10) {
                             uint8_t enemyType = entityState.flags - 10;
                             EnemyBulletSpriteConfig config = GetEnemyBulletSpriteConfig(enemyType);
                             Renderer::SpriteId bulletSprite = config.sprite;

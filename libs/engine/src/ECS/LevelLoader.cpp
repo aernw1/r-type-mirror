@@ -439,6 +439,8 @@ namespace RType {
 
             registry.AddComponent<Scrollable>(bossEntity, Scrollable{boss.scrollSpeed});
 
+            registry.AddComponent<BossAttack>(bossEntity, BossAttack{3.0f});
+
             registry.AddComponent<CollisionLayer>(bossEntity,
                 CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
 
