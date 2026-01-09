@@ -119,7 +119,8 @@ namespace RType {
             FAN_SPRAY = 1,
             DIRECT_SHOT = 2,
             CIRCLE = 3,
-            BLACK_ORB = 4
+            BLACK_ORB = 4,
+            THIRD_BULLET = 5
         };
 
         struct BossAttack : public IComponent {
@@ -169,6 +170,17 @@ namespace RType {
                 isActive = true;
                 timeRemaining = duration;
             }
+        };
+
+        struct ThirdBullet : public IComponent {
+            float spawnInterval = 0.3f;
+            float timeSinceSpawn = 0.0f;
+            int damage = 50;
+            bool isActive = true;
+
+            ThirdBullet() = default;
+            ThirdBullet(float interval, int dmg)
+                : spawnInterval(interval), damage(dmg) {}
         };
 
         struct Health : public IComponent {

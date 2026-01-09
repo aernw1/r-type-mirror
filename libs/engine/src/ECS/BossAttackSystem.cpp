@@ -45,13 +45,16 @@ namespace RType {
                     switch (attack.currentPattern) {
                         case BossAttackPattern::FAN_SPRAY:
                             CreateFanSpray(registry, bossEntity, pos.x, pos.y);
+                            attack.currentPattern = BossAttackPattern::THIRD_BULLET;
+                            break;
+                        case BossAttackPattern::THIRD_BULLET:
+                            CreateThirdBullet(registry, bossEntity, pos.x, pos.y);
                             attack.currentPattern = BossAttackPattern::BLACK_ORB;
                             break;
                         case BossAttackPattern::BLACK_ORB:
                             CreateBlackOrb(registry, bossEntity, pos.x, pos.y);
                             attack.currentPattern = BossAttackPattern::FAN_SPRAY;
                             break;
-                        case BossAttackPattern::IDLE:
                         default:
                             break;
                     }
@@ -144,6 +147,31 @@ namespace RType {
 
             Core::Logger::Info("[BossAttackSystem] Created Black Orb at ({}, {}) trajectory={}",
                               spawnX, spawnY, trajectory);
+        }
+
+        void BossAttackSystem::CreateThirdBullet(Registry& registry, Entity bossEntity, float bossX, float bossY) {
+            Entity thirdBullet = registry.CreateEntity();
+
+            const float spawnX = bossX + 350.0f;
+            const float spawnY = bossY + -30.0f;
+
+            registry.AddComponent<Position>(thirdBullet, Position{spawnX, spawnY});
+
+            const float speed = 150.0f;
+            registry.AddComponent<Velocity>(thirdBullet, Velocity{-speed, 0.0f});
+
+            registry.AddComponent<Bullet>(thirdBullet, Bullet{bossEntity});
+
+            registry.AddComponent<ThirdBullet>(thirdBullet, ThirdBullet{0.4f, 50});
+
+            registry.AddComponent<CircleCollider>(thirdBullet, CircleCollider{30.0f});
+            registry.AddComponent<CollisionLayer>(thirdBullet,
+                CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::PLAYER));
+            registry.AddComponent<Damage>(thirdBullet, Damage{50});
+
+            registry.AddComponent<BossBullet>(thirdBullet, BossBullet{});
+
+            Core::Logger::Info("[BossAttackSystem] Created Third Bullet at ({}, {})", spawnX, spawnY);
         }
 
     }

@@ -20,6 +20,7 @@
             "bullet": "assets/projectiles/bullet.png",
             "boss_bullet": "assets/boss/attacks/bullet.png",
             "black_orb": "assets/boss/attacks/black_orb_frame3.png",
+            "third_bullet": "assets/boss/attacks/third_bullet_boss.png",
             "powerup-spread": "assets/powerups/spread.png",
             "powerup-laser": "assets/powerups/laser.png",
             "powerup-force-pod": "assets/powerups/force_pod.png",

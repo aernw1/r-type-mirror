@@ -27,6 +27,7 @@ namespace RType {
             void CreateFanSpray(Registry& registry, Entity bossEntity, float bossX, float bossY);
             void CreateBossBullet(Registry& registry, float x, float y, float angle, float speed);
             void CreateBlackOrb(Registry& registry, Entity bossEntity, float bossX, float bossY);
+            void CreateThirdBullet(Registry& registry, Entity bossEntity, float bossX, float bossY);
         };
 
     }

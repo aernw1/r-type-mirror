@@ -26,6 +26,7 @@ set(ECS_SOURCES
     BossSystem.cpp
     BossAttackSystem.cpp
     BlackOrbSystem.cpp
+    ThirdBulletSystem.cpp
 )
 
 set(ECS_HEADERS
@@ -62,6 +63,7 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossAttackSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BlackOrbSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ThirdBulletSystem.hpp
 )
 
 add_library(rtype_ecs STATIC

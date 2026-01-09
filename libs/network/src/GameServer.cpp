@@ -57,6 +57,7 @@ namespace network {
         m_bossSystem = std::make_unique<RType::ECS::BossSystem>();
         m_bossAttackSystem = std::make_unique<RType::ECS::BossAttackSystem>();
         m_blackOrbSystem = std::make_unique<RType::ECS::BlackOrbSystem>();
+        m_thirdBulletSystem = std::make_unique<RType::ECS::ThirdBulletSystem>();
         m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
         m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
         m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
@@ -420,6 +421,7 @@ namespace network {
         m_bossSystem->Update(m_registry, dt);
         m_bossAttackSystem->Update(m_registry, dt);
         m_blackOrbSystem->Update(m_registry, dt);
+        m_thirdBulletSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
 
         // Powerup systems (server-side only)
@@ -767,8 +769,6 @@ namespace network {
             entity.ownerHash = 0;
             entity.score = 0;
             m_entities.push_back(entity);
-
-            std::cout << "[SERVER] Sending BOSS entity " << entity.id << " at (" << entity.x << ", " << entity.y << ")" << std::endl;
         }
 
         auto bullets = m_registry.GetEntitiesWithComponent<Bullet>();
@@ -784,7 +784,10 @@ namespace network {
             const auto& bullet = m_registry.GetComponent<Bullet>(bulletEntity);
 
             uint8_t flags = 0;
-            if (m_registry.HasComponent<RType::ECS::BlackOrb>(bulletEntity)) {
+            if (m_registry.HasComponent<RType::ECS::ThirdBullet>(bulletEntity)) {
+                // Third Bullet gets flag 15
+                flags = 15;
+            } else if (m_registry.HasComponent<RType::ECS::BlackOrb>(bulletEntity)) {
                 // Black Orb gets flag 14
                 flags = 14;
             } else if (m_registry.HasComponent<RType::ECS::BossBullet>(bulletEntity)) {

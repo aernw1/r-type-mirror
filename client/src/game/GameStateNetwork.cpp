@@ -191,7 +191,18 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
-                        if (entityState.flags == 14) {
+                        if (entityState.flags == 15) {
+                            auto thirdBulletSpriteIt = m_levelAssets.sprites.find("third_bullet");
+                            if (thirdBulletSpriteIt != m_levelAssets.sprites.end()) {
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(thirdBulletSpriteIt->second, 12));
+                                d.scale = {2.5f, 2.5f};
+                                d.origin = Math::Vector2(16.0f, 16.0f);
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing third bullet sprite (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags == 14) {
                             auto blackOrbSpriteIt = m_levelAssets.sprites.find("black_orb");
                             if (blackOrbSpriteIt != m_levelAssets.sprites.end()) {
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(blackOrbSpriteIt->second, 12));
