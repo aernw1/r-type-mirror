@@ -6,6 +6,7 @@
 */
 
 #include "../../include/LobbyState.hpp"
+#include "../../include/RoomListState.hpp"
 #include <chrono>
 #include <thread>
 #include <iostream>
@@ -29,8 +30,8 @@ namespace RType {
 
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
                 m_escapeKeyPressed = true;
-                std::cout << "[LobbyState] Returning to menu..." << std::endl;
-                m_machine.PopState();
+                std::cout << "[LobbyState] Returning to room selection..." << std::endl;
+                m_machine.ChangeState(std::make_unique<RoomListState>(m_machine, m_context));
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
                 m_escapeKeyPressed = false;
             }
@@ -48,15 +49,15 @@ namespace RType {
 
                     Entity backMsg = m_registry.CreateEntity();
                     m_registry.AddComponent<Position>(backMsg, Position{640.0f, 380.0f});
-                    TextLabel backLabel("Press ESC to return to menu", m_fontSmall, 14);
+                    TextLabel backLabel("Press ESC to return to room selection", m_fontSmall, 14);
                     backLabel.color = {0.5f, 0.86f, 1.0f, 0.9f};
                     backLabel.centered = true;
                     m_registry.AddComponent<TextLabel>(backMsg, std::move(backLabel));
                 }
                 m_errorTimer += dt;
                 if (m_errorTimer >= 3.0f) {
-                    std::cout << "[LobbyState] Auto-returning to menu after error..." << std::endl;
-                    m_machine.PopState();
+                    std::cout << "[LobbyState] Auto-returning to room selection after error..." << std::endl;
+                    m_machine.ChangeState(std::make_unique<RoomListState>(m_machine, m_context));
                 }
                 return;
             }

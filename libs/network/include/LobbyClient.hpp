@@ -20,6 +20,7 @@ namespace network {
     class LobbyClient {
     public:
         LobbyClient(const std::string& serverAddr, uint16_t port);
+        explicit LobbyClient(TcpSocket&& socket);
 
         void connect(const std::string& playerName);
         void ready();
