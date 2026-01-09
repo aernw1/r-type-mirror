@@ -117,7 +117,7 @@ namespace network {
         void UpdateGameLogic(float dt);
         void SpawnPlayer(uint64_t hash, float x, float y);
         void SpawnEnemy();
-        void SpawnEnemyBullet(uint32_t enemyId, float x, float y);
+        void SpawnEnemyBullet(uint32_t enemyId, float x, float y, uint8_t enemyType);
         void SpawnBullet(uint64_t ownerHash, float x, float y);
         void UpdateBullets(float dt);
         void UpdateEnemies(float dt);
@@ -162,6 +162,7 @@ namespace network {
         float m_enemySpawnInterval = 2.0f;
 
         std::unordered_map<uint32_t, float> m_enemyShootCooldowns;
+        std::unordered_map<uint32_t, uint8_t> m_enemyBulletTypes;
 
         std::atomic<uint64_t> m_packetsSent{0};
         std::atomic<uint64_t> m_packetsReceived{0};
