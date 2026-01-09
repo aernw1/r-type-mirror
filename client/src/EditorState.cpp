@@ -33,11 +33,9 @@ namespace RType {
         void EditorState::Init() {
             Core::Logger::Info("[EditorState] Initializing level editor...");
 
-            // Initialize rendering systems
             m_renderingSystem = std::make_unique<ECS::RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<ECS::TextRenderingSystem>(m_renderer.get());
 
-            // Load fonts
             m_fontSmall = m_renderer->LoadFont("../assets/fonts/PressStart2P-Regular.ttf", 12);
             if (m_fontSmall == Renderer::INVALID_FONT_ID) {
                 m_fontSmall = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 12);
@@ -64,6 +62,8 @@ namespace RType {
                 m_registry.AddComponent(statusEntity, std::move(statusLabel));
             }
 
+            m_inputHandler = std::make_unique<EditorInputHandler>(m_renderer.get());
+            m_propertyManager = std::make_unique<EditorPropertyManager>(m_renderer.get());
             m_canvasManager = std::make_unique<EditorCanvasManager>(m_renderer.get());
             m_assetLibrary = std::make_unique<EditorAssetLibrary>(m_renderer.get());
             m_assetLibrary->Initialize();
@@ -72,6 +72,18 @@ namespace RType {
             m_uiManager = std::make_unique<EditorUIManager>(m_renderer.get(), *m_assetLibrary, m_registry, m_entities, m_fontSmall, m_fontMedium);
             m_uiManager->InitializePalette();
             m_selection = m_uiManager->GetActiveSelection();
+
+            m_propertyManager->SetOnPropertyChanged([this](EditorEntityData& entity) {
+                m_entityManager->RebuildDefaultCollider(entity);
+                m_entityManager->SyncEntity(entity);
+                m_hasUnsavedChanges = true;
+                updatePropertyPanel();
+            });
+
+            m_propertyManager->SetOnEntityDeleted([this]() {
+                deleteSelectedEntity();
+            });
+
             updatePropertyPanel();
 
             Core::Logger::Info("[EditorState] Level editor initialized");
@@ -84,7 +96,6 @@ namespace RType {
             m_renderer->SetCamera(defaultCam);
             m_renderer->ResetCamera();
 
-            // Destroy all UI entities
             for (ECS::Entity entity : m_entities) {
                 if (m_registry.IsEntityAlive(entity)) {
                     m_registry.DestroyEntity(entity);
@@ -96,21 +107,22 @@ namespace RType {
         }
 
         void EditorState::HandleInput() {
-            if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
-                m_escapeKeyPressed = true;
-
+            m_inputHandler->HandleKeyPress(Renderer::Key::Escape, [this]() {
                 if (m_hasUnsavedChanges) {
                     Core::Logger::Warning("[EditorState] Exiting with unsaved changes");
                 }
-
                 std::cout << "[EditorState] Returning to menu..." << std::endl;
                 m_renderer->ResetCamera();
                 m_machine.PopState();
-            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
-                m_escapeKeyPressed = false;
-            }
+            });
 
-            bool blockCameraInput = handlePropertyEditing();
+            bool blockCameraInput = false;
+            if (m_propertyManager && m_entityManager && m_entityManager->GetSelectedEntity()) {
+                auto handleKeyPress = [this](Renderer::Key key, std::function<void()> action) {
+                    m_inputHandler->HandleKeyPress(key, action);
+                };
+                blockCameraInput = m_propertyManager->HandleInput(m_entityManager->GetSelectedEntity(), handleKeyPress);
+            }
 
             Math::Vector2 mouseScreen = m_renderer->GetMousePosition();
             if (m_uiManager) {
@@ -130,7 +142,9 @@ namespace RType {
                     if (selection.has_value()) {
                         m_selection = selection.value();
                         consumedByUI = true;
-                        clearValueInput();
+                        if (m_propertyManager) {
+                            m_propertyManager->ClearInput();
+                        }
                     }
                 }
 
@@ -139,7 +153,9 @@ namespace RType {
                     if (m_selection.mode != EditorMode::SELECT) {
                         if (m_entityManager->PlaceEntity(m_selection, mouseWorld)) {
                             m_hasUnsavedChanges = true;
-                            clearValueInput();
+                            if (m_propertyManager) {
+                                m_propertyManager->ClearInput();
+                            }
 
                             m_selection.mode = EditorMode::SELECT;
                             m_selection.subtype.clear();
@@ -230,216 +246,19 @@ namespace RType {
                 m_entityManager->ClearSelection();
             }
 
-            m_activeProperty = EditableProperty::POSITION_X;
-            clearValueInput();
+            if (m_propertyManager) {
+                m_propertyManager->ClearInput();
+            }
             updatePropertyPanel();
-        }
-
-        bool EditorState::handlePropertyEditing() {
-            if (!m_entityManager || !m_entityManager->GetSelectedEntity()) {
-                return false;
-            }
-
-            auto handleKeyPress = [this](Renderer::Key key, bool& stateFlag, auto&& action) {
-                if (m_renderer->IsKeyPressed(key)) {
-                    if (!stateFlag) {
-                        action();
-                        stateFlag = true;
-                    }
-                } else {
-                    stateFlag = false;
-                }
-            };
-
-            bool consumedDirectional = m_renderer->IsKeyPressed(Renderer::Key::Up) ||
-                m_renderer->IsKeyPressed(Renderer::Key::Down);
-
-            handleKeyPress(Renderer::Key::Tab, m_tabKeyPressed, [this]() {
-                cycleProperty();
-            });
-
-            handleKeyPress(Renderer::Key::Up, m_propUpPressed, [this]() {
-                applyPropertyDelta(getPropertyStep(m_activeProperty));
-            });
-            handleKeyPress(Renderer::Key::Down, m_propDownPressed, [this]() {
-                applyPropertyDelta(-getPropertyStep(m_activeProperty));
-            });
-
-            const Renderer::Key digitKeys[10] = {
-                Renderer::Key::Num0, Renderer::Key::Num1, Renderer::Key::Num2, Renderer::Key::Num3, Renderer::Key::Num4,
-                Renderer::Key::Num5, Renderer::Key::Num6, Renderer::Key::Num7, Renderer::Key::Num8, Renderer::Key::Num9
-            };
-
-            for (int i = 0; i < 10; ++i) {
-                if (m_renderer->IsKeyPressed(digitKeys[i])) {
-                    if (!m_numberKeyPressed[static_cast<size_t>(i)]) {
-                        handleNumberInput(digitKeys[i]);
-                        m_numberKeyPressed[static_cast<size_t>(i)] = true;
-                    }
-                } else {
-                    m_numberKeyPressed[static_cast<size_t>(i)] = false;
-                }
-            }
-
-            handleKeyPress(Renderer::Key::Backspace, m_backspacePressed, [this]() {
-                if (!m_propertyInputBuffer.empty()) {
-                    m_propertyInputBuffer.pop_back();
-                    if (m_propertyInputBuffer.empty()) {
-                        updatePropertyPanel();
-                    } else {
-                        setPropertyValue(std::stof(m_propertyInputBuffer));
-                    }
-                } else {
-                    deleteSelectedEntity();
-                }
-            });
-
-            handleKeyPress(Renderer::Key::Enter, m_enterPressed, [this]() {
-                clearValueInput();
-                updatePropertyPanel();
-            });
-
-            return consumedDirectional;
-        }
-
-        void EditorState::cycleProperty() {
-            int current = static_cast<int>(m_activeProperty);
-            current = (current + 1) % static_cast<int>(EditableProperty::COUNT);
-            m_activeProperty = static_cast<EditableProperty>(current);
-            clearValueInput();
-            updatePropertyPanel();
-        }
-
-        void EditorState::applyPropertyDelta(float delta) {
-            auto* entity = m_entityManager ? m_entityManager->GetSelectedEntity() : nullptr;
-            if (!entity) {
-                return;
-            }
-
-            float newValue = getPropertyValue(*entity, m_activeProperty) + delta;
-            setPropertyValue(newValue);
-            clearValueInput();
-        }
-
-        void EditorState::setPropertyValue(float value) {
-            auto* entity = m_entityManager ? m_entityManager->GetSelectedEntity() : nullptr;
-            if (!entity) {
-                return;
-            }
-
-            switch (m_activeProperty) {
-            case EditableProperty::POSITION_X:
-                entity->x = value;
-                break;
-            case EditableProperty::POSITION_Y:
-                entity->y = value;
-                break;
-            case EditableProperty::SCALE_WIDTH:
-                entity->scaleWidth = std::max(PropertySteps::MIN_SCALE, value);
-                break;
-            case EditableProperty::SCALE_HEIGHT:
-                entity->scaleHeight = std::max(PropertySteps::MIN_SCALE, value);
-                break;
-            case EditableProperty::LAYER:
-                entity->layer = static_cast<int>(value);
-                break;
-            case EditableProperty::SCROLL_SPEED:
-                entity->scrollSpeed = value;
-                break;
-            case EditableProperty::COUNT:
-                break;
-            }
-
-            m_hasUnsavedChanges = true;
-
-            if (m_entityManager) {
-                entity->colliders.clear();
-                ECS::ColliderDef collider;
-                collider.x = entity->x - entity->scaleWidth / 2.0f;
-                collider.y = entity->y - entity->scaleHeight / 2.0f;
-                collider.width = entity->scaleWidth;
-                collider.height = entity->scaleHeight;
-                entity->colliders.push_back(collider);
-                m_entityManager->SyncEntity(*entity);
-            }
-
-            updatePropertyPanel();
-        }
-
-        float EditorState::getPropertyValue(const EditorEntityData& entity, EditableProperty property) const {
-            switch (property) {
-            case EditableProperty::POSITION_X:
-                return entity.x;
-            case EditableProperty::POSITION_Y:
-                return entity.y;
-            case EditableProperty::SCALE_WIDTH:
-                return entity.scaleWidth;
-            case EditableProperty::SCALE_HEIGHT:
-                return entity.scaleHeight;
-            case EditableProperty::LAYER:
-                return static_cast<float>(entity.layer);
-            case EditableProperty::SCROLL_SPEED:
-                return entity.scrollSpeed;
-            case EditableProperty::COUNT:
-                break;
-            }
-            return 0.0f;
-        }
-
-        float EditorState::getPropertyStep(EditableProperty property) const {
-            switch (property) {
-            case EditableProperty::POSITION_X:
-            case EditableProperty::POSITION_Y:
-                return PropertySteps::POSITION_STEP;
-            case EditableProperty::SCALE_WIDTH:
-            case EditableProperty::SCALE_HEIGHT:
-                return PropertySteps::SCALE_STEP;
-            case EditableProperty::LAYER:
-                return PropertySteps::LAYER_STEP;
-            case EditableProperty::SCROLL_SPEED:
-                return PropertySteps::SCROLL_SPEED_STEP;
-            case EditableProperty::COUNT:
-                break;
-            }
-            return PropertySteps::LAYER_STEP;
         }
 
         void EditorState::updatePropertyPanel() {
-            if (!m_uiManager || !m_entityManager) {
+            if (!m_uiManager || !m_entityManager || !m_propertyManager) {
                 return;
             }
             const EditorEntityData* selected = m_entityManager->GetSelectedEntity();
-            m_uiManager->UpdatePropertyPanel(selected, m_activeProperty, m_propertyInputBuffer);
+            m_uiManager->UpdatePropertyPanel(selected, m_propertyManager->GetActiveProperty(), m_propertyManager->GetInputBuffer());
             m_uiManager->UpdateColliderPanel(selected, m_entityManager->GetSelectedColliderIndex());
-        }
-
-        void EditorState::clearValueInput() {
-            m_propertyInputBuffer.clear();
-        }
-
-        void EditorState::handleNumberInput(Renderer::Key key) {
-            if (m_propertyInputBuffer.size() >= Input::MAX_INPUT_BUFFER_SIZE) {
-                return;
-            }
-
-            char digit = '0';
-            switch (key) {
-            case Renderer::Key::Num0: digit = '0'; break;
-            case Renderer::Key::Num1: digit = '1'; break;
-            case Renderer::Key::Num2: digit = '2'; break;
-            case Renderer::Key::Num3: digit = '3'; break;
-            case Renderer::Key::Num4: digit = '4'; break;
-            case Renderer::Key::Num5: digit = '5'; break;
-            case Renderer::Key::Num6: digit = '6'; break;
-            case Renderer::Key::Num7: digit = '7'; break;
-            case Renderer::Key::Num8: digit = '8'; break;
-            case Renderer::Key::Num9: digit = '9'; break;
-            default:
-                return;
-            }
-
-            m_propertyInputBuffer.push_back(digit);
-            setPropertyValue(std::stof(m_propertyInputBuffer));
         }
 
         void EditorState::deleteSelectedEntity() {
@@ -449,7 +268,9 @@ namespace RType {
 
             if (m_entityManager->DeleteSelected()) {
                 m_hasUnsavedChanges = true;
-                clearValueInput();
+                if (m_propertyManager) {
+                    m_propertyManager->ClearInput();
+                }
                 updatePropertyPanel();
             }
         }

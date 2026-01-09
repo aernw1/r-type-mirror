@@ -1,5 +1,6 @@
 #include "editor/EditorUIManager.hpp"
 #include "editor/EditorConstants.hpp"
+#include "editor/EditorGeometry.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include <sstream>
 
@@ -167,7 +168,7 @@ namespace RType {
         void EditorUIManager::UpdateHover(Math::Vector2 mouseScreen) {
             bool hoverChanged = false;
             for (auto& entry : m_entries) {
-                bool inside = pointInRect(mouseScreen, entry.bounds);
+                bool inside = EditorGeometry::PointInRect(mouseScreen, entry.bounds);
                 if (entry.hovered != inside) {
                     entry.hovered = inside;
                     hoverChanged = true;
@@ -181,7 +182,7 @@ namespace RType {
 
         std::optional<EditorPaletteSelection> EditorUIManager::HandleClick(Math::Vector2 mouseScreen) {
             for (const auto& entry : m_entries) {
-                if (pointInRect(mouseScreen, entry.bounds)) {
+                if (EditorGeometry::PointInRect(mouseScreen, entry.bounds)) {
                     EditorPaletteSelection selection;
                     selection.mode = entry.mode;
                     selection.entityType = entry.entityType;
@@ -308,12 +309,6 @@ namespace RType {
             m_entries.push_back(std::move(entry));
         }
 
-        bool EditorUIManager::pointInRect(Math::Vector2 point, const Math::Rectangle& rect) const {
-            return point.x >= rect.position.x &&
-                point.x <= rect.position.x + rect.size.x &&
-                point.y >= rect.position.y &&
-                point.y <= rect.position.y + rect.size.y;
-        }
 
         void EditorUIManager::refreshPaletteVisuals() {
             for (auto& entry : m_entries) {

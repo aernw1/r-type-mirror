@@ -84,6 +84,12 @@ namespace RType {
 
             namespace Input {
                 constexpr size_t MAX_INPUT_BUFFER_SIZE = 8;
+                constexpr int NUMBER_KEY_COUNT = 10;
+            }
+
+            namespace Selection {
+                constexpr float OUTLINE_THICKNESS = 3.0f;
+                inline const Math::Color OUTLINE_COLOR{1.0f, 0.85f, 0.35f, 1.0f};
             }
 
         }

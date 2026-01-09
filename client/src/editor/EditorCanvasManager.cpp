@@ -24,55 +24,38 @@ namespace RType {
             const float panSpeed = Camera::PAN_SPEED;
             const float zoomSpeed = Camera::ZOOM_SPEED;
 
-            if (m_renderer->IsKeyPressed(Renderer::Key::Up) && !m_upKeyPressed) {
-                m_upKeyPressed = true;
-            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Up)) {
-                m_upKeyPressed = false;
-            }
-
-            if (m_renderer->IsKeyPressed(Renderer::Key::Down) && !m_downKeyPressed) {
-                m_downKeyPressed = true;
-            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Down)) {
-                m_downKeyPressed = false;
-            }
-
-            if (m_renderer->IsKeyPressed(Renderer::Key::Left) && !m_leftKeyPressed) {
-                m_leftKeyPressed = true;
-            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Left)) {
-                m_leftKeyPressed = false;
-            }
-
-            if (m_renderer->IsKeyPressed(Renderer::Key::Right) && !m_rightKeyPressed) {
-                m_rightKeyPressed = true;
-            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Right)) {
-                m_rightKeyPressed = false;
-            }
-
-            if (m_upKeyPressed) {
+            // Camera panning (continuous while key is held)
+            if (m_renderer->IsKeyPressed(Renderer::Key::Up)) {
                 m_camera.y -= panSpeed * (1.0f / 60.0f) / m_camera.zoom;
             }
-            if (m_downKeyPressed) {
+            if (m_renderer->IsKeyPressed(Renderer::Key::Down)) {
                 m_camera.y += panSpeed * (1.0f / 60.0f) / m_camera.zoom;
             }
-            if (m_leftKeyPressed) {
+            if (m_renderer->IsKeyPressed(Renderer::Key::Left)) {
                 m_camera.x -= panSpeed * (1.0f / 60.0f) / m_camera.zoom;
             }
-            if (m_rightKeyPressed) {
+            if (m_renderer->IsKeyPressed(Renderer::Key::Right)) {
                 m_camera.x += panSpeed * (1.0f / 60.0f) / m_camera.zoom;
             }
 
-            if (m_renderer->IsKeyPressed(Renderer::Key::Num0) && !m_plusKeyPressed) {
-                m_plusKeyPressed = true;
+            // Zoom (single action per key press)
+            // Note: Zoom uses manual state tracking since continuous zoom is desired
+            // EditorInputHandler would be better suited for discrete actions
+            static bool plusKeyPressed = false;
+            static bool minusKeyPressed = false;
+
+            if (m_renderer->IsKeyPressed(Renderer::Key::Num0) && !plusKeyPressed) {
+                plusKeyPressed = true;
                 m_camera.zoom += zoomSpeed;
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Num0)) {
-                m_plusKeyPressed = false;
+                plusKeyPressed = false;
             }
 
-            if (m_renderer->IsKeyPressed(Renderer::Key::Num9) && !m_minusKeyPressed) {
-                m_minusKeyPressed = true;
+            if (m_renderer->IsKeyPressed(Renderer::Key::Num9) && !minusKeyPressed) {
+                minusKeyPressed = true;
                 m_camera.zoom -= zoomSpeed;
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Num9)) {
-                m_minusKeyPressed = false;
+                minusKeyPressed = false;
             }
 
             m_camera.x = std::clamp(m_camera.x, m_camera.minX, m_camera.maxX);

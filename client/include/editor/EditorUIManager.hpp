@@ -54,7 +54,6 @@ namespace RType {
 
             void createCategoryLabel(const std::string& label, float y);
             void createPaletteButton(PaletteEntry entry, float y);
-            bool pointInRect(Math::Vector2 point, const Math::Rectangle& rect) const;
             void refreshPaletteVisuals();
 
             Renderer::IRenderer* m_renderer;

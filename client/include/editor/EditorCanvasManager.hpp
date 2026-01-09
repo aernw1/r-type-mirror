@@ -37,13 +37,6 @@ namespace RType {
             Renderer::IRenderer* m_renderer;
             EditorCamera m_camera;
             EditorGrid m_grid;
-
-            bool m_upKeyPressed = false;
-            bool m_downKeyPressed = false;
-            bool m_leftKeyPressed = false;
-            bool m_rightKeyPressed = false;
-            bool m_plusKeyPressed = false;
-            bool m_minusKeyPressed = false;
         };
 
     }
