@@ -56,6 +56,7 @@ namespace RType {
             float height = 200.0f;
             int health = 1000;
             float scrollSpeed = -300.0f;
+            int attackPattern = 1;
         };
 
         struct PlayerSpawnDef {

@@ -158,6 +158,7 @@ namespace RType {
                     boss.height = bossJson.value("height", 200.0f);
                     boss.health = bossJson.value("health", 1000);
                     boss.scrollSpeed = bossJson.value("scrollSpeed", -300.0f);
+                    boss.attackPattern = bossJson.value("attackPattern", 1);
 
                     level.boss = boss;
                 }
@@ -439,7 +440,8 @@ namespace RType {
 
             registry.AddComponent<Scrollable>(bossEntity, Scrollable{boss.scrollSpeed});
 
-            registry.AddComponent<BossAttack>(bossEntity, BossAttack{3.0f});
+            auto& bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{3.0f});
+            bossAttack.currentPattern = static_cast<BossAttackPattern>(boss.attackPattern);
 
             registry.AddComponent<DamageFlash>(bossEntity, DamageFlash{0.1f});
 

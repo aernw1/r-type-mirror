@@ -56,6 +56,7 @@ namespace network {
         m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
         m_bossSystem = std::make_unique<RType::ECS::BossSystem>();
         m_bossAttackSystem = std::make_unique<RType::ECS::BossAttackSystem>();
+        m_blackOrbSystem = std::make_unique<RType::ECS::BlackOrbSystem>();
         m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
         m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
         m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
@@ -418,6 +419,7 @@ namespace network {
         m_scrollingSystem->Update(m_registry, dt);
         m_bossSystem->Update(m_registry, dt);
         m_bossAttackSystem->Update(m_registry, dt);
+        m_blackOrbSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
 
         // Powerup systems (server-side only)
@@ -782,7 +784,10 @@ namespace network {
             const auto& bullet = m_registry.GetComponent<Bullet>(bulletEntity);
 
             uint8_t flags = 0;
-            if (m_registry.HasComponent<RType::ECS::BossBullet>(bulletEntity)) {
+            if (m_registry.HasComponent<RType::ECS::BlackOrb>(bulletEntity)) {
+                // Black Orb gets flag 14
+                flags = 14;
+            } else if (m_registry.HasComponent<RType::ECS::BossBullet>(bulletEntity)) {
                 // Boss bullets get flag 13
                 flags = 13;
             } else if (m_registry.HasComponent<CollisionLayer>(bulletEntity)) {

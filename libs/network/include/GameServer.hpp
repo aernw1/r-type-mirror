@@ -20,6 +20,7 @@
 #include "ECS/ScrollingSystem.hpp"
 #include "ECS/BossSystem.hpp"
 #include "ECS/BossAttackSystem.hpp"
+#include "ECS/BlackOrbSystem.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/ScoreSystem.hpp"
@@ -142,6 +143,7 @@ namespace network {
         std::unique_ptr<RType::ECS::ScrollingSystem> m_scrollingSystem;
         std::unique_ptr<RType::ECS::BossSystem> m_bossSystem;
         std::unique_ptr<RType::ECS::BossAttackSystem> m_bossAttackSystem;
+        std::unique_ptr<RType::ECS::BlackOrbSystem> m_blackOrbSystem;
         std::unique_ptr<RType::ECS::MovementSystem> m_movementSystem;
         std::unique_ptr<RType::ECS::CollisionDetectionSystem> m_collisionDetectionSystem;
         std::unique_ptr<RType::ECS::BulletCollisionResponseSystem> m_bulletResponseSystem;

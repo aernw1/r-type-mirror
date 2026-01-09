@@ -118,11 +118,12 @@ namespace RType {
             IDLE = 0,
             FAN_SPRAY = 1,
             DIRECT_SHOT = 2,
-            CIRCLE = 3
+            CIRCLE = 3,
+            BLACK_ORB = 4
         };
 
         struct BossAttack : public IComponent {
-            float attackCooldown = 2.0f;
+            float attackCooldown = 3.0f;
             float timeSinceLastAttack = 0.0f;
             BossAttackPattern currentPattern = BossAttackPattern::FAN_SPRAY;
 
@@ -132,6 +133,28 @@ namespace RType {
 
         struct BossBullet : public IComponent {
             BossBullet() = default;
+        };
+
+        struct BlackOrb : public IComponent {
+            float attractionRadius = 200.0f;
+            float absorptionRadius = 30.0f;
+            float attractionForce = 500.0f;
+            bool isActive = true;
+
+            BlackOrb() = default;
+            BlackOrb(float attraction, float absorption, float force)
+                : attractionRadius(attraction), absorptionRadius(absorption), attractionForce(force) {}
+        };
+
+        struct ProximityDamage : public IComponent {
+            float damageRadius = 120.0f;
+            float damageAmount = 1.0f;
+            float tickRate = 0.5f;
+            float timeSinceDamage = 0.0f;
+
+            ProximityDamage() = default;
+            ProximityDamage(float radius, float damage, float rate)
+                : damageRadius(radius), damageAmount(damage), tickRate(rate) {}
         };
 
         struct DamageFlash : public IComponent {
