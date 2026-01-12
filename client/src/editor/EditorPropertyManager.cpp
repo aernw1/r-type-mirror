@@ -82,11 +82,19 @@ namespace RType {
             m_onEntityDeleted = callback;
         }
 
+        void EditorPropertyManager::SetOnPropertyCycled(std::function<void()> callback) {
+            m_onPropertyCycled = callback;
+        }
+
         void EditorPropertyManager::cycleProperty() {
             int current = static_cast<int>(m_activeProperty);
             current = (current + 1) % static_cast<int>(EditableProperty::COUNT);
             m_activeProperty = static_cast<EditableProperty>(current);
             ClearInput();
+
+            if (m_onPropertyCycled) {
+                m_onPropertyCycled();
+            }
         }
 
         void EditorPropertyManager::applyPropertyDelta(EditorEntityData& entity, float delta) {

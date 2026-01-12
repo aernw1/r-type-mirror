@@ -28,6 +28,7 @@ namespace RType {
             void ClearInput();
             void SetOnPropertyChanged(std::function<void(EditorEntityData&)> callback);
             void SetOnEntityDeleted(std::function<void()> callback);
+            void SetOnPropertyCycled(std::function<void()> callback);
 
         private:
             Renderer::IRenderer* m_renderer;
@@ -37,6 +38,7 @@ namespace RType {
 
             std::function<void(EditorEntityData&)> m_onPropertyChanged;
             std::function<void()> m_onEntityDeleted;
+            std::function<void()> m_onPropertyCycled;
 
             void cycleProperty();
             void applyPropertyDelta(EditorEntityData& entity, float delta);

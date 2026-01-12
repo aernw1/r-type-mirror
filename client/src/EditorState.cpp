@@ -88,6 +88,10 @@ namespace RType {
                 deleteSelectedEntity();
             });
 
+            m_propertyManager->SetOnPropertyCycled([this]() {
+                updatePropertyPanel();
+            });
+
             updatePropertyPanel();
 
             Core::Logger::Info("[EditorState] Level editor initialized");
