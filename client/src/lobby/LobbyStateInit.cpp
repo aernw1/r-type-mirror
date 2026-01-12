@@ -20,6 +20,12 @@ namespace RType {
             m_textSystem = std::make_unique<TextRenderingSystem>(m_renderer.get());
         }
 
+        LobbyState::LobbyState(GameStateMachine& machine, GameContext& context, network::TcpSocket&& socket) : m_machine(machine), m_context(context), m_client(std::move(socket)), m_playerName(context.playerName) {
+            m_renderer = context.renderer;
+            m_renderingSystem = std::make_unique<RenderingSystem>(m_renderer.get());
+            m_textSystem = std::make_unique<TextRenderingSystem>(m_renderer.get());
+        }
+
         void LobbyState::Init() {
             std::cout << "[LobbyState] Connecting to " << m_context.serverIp << ":" << m_context.serverPort << " as " << m_playerName << std::endl;
 
@@ -127,7 +133,7 @@ namespace RType {
 
             m_instructionsEntity = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(m_instructionsEntity, Position{640.0f, 650.0f});
-            TextLabel instrLabel("[R] Toggle Ready  |  [ESC] Back to Menu", m_fontSmall, 14);
+            TextLabel instrLabel("[R] Toggle Ready  |  [ESC] Change Room", m_fontSmall, 14);
             instrLabel.color = {0.5f, 0.86f, 1.0f, 0.9f};
             instrLabel.centered = true;
             m_registry.AddComponent<TextLabel>(m_instructionsEntity, std::move(instrLabel));

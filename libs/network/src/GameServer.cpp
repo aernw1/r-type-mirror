@@ -72,11 +72,11 @@ namespace network {
         );
         m_powerUpSpawnSystem->SetSpawnInterval(5.0f); // Spawn every 5 seconds for testing
         m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(nullptr);
-        
+
         // Shooting system for spread shot and laser beam
         // Note: We use INVALID_SPRITE_ID since we don't need rendering on server
         m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(0);
-        
+
         // Force pod and shield systems
         m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
         m_shieldSystem = std::make_unique<RType::ECS::ShieldSystem>();
@@ -427,10 +427,10 @@ namespace network {
         // Powerup systems (server-side only)
         m_powerUpSpawnSystem->Update(m_registry, dt);
         m_powerUpCollisionSystem->Update(m_registry, dt);
-        
+
         // Shooting system for weapon powerups (spread shot, laser)
         m_shootingSystem->Update(m_registry, dt);
-        
+
         // Force pod and shield systems
         m_forcePodSystem->Update(m_registry, dt);
         m_shieldSystem->Update(m_registry, dt);
@@ -514,7 +514,7 @@ namespace network {
         m_registry.AddComponent<CollisionLayer>(bulletEntity, CollisionLayer(CollisionLayers::PLAYER_BULLET, CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
     }
 
-    void GameServer::SpawnEnemyBullet(uint32_t enemyId, float x, float y) {
+    void GameServer::SpawnEnemyBullet(uint32_t enemyId, float x, float y, uint8_t enemyType) {
         using namespace RType::ECS;
 
         Entity enemyEntity = static_cast<Entity>(enemyId);
@@ -524,6 +524,7 @@ namespace network {
         }
 
         Entity bulletEntity = m_registry.CreateEntity();
+        uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(-400.0f, 0.0f));
         m_registry.AddComponent<Bullet>(bulletEntity, Bullet(NULL_ENTITY));
@@ -531,6 +532,8 @@ namespace network {
         m_registry.AddComponent<BoxCollider>(bulletEntity, BoxCollider(10.0f, 5.0f));
         m_registry.AddComponent<CircleCollider>(bulletEntity, CircleCollider(5.0f));
         m_registry.AddComponent<CollisionLayer>(bulletEntity, CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER | CollisionLayers::OBSTACLE));
+
+        m_enemyBulletTypes[bulletId] = enemyType;
     }
 
 
@@ -557,6 +560,8 @@ namespace network {
         }
 
         for (auto bullet : bulletsToDestroy) {
+            uint32_t bulletId = static_cast<uint32_t>(bullet);
+            m_enemyBulletTypes.erase(bulletId);
             m_registry.DestroyEntity(bullet);
         }
     }
@@ -591,7 +596,8 @@ namespace network {
             if (m_enemyShootCooldowns[enemyId] <= 0.0f) {
                 EnemyType type = static_cast<EnemyType>(static_cast<uint8_t>(enemyComp.type));
                 const EnemyStats& stats = GetEnemyStats(type);
-                SpawnEnemyBullet(enemyId, pos.x + stats.bulletXOffset, pos.y + stats.bulletYOffset);
+                uint8_t enemyTypeValue = static_cast<uint8_t>(enemyComp.type);
+                SpawnEnemyBullet(enemyId, pos.x + stats.bulletXOffset, pos.y + stats.bulletYOffset, enemyTypeValue);
                 m_enemyShootCooldowns[enemyId] = stats.fireRate;
             }
         }
@@ -639,28 +645,28 @@ namespace network {
             entity.vx = vel.dx;
             entity.vy = vel.dy;
             entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
-            
+
             // Encode player number in flags (lower 4 bits)
             uint8_t flags = player.playerNumber & 0x0F;
             entity.flags = flags;
             entity.ownerHash = player.playerHash;
-          
+
             if (m_registry.HasComponent<ScoreValue>(playerEntity)) {
                 entity.score = m_registry.GetComponent<ScoreValue>(playerEntity).points;
             } else {
                 entity.score = 0;
             }
-            
+
             // Initialize power-up state defaults
             entity.powerUpFlags = 0;
             entity.speedMultiplier = 10; // 1.0 scaled by 10
             entity.weaponType = 0; // STANDARD
             entity.fireRate = 20; // 0.2 scaled by 10
-            
+
             // Encode power-up state
             if (m_registry.HasComponent<ActivePowerUps>(playerEntity)) {
                 const auto& powerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
-                
+
                 if (powerUps.hasFireRateBoost) {
                     entity.powerUpFlags |= network::PowerUpFlags::POWERUP_FIRE_RATE_BOOST;
                 }
@@ -673,12 +679,12 @@ namespace network {
                 if (powerUps.hasShield) {
                     entity.powerUpFlags |= network::PowerUpFlags::POWERUP_SHIELD;
                 }
-                
+
                 // Encode speed multiplier (scaled by 10, clamped to 0-255)
                 float speedMult = powerUps.speedMultiplier;
                 entity.speedMultiplier = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(speedMult * 10.0f))));
             }
-            
+
             // Check if player has a force pod (separate entity with ForcePod component pointing to this player)
             auto forcePods = m_registry.GetEntitiesWithComponent<ForcePod>();
             for (auto podEntity : forcePods) {
@@ -690,7 +696,7 @@ namespace network {
                     }
                 }
             }
-            
+
             // Encode weapon type and fire rate
             if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
                 const auto& weaponSlot = m_registry.GetComponent<WeaponSlot>(playerEntity);
@@ -783,6 +789,7 @@ namespace network {
             const auto& vel = m_registry.GetComponent<Velocity>(bulletEntity);
             const auto& bullet = m_registry.GetComponent<Bullet>(bulletEntity);
 
+            uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
             uint8_t flags = 0;
             if (m_registry.HasComponent<RType::ECS::ThirdBullet>(bulletEntity)) {
                 // Third Bullet gets flag 15
@@ -796,12 +803,17 @@ namespace network {
             } else if (m_registry.HasComponent<CollisionLayer>(bulletEntity)) {
                 const auto& collLayer = m_registry.GetComponent<CollisionLayer>(bulletEntity);
                 if (collLayer.layer == CollisionLayers::ENEMY_BULLET) {
-                    flags = 10;
+                    uint8_t enemyType = 0;
+                    auto it = m_enemyBulletTypes.find(bulletId);
+                    if (it != m_enemyBulletTypes.end()) {
+                        enemyType = it->second;
+                    }
+                    flags = 10 + enemyType;
                 }
             }
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(bulletEntity);
+            entity.id = bulletId;
             entity.type = EntityType::BULLET;
             entity.x = pos.x;
             entity.y = pos.y;
@@ -886,7 +898,7 @@ namespace network {
 
             // Find owner to get player hash
             uint64_t ownerHash = 0;
-            if (m_registry.IsEntityAlive(pod.owner) && 
+            if (m_registry.IsEntityAlive(pod.owner) &&
                 m_registry.HasComponent<Player>(pod.owner)) {
                 const auto& owner = m_registry.GetComponent<Player>(pod.owner);
                 ownerHash = owner.playerHash;

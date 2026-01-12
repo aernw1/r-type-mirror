@@ -12,13 +12,25 @@
 
 // ==================== CONSTANTS ====================
 constexpr size_t PLAYER_NAME_SIZE = 32;
+constexpr size_t ROOM_NAME_SIZE = 32;
 constexpr size_t MAX_PLAYERS = 4;
+constexpr size_t MAX_ROOMS = 16;
 constexpr size_t MAX_ENTITIES = 256;
 
 namespace network {
 
     // ==================== LOBBY PROTOCOL (TCP) ====================
     enum class LobbyPacket : uint8_t {
+        // Room management packets
+        LIST_ROOMS_REQ = 0x01,   // Client → Server: request room list
+        LIST_ROOMS_ACK = 0x02,   // Server → Client: room list response
+        CREATE_ROOM_REQ = 0x03,  // Client → Server: create a new room
+        CREATE_ROOM_ACK = 0x04,  // Server → Client: room created (with ID)
+        JOIN_ROOM_REQ = 0x05,    // Client → Server: join a room
+        JOIN_ROOM_ACK = 0x06,    // Server → Client: join accepted/rejected
+        ROOM_UPDATE = 0x07,      // Server → All: room state changed
+
+        // Lobby packets (within a room)
         CONNECT_REQ = 0x10,
         CONNECT_ACK = 0x11,
         PLAYER_JOIN = 0x12,
@@ -64,6 +76,24 @@ namespace network {
     };
 
     // ==================== STRUCTURES ====================
+
+    // Room information for room list
+    struct RoomInfo {
+        uint32_t id = 0;
+        char name[ROOM_NAME_SIZE] = {};
+        uint8_t playerCount = 0;
+        uint8_t maxPlayers = MAX_PLAYERS;
+        bool inGame = false;
+    };
+
+    // Join room result status
+    enum class JoinRoomStatus : uint8_t {
+        SUCCESS = 0x00,
+        ROOM_FULL = 0x01,
+        ROOM_NOT_FOUND = 0x02,
+        ROOM_IN_GAME = 0x03,
+    };
+
     struct PlayerInfo {
         uint8_t number = 0;
         uint64_t hash = 0;
