@@ -52,6 +52,7 @@ add_executable(r-type_client
     client/src/editor/EditorAssetLibrary.cpp
     client/src/editor/EditorUIManager.cpp
     client/src/editor/EditorEntityManager.cpp
+    client/src/editor/EditorFileManager.cpp
     # Editor utilities
     client/src/editor/EditorInputHandler.cpp
     client/src/editor/EditorDrawing.cpp
