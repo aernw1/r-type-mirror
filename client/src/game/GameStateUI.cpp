@@ -242,6 +242,7 @@ namespace RType {
 
             renderChargeBar();
             renderHealthBars();
+            renderBossHealthBar();
             renderGameOverOverlay();
         }
 
@@ -368,6 +369,81 @@ namespace RType {
             rect.position = Renderer::Vector2(0.0f, 0.0f);
             rect.size = Renderer::Vector2(1280.0f, 720.0f);
             m_renderer->DrawRectangle(rect, Renderer::Color(0.0f, 0.0f, 0.0f, 0.45f));
+        }
+
+        void InGameState::initializeBossHealthBar() {
+            if (m_bossHealthBar.active) {
+                return;
+            }
+
+            m_bossHealthBar.active = true;
+
+            m_bossHealthBar.titleEntity = m_registry.CreateEntity();
+            m_registry.AddComponent<Position>(m_bossHealthBar.titleEntity, Position{640.0f - 80.0f, 10.0f});
+            m_registry.AddComponent<TextLabel>(m_bossHealthBar.titleEntity,
+                TextLabel("BOSS - LEVEL 1", m_hudFontSmall != Renderer::INVALID_FONT_ID ? m_hudFontSmall : m_hudFont, 12));
+
+            Core::Logger::Info("[GameState] Boss health bar initialized");
+        }
+
+        void InGameState::destroyBossHealthBar() {
+            if (!m_bossHealthBar.active) {
+                return;
+            }
+
+            if (m_bossHealthBar.titleEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_bossHealthBar.titleEntity)) {
+                m_registry.DestroyEntity(m_bossHealthBar.titleEntity);
+            }
+
+            m_bossHealthBar.active = false;
+            m_bossHealthBar.titleEntity = NULL_ENTITY;
+            m_bossHealthBar.bossNetworkId = 0;
+
+            Core::Logger::Info("[GameState] Boss health bar destroyed");
+        }
+
+        void InGameState::updateBossHealthBar() {
+            if (!m_bossHealthBar.active) {
+                return;
+            }
+
+            float healthPercent = static_cast<float>(m_bossHealthBar.currentHealth) /
+                                 static_cast<float>(m_bossHealthBar.maxHealth);
+            if (healthPercent < 0.0f) healthPercent = 0.0f;
+            if (healthPercent > 1.0f) healthPercent = 1.0f;
+
+            if (m_bossHealthBar.currentHealth <= 0) {
+                destroyBossHealthBar();
+            }
+        }
+
+        void InGameState::renderBossHealthBar() {
+            if (!m_bossHealthBar.active) {
+                return;
+            }
+
+            const float barWidth = 400.0f;
+            const float barHeight = 15.0f;
+            const float barX = 440.0f;
+            const float barY = 35.0f;
+
+            Renderer::Rectangle bgRect;
+            bgRect.position = Renderer::Vector2(barX, barY);
+            bgRect.size = Renderer::Vector2(barWidth, barHeight);
+            m_renderer->DrawRectangle(bgRect, Renderer::Color(0.3f, 0.3f, 0.3f, 1.0f));
+
+            float healthPercent = static_cast<float>(m_bossHealthBar.currentHealth) /
+                                 static_cast<float>(m_bossHealthBar.maxHealth);
+            if (healthPercent < 0.0f) healthPercent = 0.0f;
+            if (healthPercent > 1.0f) healthPercent = 1.0f;
+
+            Renderer::Rectangle fgRect;
+            fgRect.position = Renderer::Vector2(barX, barY);
+            fgRect.size = Renderer::Vector2(barWidth * healthPercent, barHeight);
+
+            float red = 1.0f - (healthPercent * 0.5f);
+            float green = healthPercent * 0.8f;
+            m_renderer->DrawRectangle(fgRect, Renderer::Color(red, green, 0.0f, 1.0f));
         }
 
     }

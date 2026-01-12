@@ -6,7 +6,7 @@
 */
 
 #include "ResultsState.hpp"
-#include "MenuState.hpp"
+#include "RoomListState.hpp"
 #include "ECS/Components/TextLabel.hpp"
 
 #include <algorithm>
@@ -77,7 +77,7 @@ namespace RType {
         void ResultsState::HandleInput() {
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapePressed) {
                 m_escapePressed = true;
-                m_machine.ChangeState(std::make_unique<MenuState>(m_machine, m_context));
+                m_machine.ChangeState(std::make_unique<RoomListState>(m_machine, m_context));
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
                 m_escapePressed = false;
             }
@@ -233,7 +233,7 @@ namespace RType {
 
             Entity hint = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(hint, Position{640.0f, 650.0f});
-            TextLabel hintLabel("Press ESC to return to menu", m_fontSmall != Renderer::INVALID_FONT_ID ? m_fontSmall : m_fontMedium, 14);
+            TextLabel hintLabel("Press ESC to return to room selection", m_fontSmall != Renderer::INVALID_FONT_ID ? m_fontSmall : m_fontMedium, 14);
             hintLabel.centered = true;
             hintLabel.color = {0.20f, 0.60f, 1.00f, 0.95f};
             m_registry.AddComponent<TextLabel>(hint, std::move(hintLabel));

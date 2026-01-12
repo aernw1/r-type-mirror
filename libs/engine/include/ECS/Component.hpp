@@ -110,6 +110,79 @@ namespace RType {
                 : type(enemyType), id(enemyId) {}
         };
 
+        struct Boss : public IComponent {
+            Boss() = default;
+        };
+
+        enum class BossAttackPattern {
+            IDLE = 0,
+            FAN_SPRAY = 1,
+            DIRECT_SHOT = 2,
+            CIRCLE = 3,
+            BLACK_ORB = 4,
+            THIRD_BULLET = 5
+        };
+
+        struct BossAttack : public IComponent {
+            float attackCooldown = 3.0f;
+            float timeSinceLastAttack = 0.0f;
+            BossAttackPattern currentPattern = BossAttackPattern::FAN_SPRAY;
+
+            BossAttack() = default;
+            BossAttack(float cooldown) : attackCooldown(cooldown) {}
+        };
+
+        struct BossBullet : public IComponent {
+            BossBullet() = default;
+        };
+
+        struct BlackOrb : public IComponent {
+            float attractionRadius = 200.0f;
+            float absorptionRadius = 30.0f;
+            float attractionForce = 500.0f;
+            bool isActive = true;
+
+            BlackOrb() = default;
+            BlackOrb(float attraction, float absorption, float force)
+                : attractionRadius(attraction), absorptionRadius(absorption), attractionForce(force) {}
+        };
+
+        struct ProximityDamage : public IComponent {
+            float damageRadius = 120.0f;
+            float damageAmount = 1.0f;
+            float tickRate = 0.5f;
+            float timeSinceDamage = 0.0f;
+
+            ProximityDamage() = default;
+            ProximityDamage(float radius, float damage, float rate)
+                : damageRadius(radius), damageAmount(damage), tickRate(rate) {}
+        };
+
+        struct DamageFlash : public IComponent {
+            float duration = 0.1f;
+            float timeRemaining = 0.0f;
+            bool isActive = false;
+
+            DamageFlash() = default;
+            DamageFlash(float flashDuration) : duration(flashDuration) {}
+
+            void Trigger() {
+                isActive = true;
+                timeRemaining = duration;
+            }
+        };
+
+        struct ThirdBullet : public IComponent {
+            float spawnInterval = 0.3f;
+            float timeSinceSpawn = 0.0f;
+            int damage = 50;
+            bool isActive = true;
+
+            ThirdBullet() = default;
+            ThirdBullet(float interval, int dmg)
+                : spawnInterval(interval), damage(dmg) {}
+        };
+
         struct Health : public IComponent {
             int current = 100;
             int max = 100;

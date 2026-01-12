@@ -11,7 +11,7 @@
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include "ResultsState.hpp"
-#include "LobbyState.hpp"
+#include "RoomListState.hpp"
 #include <cmath>
 
 using namespace RType::ECS;
@@ -34,7 +34,7 @@ namespace RType {
                         m_context.networkClient->Stop();
                         m_context.networkClient.reset();
                     }
-                    m_machine.ChangeState(std::make_unique<LobbyState>(m_machine, m_context));
+                    m_machine.ChangeState(std::make_unique<RoomListState>(m_machine, m_context));
                 } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
                     m_gameOverEscapePressed = false;
                 }

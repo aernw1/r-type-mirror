@@ -14,6 +14,7 @@
 #include "Renderer/IRenderer.hpp"
 #include "ECS/Registry.hpp"
 #include "../../libs/network/include/GameClient.hpp"
+#include "../../libs/network/include/TcpSocket.hpp"
 #include "../../libs/network/include/Protocol.hpp"
 
 namespace RType {
@@ -38,6 +39,9 @@ namespace RType {
             uint64_t playerHash;
             uint8_t playerNumber;
             std::vector<network::PlayerInfo> allPlayers;
+
+            uint32_t roomId = 0;
+            std::string roomName;
         };
 
         class IState {
