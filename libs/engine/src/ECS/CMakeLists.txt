@@ -23,6 +23,10 @@ set(ECS_SOURCES
     PowerUpCollisionSystem.cpp
     ForcePodSystem.cpp
     ShieldSystem.cpp
+    BossSystem.cpp
+    BossAttackSystem.cpp
+    BlackOrbSystem.cpp
+    ThirdBulletSystem.cpp
 )
 
 set(ECS_HEADERS
@@ -56,6 +60,10 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PowerUpCollisionSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ForcePodSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShieldSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossAttackSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BlackOrbSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ThirdBulletSystem.hpp
 )
 
 add_library(rtype_ecs STATIC

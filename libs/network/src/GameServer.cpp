@@ -6,6 +6,7 @@
 */
 
 #include "GameServer.hpp"
+#include "ECS/BossSystem.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <fstream>
@@ -53,6 +54,10 @@ namespace network {
         m_socket.set_option(sendOption);
 
         m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
+        m_bossSystem = std::make_unique<RType::ECS::BossSystem>();
+        m_bossAttackSystem = std::make_unique<RType::ECS::BossAttackSystem>();
+        m_blackOrbSystem = std::make_unique<RType::ECS::BlackOrbSystem>();
+        m_thirdBulletSystem = std::make_unique<RType::ECS::ThirdBulletSystem>();
         m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
         m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
         m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
@@ -94,9 +99,15 @@ namespace network {
             std::cout << "Loading level from: " << m_levelPath << std::endl;
             auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
             std::cout << "Level JSON loaded: " << levelData.obstacles.size() << " obstacle definitions found" << std::endl;
+            std::cout << "Boss in level data: " << (levelData.boss.has_value() ? "YES" : "NO") << std::endl;
+            if (levelData.boss.has_value()) {
+                std::cout << "Boss position: (" << levelData.boss->x << ", " << levelData.boss->y << ")" << std::endl;
+            }
 
             auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
-            std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, " << createdEntities.enemies.size() << " enemy entities created" << std::endl;
+            std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, "
+                      << createdEntities.enemies.size() << " enemy entities, boss: "
+                      << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "CREATED" : "NOT CREATED") << std::endl;
 
             size_t obstaclesWithColliders = 0;
             for (auto obsEntity : createdEntities.obstacleColliders) {
@@ -407,6 +418,10 @@ namespace network {
         m_scrollOffset += SCROLL_SPEED * dt;
 
         m_scrollingSystem->Update(m_registry, dt);
+        m_bossSystem->Update(m_registry, dt);
+        m_bossAttackSystem->Update(m_registry, dt);
+        m_blackOrbSystem->Update(m_registry, dt);
+        m_thirdBulletSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
 
         // Powerup systems (server-side only)
@@ -435,7 +450,9 @@ namespace network {
 
         auto now = std::chrono::steady_clock::now();
         float elapsed = std::chrono::duration<float>(now - m_lastSpawnTime).count();
-        if (elapsed >= m_enemySpawnInterval) {
+
+        // Don't spawn normal enemies when boss is active
+        if (elapsed >= m_enemySpawnInterval && !IsBossActive()) {
             SpawnEnemy();
             m_lastSpawnTime = now;
         }
@@ -711,12 +728,50 @@ namespace network {
             GameEntity entity;
             entity.id = static_cast<uint32_t>(enemyEntity);
             entity.type = EntityType::ENEMY;
+            entity.flags = static_cast<uint8_t>(enemy.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
             entity.vy = vel.dy;
             entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
-            entity.flags = static_cast<uint8_t>(enemy.type);
+            entity.ownerHash = 0;
+            entity.score = 0;
+            m_entities.push_back(entity);
+        }
+
+        auto bosses = m_registry.GetEntitiesWithComponent<Boss>();
+        for (auto bossEntity : bosses) {
+            if (!m_registry.IsEntityAlive(bossEntity) ||
+                !m_registry.HasComponent<Position>(bossEntity) ||
+                !m_registry.HasComponent<Velocity>(bossEntity) ||
+                !m_registry.HasComponent<Health>(bossEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(bossEntity);
+            const auto& vel = m_registry.GetComponent<Velocity>(bossEntity);
+            const auto& health = m_registry.GetComponent<Health>(bossEntity);
+
+            uint8_t flags = 0;
+            if (m_registry.HasComponent<RType::ECS::DamageFlash>(bossEntity)) {
+                const auto& flash = m_registry.GetComponent<RType::ECS::DamageFlash>(bossEntity);
+                if (flash.isActive) {
+                    flags = 1;
+                }
+            }
+
+            float healthPercent = (static_cast<float>(health.current) / static_cast<float>(health.max)) * 100.0f;
+            uint8_t healthValue = static_cast<uint8_t>(std::min(100.0f, std::max(0.0f, healthPercent)));
+
+            GameEntity entity;
+            entity.id = static_cast<uint32_t>(bossEntity);
+            entity.type = EntityType::BOSS;
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = vel.dx;
+            entity.vy = vel.dy;
+            entity.health = healthValue;
+            entity.flags = flags;
             entity.ownerHash = 0;
             entity.score = 0;
             m_entities.push_back(entity);
@@ -736,7 +791,16 @@ namespace network {
 
             uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
             uint8_t flags = 0;
-            if (m_registry.HasComponent<CollisionLayer>(bulletEntity)) {
+            if (m_registry.HasComponent<RType::ECS::ThirdBullet>(bulletEntity)) {
+                // Third Bullet gets flag 15
+                flags = 15;
+            } else if (m_registry.HasComponent<RType::ECS::BlackOrb>(bulletEntity)) {
+                // Black Orb gets flag 14
+                flags = 14;
+            } else if (m_registry.HasComponent<RType::ECS::BossBullet>(bulletEntity)) {
+                // Boss bullets get flag 13
+                flags = 13;
+            } else if (m_registry.HasComponent<CollisionLayer>(bulletEntity)) {
                 const auto& collLayer = m_registry.GetComponent<CollisionLayer>(bulletEntity);
                 if (collLayer.layer == CollisionLayers::ENEMY_BULLET) {
                     uint8_t enemyType = 0;
@@ -875,6 +939,39 @@ namespace network {
             index = 0;
         }
         return s_enemyStats[index];
+    }
+
+    bool GameServer::IsBossActive() const {
+        auto bosses = m_registry.GetEntitiesWithComponent<RType::ECS::Boss>();
+
+        static bool lastState = false;
+        bool currentState = false;
+
+        for (auto bossEntity : bosses) {
+            if (!m_registry.IsEntityAlive(bossEntity)) {
+                continue;
+            }
+
+            if (m_registry.HasComponent<RType::ECS::Health>(bossEntity) &&
+                !m_registry.HasComponent<RType::ECS::Scrollable>(bossEntity)) {
+                const auto& health = m_registry.GetComponent<RType::ECS::Health>(bossEntity);
+                if (health.current > 0) {
+                    currentState = true;
+                    break;
+                }
+            }
+        }
+
+        if (currentState != lastState) {
+            if (currentState) {
+                std::cout << "[GameServer] Boss is now ACTIVE - enemy spawning DISABLED" << std::endl;
+            } else {
+                std::cout << "[GameServer] Boss is DEFEATED - enemy spawning RESUMED" << std::endl;
+            }
+            lastState = currentState;
+        }
+
+        return currentState;
     }
 
 }

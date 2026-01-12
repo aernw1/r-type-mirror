@@ -160,12 +160,71 @@ namespace RType {
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         std::cout << "[GameState] Created ENEMY entity " << entityState.entityId << " type " << static_cast<int>(enemyType) << std::endl;
+                    } else if (type == network::EntityType::BOSS) {
+                        Renderer::SpriteId bossSprite = Renderer::INVALID_SPRITE_ID;
+                        auto spriteIt = m_levelAssets.sprites.find("boss_dragon");
+                        if (spriteIt != m_levelAssets.sprites.end()) {
+                            bossSprite = spriteIt->second;
+                        }
+
+                        if (bossSprite == Renderer::INVALID_SPRITE_ID) {
+                            Core::Logger::Warning("[GameState] Missing boss sprite (entity {})", entityState.entityId);
+                            continue;
+                        }
+
+                        auto newEntity = m_registry.CreateEntity();
+                        m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
+                        m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
+                        m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 1000});
+
+                        auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(bossSprite, 5));
+                        drawable.scale = {3.0f, 3.0f};
+                        drawable.origin = Math::Vector2(0.0f, 0.0f);
+
+                        m_networkEntityMap[entityState.entityId] = newEntity;
+                        std::cout << "[GameState] Created BOSS entity " << entityState.entityId << std::endl;
+
+                        m_bossHealthBar.currentHealth = static_cast<int>(entityState.health);
+                        m_bossHealthBar.maxHealth = 1000;
                     } else if (type == network::EntityType::BULLET) {
                         auto newEntity = m_registry.CreateEntity();
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
-                        if (entityState.flags >= 10) {
+                        if (entityState.flags == 15) {
+                            auto thirdBulletSpriteIt = m_levelAssets.sprites.find("third_bullet");
+                            if (thirdBulletSpriteIt != m_levelAssets.sprites.end()) {
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(thirdBulletSpriteIt->second, 12));
+                                d.scale = {2.5f, 2.5f};
+                                d.origin = Math::Vector2(16.0f, 16.0f);
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing third bullet sprite (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags == 14) {
+                            auto blackOrbSpriteIt = m_levelAssets.sprites.find("black_orb");
+                            if (blackOrbSpriteIt != m_levelAssets.sprites.end()) {
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(blackOrbSpriteIt->second, 12));
+                                d.scale = {2.0f, 2.0f};
+                                d.origin = Math::Vector2(20.0f, 20.0f);
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing black orb sprite (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags == 13) {
+                            auto bossBulletSpriteIt = m_levelAssets.sprites.find("boss_bullet");
+                            if (bossBulletSpriteIt != m_levelAssets.sprites.end()) {
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bossBulletSpriteIt->second, 12));
+                                d.scale = {2.0f, 2.0f};
+                                d.origin = Math::Vector2(8.0f, 4.0f);
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing boss bullet sprite (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags >= 10) {
                             uint8_t enemyType = entityState.flags - 10;
                             EnemyBulletSpriteConfig config = GetEnemyBulletSpriteConfig(enemyType);
                             Renderer::SpriteId bulletSprite = config.sprite;
@@ -432,6 +491,34 @@ namespace RType {
                         }
                     }
 
+                    // Handle boss damage flash and health bar update
+                    if (type == network::EntityType::BOSS) {
+                        if (m_registry.HasComponent<Drawable>(ecsEntity)) {
+                            auto& drawable = m_registry.GetComponent<Drawable>(ecsEntity);
+                            if (entityState.flags == 1) {
+                                // Red tint flash
+                                drawable.tint = {1.0f, 0.3f, 0.3f, 1.0f};
+                            } else {
+                                // Normal tint
+                                drawable.tint = {1.0f, 1.0f, 1.0f, 1.0f};
+                            }
+                        }
+
+                        if (!m_bossHealthBar.active && entityState.x < 1920.0f) {
+                            initializeBossHealthBar();
+                            m_bossHealthBar.maxHealth = 100;
+                            m_bossHealthBar.bossNetworkId = entityState.entityId;
+                        }
+
+                        m_bossHealthBar.currentHealth = static_cast<int>(entityState.health);
+
+                        if (m_bossHealthBar.active && entityState.health == 0) {
+                            destroyBossHealthBar();
+                        } else {
+                            updateBossHealthBar();
+                        }
+                    }
+
                     if (type == network::EntityType::PLAYER) {
                         ApplyPowerUpStateToPlayer(ecsEntity, entityState);
                     }
@@ -448,6 +535,7 @@ namespace RType {
             for (auto it = m_networkEntityMap.begin(); it != m_networkEntityMap.end();) {
                 if (receivedIds.find(it->first) == receivedIds.end()) {
                     auto ecsEntity = it->second;
+                    uint32_t networkId = it->first;
 
                     DestroyPlayerNameLabel(ecsEntity);
 
@@ -473,6 +561,10 @@ namespace RType {
                             m_playersHUD[localPlayerIndex].playerEntity = NULL_ENTITY;
                         }
                         m_localPlayerEntity = NULL_ENTITY;
+                    }
+
+                    if (m_bossHealthBar.active && networkId == m_bossHealthBar.bossNetworkId) {
+                        destroyBossHealthBar();
                     }
 
                     if (m_registry.IsEntityAlive(ecsEntity)) {
