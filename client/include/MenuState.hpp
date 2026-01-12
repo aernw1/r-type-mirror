@@ -31,6 +31,15 @@ namespace RType {
         private:
             void createUI();
             void updateAnimations(float dt);
+            void updateMenuSelection();
+
+            enum class MenuItem {
+                PLAY = 0,
+                EDITOR = 1,
+                SETTINGS = 2,
+                QUIT = 3,
+                COUNT = 4
+            };
 
             GameStateMachine& m_machine;
             GameContext& m_context;
@@ -47,11 +56,13 @@ namespace RType {
 
             std::vector<RType::ECS::Entity> m_entities;
             RType::ECS::Entity m_titleEntity = RType::ECS::NULL_ENTITY;
-            RType::ECS::Entity m_playTextEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity m_subtitleEntity = RType::ECS::NULL_ENTITY;
+            std::vector<RType::ECS::Entity> m_menuItems;
 
-            bool m_playKeyPressed = false;
-            bool m_escapeKeyPressed = false;
+            int m_selectedIndex = 0;
+            bool m_upKeyPressed = false;
+            bool m_downKeyPressed = false;
+            bool m_enterKeyPressed = false;
 
             float m_animTime = 0.0f;
             float m_titlePulse = 0.0f;
