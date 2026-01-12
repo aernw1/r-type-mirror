@@ -87,8 +87,11 @@ namespace RType {
         }
 
         void EditorPropertyManager::cycleProperty() {
+            // Only cycle through the 6 visible properties (POSITION_X to SCROLL_SPEED)
+            // Skip collider properties (COLLIDER_X to COLLIDER_HEIGHT) as they have their own UI
+            const int numVisibleProperties = static_cast<int>(EditableProperty::SCROLL_SPEED) + 1;
             int current = static_cast<int>(m_activeProperty);
-            current = (current + 1) % static_cast<int>(EditableProperty::COUNT);
+            current = (current + 1) % numVisibleProperties;
             m_activeProperty = static_cast<EditableProperty>(current);
             ClearInput();
 
