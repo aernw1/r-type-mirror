@@ -9,6 +9,7 @@
 
 #include "GameStateMachine.hpp"
 #include "LobbyClient.hpp"
+#include "TcpSocket.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/RenderingSystem.hpp"
@@ -28,6 +29,7 @@ namespace RType {
         class LobbyState : public IState {
         public:
             LobbyState(GameStateMachine& machine, GameContext& context);
+            LobbyState(GameStateMachine& machine, GameContext& context, network::TcpSocket&& socket);
             ~LobbyState() override = default;
 
             void Init() override;

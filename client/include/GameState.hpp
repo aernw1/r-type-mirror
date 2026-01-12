@@ -78,6 +78,10 @@ namespace RType {
             void updateHUD();
             void renderChargeBar();
             void renderHealthBars();
+            void renderBossHealthBar();
+            void updateBossHealthBar();
+            void initializeBossHealthBar();
+            void destroyBossHealthBar();
             void renderGameOverOverlay();
             void triggerGameOverIfNeeded();
             void enterResultsScreen();
@@ -233,6 +237,17 @@ namespace RType {
             RType::ECS::LoadedAssets m_levelAssets;
             RType::ECS::CreatedEntities m_levelEntities;
             std::string m_currentLevelPath = "assets/levels/level1.json";
+
+            // Boss health bar
+            struct {
+                bool active = false;
+                int currentHealth = 0;
+                int maxHealth = 1000;
+                uint32_t bossNetworkId = 0;
+                RType::ECS::Entity titleEntity = RType::ECS::NULL_ENTITY;
+                RType::ECS::Entity barBackgroundEntity = RType::ECS::NULL_ENTITY;
+                RType::ECS::Entity barForegroundEntity = RType::ECS::NULL_ENTITY;
+            } m_bossHealthBar;
         };
 
     }

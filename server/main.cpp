@@ -5,12 +5,14 @@
 ** Server main entry point
 */
 
-#include "LobbyServer.hpp"
+#include "RoomManager.hpp"
 #include "GameServer.hpp"
 #include <iostream>
 #include <thread>
 #include <chrono>
 #include <string>
+#include <atomic>
+#include <optional>
 
 int main(int argc, char* argv[]) {
     uint16_t port = 4242;
@@ -24,44 +26,50 @@ int main(int argc, char* argv[]) {
     if (argc > 3)
         levelPath = argv[3];
 
-    while (true) {
-        std::cout << "\n=== Starting lobby server on port " << port << " ===" << std::endl;
+    std::cout << "\n=== Starting R-Type server with room support on port " << port << " ===" << std::endl;
 
-        network::LobbyServer server(port, 4, minPlayers);
+    network::RoomManager roomManager(port, MAX_ROOMS, minPlayers);
 
-        size_t lastPlayerCount = 0;
+    std::atomic<bool> gameStarted{false};
+    std::optional<uint32_t> startedRoomId;
+    std::vector<network::PlayerInfo> gamePlayers;
 
-        while (!server.isGameStarted()) {
-            server.update();
-
-            if (server.playerCount() != lastPlayerCount) {
-                server.printStatus();
-                lastPlayerCount = server.playerCount();
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        }
-
-        std::cout << "Game started with " << server.playerCount() << " players!" << std::endl;
-
-        std::vector<network::PlayerInfo> players;
-        for (const auto& maybePlayer : server.getPlayers()) {
+    roomManager.onGameStart([&](uint32_t roomId, const network::RoomManager::Room& room) {
+        gamePlayers.clear();
+        for (const auto& maybePlayer : room.players) {
             if (maybePlayer) {
-                players.push_back(*maybePlayer);
+                gamePlayers.push_back(*maybePlayer);
             }
         }
+        startedRoomId = roomId;
+        gameStarted = true;
+    });
 
-        std::cout << "Waiting 2 seconds for clients to transition..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(2));
+    while (true) {
+        roomManager.update();
 
-        std::cout << "Starting UDP GameServer on port " << port << " with " << players.size() << " players..." << std::endl;
-        std::cout << "Level: " << levelPath << std::endl;
+        if (gameStarted) {
+            std::cout << "Game started in room " << *startedRoomId << " with " << gamePlayers.size() << " players!" << std::endl;
 
-        network::GameServer gameServer(port, players, levelPath);
-        gameServer.Run();
+            std::cout << "Waiting 2 seconds for clients to transition..." << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(2));
 
-        std::cout << "\n=== Game ended. Restarting lobby... ===" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(2));
+            std::cout << "Starting UDP GameServer on port " << port << " with " << gamePlayers.size() << " players..." << std::endl;
+            std::cout << "Level: " << levelPath << std::endl;
+
+            network::GameServer gameServer(port, gamePlayers, levelPath);
+            gameServer.Run();
+
+            std::cout << "\n=== Game ended in room " << *startedRoomId << ". Room available again. ===" << std::endl;
+
+            gameStarted = false;
+            startedRoomId.reset();
+            gamePlayers.clear();
+
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
     return 0;

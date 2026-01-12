@@ -14,9 +14,13 @@ namespace network {
 
     LobbyClient::LobbyClient(const std::string& serverAddr, uint16_t port) : _socket(serverAddr, port) {
         if (_socket.isConnected())
-            std::cout << "[Client] Connected to server" << std::endl;
+            std::cout << "[LobbyClient] Connected to server" << std::endl;
         else
-            std::cout << "[Client] Failed to connect to server" << std::endl;
+            std::cout << "[LobbyClient] Failed to connect to server" << std::endl;
+    }
+
+    LobbyClient::LobbyClient(TcpSocket&& socket) : _socket(std::move(socket)) {
+        std::cout << "[LobbyClient] Using existing socket connection" << std::endl;
     }
 
     void LobbyClient::connect(const std::string& playerName) {
