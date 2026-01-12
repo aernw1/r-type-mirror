@@ -14,7 +14,6 @@
 #include "editor/EditorAssetLibrary.hpp"
 #include "editor/EditorInputHandler.hpp"
 #include "editor/EditorPropertyManager.hpp"
-#include "editor/EditorFileManager.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
