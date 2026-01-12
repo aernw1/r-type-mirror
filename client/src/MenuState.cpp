@@ -183,9 +183,9 @@ namespace RType {
 
                 switch (static_cast<MenuItem>(m_selectedIndex)) {
                     case MenuItem::PLAY:
-                        std::cout << "[MenuState] Starting game... Transitioning to Lobby" << std::endl;
+                        std::cout << "[MenuState] Starting game... Transitioning to Room Selection" << std::endl;
                         std::cout << "[MenuState] Connecting to " << m_context.serverIp << ":" << m_context.serverPort << " as '" << m_context.playerName << "'" << std::endl;
-                        m_machine.PushState(std::make_unique<LobbyState>(m_machine, m_context));
+                        m_machine.PushState(std::make_unique<RoomListState>(m_machine, m_context));
                         break;
 
                     case MenuItem::EDITOR:
@@ -206,10 +206,6 @@ namespace RType {
                     default:
                         break;
                 }
-                std::cout << "[MenuState] Starting game... Transitioning to Room Selection" << std::endl;
-                std::cout << "[MenuState] Connecting to " << m_context.serverIp << ":" << m_context.serverPort << " as '" << m_context.playerName << "'" << std::endl;
-
-                m_machine.PushState(std::make_unique<RoomListState>(m_machine, m_context));
 
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
                 m_enterKeyPressed = false;

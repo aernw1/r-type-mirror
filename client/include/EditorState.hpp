@@ -27,8 +27,6 @@ namespace RType {
     namespace Client {
 
         class EditorCanvasManager;
-        class EditorUIManager;
-        class EditorEntityManager;
         class EditorFileManager;
 
         class EditorState : public IState {
