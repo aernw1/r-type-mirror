@@ -68,6 +68,7 @@ namespace network {
         uint32_t createRoom(const std::string& name);
         JoinRoomStatus joinRoom(uint32_t roomId, TcpSocket& client);
         void removeClientFromRoom(Room& room, size_t idx);
+        void cleanupEmptyRooms();
         void updateRoomCountdown(Room& room);
         bool isRoomReady(const Room& room) const;
         size_t findFreeSlotInRoom(const Room& room) const;
@@ -76,6 +77,7 @@ namespace network {
         void sendTo(TcpSocket& client, LobbyPacket type, const std::vector<uint8_t>& payload = {});
         void sendToRoom(Room& room, size_t clientIdx, LobbyPacket type, const std::vector<uint8_t>& payload = {});
         void broadcastToRoom(Room& room, LobbyPacket type, const std::vector<uint8_t>& payload = {});
+        void broadcastToRoomExcept(Room& room, size_t exceptIdx, LobbyPacket type, const std::vector<uint8_t>& payload = {});
         void broadcastRoomUpdate(uint32_t roomId);
         uint64_t generateHash();
         RoomInfo getRoomInfo(const Room& room, uint32_t roomId) const;

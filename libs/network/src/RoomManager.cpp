@@ -48,6 +48,8 @@ namespace network {
         for (auto& [roomId, room] : _rooms) {
             updateRoomCountdown(room);
         }
+
+        cleanupEmptyRooms();
     }
 
     void RoomManager::acceptNewClients() {
@@ -117,6 +119,8 @@ namespace network {
                     default:
                         break;
                     }
+                    if (!room.clients[idx])
+                        break;
                 }
             }
         }
@@ -337,13 +341,26 @@ namespace network {
         uint8_t playerNum = room.players[idx]->number;
         std::cout << "[RoomManager] Player #" << (int)playerNum << " disconnected from room" << std::endl;
 
-        room.clients[idx].reset();
-        room.players[idx].reset();
-
         if (playerNum > 0) {
             Serializer s;
             s.writeU8(playerNum);
-            broadcastToRoom(room, LobbyPacket::PLAYER_LEFT, s.finalize());
+            broadcastToRoomExcept(room, idx, LobbyPacket::PLAYER_LEFT, s.finalize());
+        }
+
+        room.clients[idx].reset();
+        room.players[idx].reset();
+    }
+
+    void RoomManager::cleanupEmptyRooms() {
+        std::vector<uint32_t> toRemove;
+        for (const auto& [roomId, room] : _rooms) {
+            if (room.inGame && activePlayerCountInRoom(room) == 0) {
+                toRemove.push_back(roomId);
+            }
+        }
+        for (uint32_t roomId : toRemove) {
+            std::cout << "[RoomManager] Removing empty room " << roomId << " (game ended)" << std::endl;
+            _rooms.erase(roomId);
         }
     }
 
@@ -452,6 +469,19 @@ namespace network {
         }
     }
 
+    void RoomManager::broadcastToRoomExcept(Room& room, size_t exceptIdx, LobbyPacket type, const std::vector<uint8_t>& payload) {
+        std::cout << "[RoomManager] >> BROADCAST " << lobbyPacketName(type) << " to room (except #" << (exceptIdx + 1) << ")" << std::endl;
+        for (size_t i = 0; i < MAX_PLAYERS; ++i) {
+            if (i == exceptIdx || !room.clients[i])
+                continue;
+            Serializer s;
+            s.writeU8(static_cast<uint8_t>(type));
+            auto packet = s.finalize();
+            packet.insert(packet.end(), payload.begin(), payload.end());
+            room.clients[i]->send(packet);
+        }
+    }
+
     void RoomManager::broadcastRoomUpdate(uint32_t roomId) {
         auto it = _rooms.find(roomId);
         if (it == _rooms.end())
@@ -465,10 +495,11 @@ namespace network {
         s.writeU8(info.playerCount);
         s.writeU8(info.maxPlayers);
         s.writeU8(info.inGame ? 1 : 0);
+        auto payload = s.finalize();
 
         for (const auto& client : _pendingClients) {
             if (client && client->isConnected()) {
-                sendTo(*client, LobbyPacket::ROOM_UPDATE, s.finalize());
+                sendTo(*client, LobbyPacket::ROOM_UPDATE, payload);
             }
         }
     }
