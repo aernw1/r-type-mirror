@@ -123,6 +123,9 @@ namespace RType {
             static LevelData LoadFromFile(const std::string& path);
             static LevelData LoadFromString(const std::string& jsonString);
 
+            static std::string SerializeToString(const LevelData& level);
+            static void SaveToFile(const LevelData& level, const std::string& path);
+
             static LoadedAssets LoadAssets(
                 const LevelData& level,
                 Renderer::IRenderer* renderer);

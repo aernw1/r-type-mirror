@@ -14,6 +14,7 @@
 #include "editor/EditorAssetLibrary.hpp"
 #include "editor/EditorInputHandler.hpp"
 #include "editor/EditorPropertyManager.hpp"
+#include "editor/EditorFileManager.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
@@ -29,7 +30,6 @@ namespace RType {
         class EditorCanvasManager;
         class EditorUIManager;
         class EditorEntityManager;
-        class EditorFileManager;
 
         class EditorState : public IState {
         public:
