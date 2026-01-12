@@ -34,7 +34,7 @@ namespace RType {
         class EditorState : public IState {
         public:
             EditorState(GameStateMachine& machine, GameContext& context);
-            ~EditorState() override = default;
+            ~EditorState() override;
 
             void Init() override;
             void Cleanup() override;
@@ -57,6 +57,7 @@ namespace RType {
             std::unique_ptr<EditorEntityManager> m_entityManager;
             std::unique_ptr<EditorInputHandler> m_inputHandler;
             std::unique_ptr<EditorPropertyManager> m_propertyManager;
+            std::unique_ptr<EditorFileManager> m_fileManager;
 
             // Fonts
             Renderer::FontId m_fontSmall = Renderer::INVALID_FONT_ID;
@@ -73,6 +74,7 @@ namespace RType {
             EditorPaletteSelection m_selection;
             Math::Vector2 m_lastMouseWorld{0.0f, 0.0f};
             std::string m_currentLevelPath;
+            std::string m_levelName = "Custom Level";
             bool m_hasUnsavedChanges = false;
 
             void handleSelectionAt(const Math::Vector2& mouseWorld);

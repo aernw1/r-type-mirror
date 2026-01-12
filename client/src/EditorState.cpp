@@ -9,6 +9,7 @@
 #include "editor/EditorCanvasManager.hpp"
 #include "editor/EditorUIManager.hpp"
 #include "editor/EditorEntityManager.hpp"
+#include "editor/EditorFileManager.hpp"
 #include "editor/EditorConstants.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/Components/TextLabel.hpp"
@@ -29,6 +30,8 @@ namespace RType {
             , m_renderer(context.renderer)
         {
         }
+
+        EditorState::~EditorState() = default;
 
         void EditorState::Init() {
             Core::Logger::Info("[EditorState] Initializing level editor...");
@@ -68,6 +71,7 @@ namespace RType {
             m_assetLibrary = std::make_unique<EditorAssetLibrary>(m_renderer.get());
             m_assetLibrary->Initialize();
 
+            m_fileManager = std::make_unique<EditorFileManager>(*m_assetLibrary);
             m_entityManager = std::make_unique<EditorEntityManager>(m_renderer.get(), m_registry, *m_assetLibrary);
             m_uiManager = std::make_unique<EditorUIManager>(m_renderer.get(), *m_assetLibrary, m_registry, m_entities, m_fontSmall, m_fontMedium);
             m_uiManager->InitializePalette();
@@ -114,6 +118,43 @@ namespace RType {
                 std::cout << "[EditorState] Returning to menu..." << std::endl;
                 m_renderer->ResetCamera();
                 m_machine.PopState();
+            });
+
+            m_inputHandler->HandleKeyPress(Renderer::Key::S, [this]() {
+                if (m_renderer->IsKeyPressed(Renderer::Key::LControl) ||
+                    m_renderer->IsKeyPressed(Renderer::Key::RControl)) {
+
+                    std::string path = m_currentLevelPath.empty()
+                        ? "assets/levels/custom_level.json"
+                        : m_currentLevelPath;
+
+                    if (m_fileManager->SaveLevel(path, m_entityManager->GetEntities(), m_levelName)) {
+                        Core::Logger::Info("[EditorState] Level saved to {}", path);
+                        m_hasUnsavedChanges = false;
+                        m_currentLevelPath = path;
+                    } else {
+                        Core::Logger::Error("[EditorState] Failed to save: {}", m_fileManager->GetLastError());
+                    }
+                }
+            });
+
+            m_inputHandler->HandleKeyPress(Renderer::Key::O, [this]() {
+                if (m_renderer->IsKeyPressed(Renderer::Key::LControl) ||
+                    m_renderer->IsKeyPressed(Renderer::Key::RControl)) {
+
+                    std::string path = m_currentLevelPath.empty()
+                        ? "assets/levels/level1.json"
+                        : m_currentLevelPath;
+
+                    auto loadedEntities = m_fileManager->LoadLevel(path, m_registry, m_renderer.get());
+                    if (!loadedEntities.empty()) {
+                        Core::Logger::Info("[EditorState] Level loaded from {}", path);
+                        m_currentLevelPath = path;
+                        m_hasUnsavedChanges = false;
+                    } else {
+                        Core::Logger::Error("[EditorState] Failed to load: {}", m_fileManager->GetLastError());
+                    }
+                }
             });
 
             bool blockCameraInput = false;
