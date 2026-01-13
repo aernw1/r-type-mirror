@@ -12,6 +12,7 @@
 #include "RoomListState.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
+#include "ECS/AudioSystem.hpp"
 #include <iostream>
 #include <cmath>
 
@@ -29,6 +30,16 @@ namespace RType {
 
         void MenuState::Init() {
             std::cout << "[MenuState] Initializing modern UI..." << std::endl;
+
+            if (m_context.audio) {
+                m_audioSystem = std::make_unique<RType::ECS::AudioSystem>(m_context.audio.get());
+                m_menuMusic = m_context.audio->LoadMusic("assets/sounds/menu.flac");
+                if (m_menuMusic == Audio::INVALID_MUSIC_ID) {
+                    m_menuMusic = m_context.audio->LoadMusic("../assets/sounds/menu.flac");
+                }
+                m_menuMusicPlaying = false;
+            }
+
             m_fontLarge = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 48);
             if (m_fontLarge == Renderer::INVALID_FONT_ID) {
                 m_fontLarge = m_renderer->LoadFont("../assets/fonts/PressStart2P-Regular.ttf", 48);
@@ -54,6 +65,13 @@ namespace RType {
 
         void MenuState::Cleanup() {
             std::cout << "[MenuState] Cleaning up..." << std::endl;
+
+            if (m_context.audio && m_menuMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_menuMusic);
+                m_context.audio->UnloadMusic(m_menuMusic);
+                m_menuMusic = Audio::INVALID_MUSIC_ID;
+                m_menuMusicPlaying = false;
+            }
 
             for (Entity entity : m_entities) {
                 if (m_registry.IsEntityAlive(entity)) {
@@ -181,6 +199,11 @@ namespace RType {
             if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_enterKeyPressed) {
                 m_enterKeyPressed = true;
 
+                if (m_context.audio && m_menuMusic != Audio::INVALID_MUSIC_ID) {
+                    m_context.audio->StopMusic(m_menuMusic);
+                    m_menuMusicPlaying = false;
+                }
+
                 switch (static_cast<MenuItem>(m_selectedIndex)) {
                     case MenuItem::PLAY:
                         std::cout << "[MenuState] Starting game... Transitioning to Room Selection" << std::endl;
@@ -215,6 +238,21 @@ namespace RType {
         void MenuState::Update(float dt) {
             updateAnimations(dt);
             updateMenuSelection();
+
+            if (m_audioSystem && m_menuMusic != Audio::INVALID_MUSIC_ID && !m_menuMusicPlaying) {
+                auto cmd = m_registry.CreateEntity();
+                auto& me = m_registry.AddComponent<MusicEffect>(cmd, MusicEffect(m_menuMusic));
+                me.play = true;
+                me.stop = false;
+                me.loop = true;
+                me.volume = 0.35f;
+                me.pitch = 1.0f;
+                m_menuMusicPlaying = true;
+            }
+
+            if (m_audioSystem) {
+                m_audioSystem->Update(m_registry, dt);
+            }
         }
 
         void MenuState::Draw() {
