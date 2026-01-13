@@ -258,7 +258,7 @@ namespace RType {
                             }
                         }
                         m_networkEntityMap[entityState.entityId] = newEntity;
-                    } else if (type == network::EntityType::OBSTACLE) {
+                        m_bulletFlagsMap[entityState.entityId] = entityState.flags;
                         uint64_t obstacleId = entityState.ownerHash;
                         auto colliderIt = m_obstacleIdToCollider.find(obstacleId);
                         if (colliderIt == m_obstacleIdToCollider.end()) {
@@ -343,6 +343,26 @@ namespace RType {
                     }
                 } else {
                     auto ecsEntity = it->second;
+
+                    if (type == network::EntityType::BULLET) {
+                        auto flagsIt = m_bulletFlagsMap.find(entityState.entityId);
+                        bool flagsChanged = false;
+
+                        if (flagsIt != m_bulletFlagsMap.end()) {
+                            if (flagsIt->second != entityState.flags) {
+                                flagsChanged = true;
+                            }
+                        }
+
+                        if (flagsChanged || !m_registry.IsEntityAlive(ecsEntity)) {
+                            if (m_registry.IsEntityAlive(ecsEntity)) {
+                                m_registry.DestroyEntity(ecsEntity);
+                            }
+                            m_networkEntityMap.erase(it);
+                            m_bulletFlagsMap.erase(entityState.entityId);
+                            continue;
+                        }
+                    }
 
                     if (type == network::EntityType::OBSTACLE) {
                         uint64_t obstacleId = entityState.ownerHash;
@@ -530,6 +550,7 @@ namespace RType {
                 if (it != m_networkEntityMap.end()) {
                     m_networkEntityMap.erase(it);
                 }
+                m_bulletFlagsMap.erase(entityId);
             }
 
             for (auto it = m_networkEntityMap.begin(); it != m_networkEntityMap.end();) {
@@ -571,6 +592,7 @@ namespace RType {
                         m_registry.DestroyEntity(ecsEntity);
                     }
                     it = m_networkEntityMap.erase(it);
+                    m_bulletFlagsMap.erase(networkId);
                 } else {
                     ++it;
                 }
