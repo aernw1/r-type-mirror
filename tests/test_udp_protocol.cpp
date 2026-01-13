@@ -90,7 +90,7 @@ int main() {
     clients.push_back(&client2);
 
     bool firstStateReceived = false;
-    client1.SetStateCallback([&firstStateReceived](uint32_t tick, const std::vector<EntityState>& entities) {
+    client1.SetStateCallback([&firstStateReceived](uint32_t tick, const std::vector<EntityState>& entities, const std::vector<InputAck>& /*inputAcks*/) {
         if (!firstStateReceived) {
             std::cout << "\n[Client Alice] First STATE packet received!" << std::endl;
             std::cout << "  Tick: " << tick << std::endl;

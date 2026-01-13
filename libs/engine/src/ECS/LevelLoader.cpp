@@ -329,26 +329,29 @@ namespace RType {
                 auto spriteIt = assets.sprites.find(obs.texture);
                 auto texIt = assets.textures.find(obs.texture);
 
-                if (spriteIt == assets.sprites.end() || texIt == assets.textures.end()) {
+                bool hasTexture = (spriteIt != assets.sprites.end() && texIt != assets.textures.end());
+
+                Entity obsEntity = NULL_ENTITY;
+                if (hasTexture) {
+                    obsEntity = registry.CreateEntity();
+
+                    registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
+
+                    Math::Vector2 obsSize = renderer->GetTextureSize(texIt->second);
+                    auto& drawable = registry.AddComponent<Drawable>(obsEntity, Drawable(spriteIt->second, obs.layer));
+                    drawable.scale = {obs.scaleWidth / obsSize.x, obs.scaleHeight / obsSize.y};
+                    drawable.origin = {0.0f, 0.0f};
+
+                    registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
+                    entities.obstacleVisuals.push_back(obsEntity);
+                } else {
                     Core::Logger::Warning("Obstacle texture '{}' not found in loaded assets", obs.texture);
-                    continue;
                 }
-
-                Entity obsEntity = registry.CreateEntity();
-
-                registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
-
-                Math::Vector2 obsSize = renderer->GetTextureSize(texIt->second);
-                auto& drawable = registry.AddComponent<Drawable>(obsEntity, Drawable(spriteIt->second, obs.layer));
-                drawable.scale = {obs.scaleWidth / obsSize.x, obs.scaleHeight / obsSize.y};
-                drawable.origin = {0.0f, 0.0f};
-
-                registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
-                entities.obstacleVisuals.push_back(obsEntity);
 
                 for (const auto& col : obs.colliders) {
                     Entity colliderEntity = registry.CreateEntity();
-                    registry.AddComponent<Position>(colliderEntity, Position{col.x, col.y});
+                    // Store collider position as offset from visual entity (not absolute)
+                    registry.AddComponent<Position>(colliderEntity, Position{col.x - obs.x, col.y - obs.y});
                     registry.AddComponent<BoxCollider>(colliderEntity, BoxCollider{col.width, col.height});
                     registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
                     registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));
@@ -389,9 +392,8 @@ namespace RType {
 
                 for (const auto& col : obs.colliders) {
                     Entity colliderEntity = registry.CreateEntity();
-                    float colliderX = obs.x + (col.x - obs.x);
-                    float colliderY = obs.y + (col.y - obs.y);
-                    registry.AddComponent<Position>(colliderEntity, Position{colliderX, colliderY});
+                    // Store collider position as offset from visual entity (not absolute)
+                    registry.AddComponent<Position>(colliderEntity, Position{col.x - obs.x, col.y - obs.y});
                     registry.AddComponent<BoxCollider>(colliderEntity, BoxCollider{col.width, col.height});
                     registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
                     registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));

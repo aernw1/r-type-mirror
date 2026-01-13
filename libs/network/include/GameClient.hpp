@@ -27,11 +27,12 @@ namespace network {
         void Stop();
 
         void SetInputGenerator(std::function<uint8_t()> generator) { m_inputGenerator = generator; }
-        void SetStateCallback(std::function<void(uint32_t, const std::vector<EntityState>&)> callback) {
+        void SetStateCallback(std::function<void(uint32_t, const std::vector<EntityState>&, const std::vector<InputAck>&)> callback) {
             m_stateCallback = callback;
         }
 
         uint32_t GetLastServerTick() const { return m_lastServerTick; }
+        uint32_t GetInputSequence() const { return m_inputSequence; }
         float GetLastScrollOffset() const { return m_lastScrollOffset; }
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
@@ -59,7 +60,7 @@ namespace network {
         std::atomic<bool> m_running{false};
 
         std::function<uint8_t()> m_inputGenerator;
-        std::function<void(uint32_t, const std::vector<EntityState>&)> m_stateCallback;
+        std::function<void(uint32_t, const std::vector<EntityState>&, const std::vector<InputAck>&)> m_stateCallback;
 
         std::atomic<uint64_t> m_packetsSent{0};
         std::atomic<uint64_t> m_packetsReceived{0};

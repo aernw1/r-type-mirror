@@ -116,6 +116,33 @@ namespace network {
                       << createdEntities.enemies.size() << " enemy entities, boss: "
                       << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "CREATED" : "NOT CREATED") << std::endl;
 
+            // Initialize collider positions based on their visual entities
+            for (auto collider : createdEntities.obstacleColliders) {
+                if (!m_registry.IsEntityAlive(collider) ||
+                    !m_registry.HasComponent<RType::ECS::ObstacleMetadata>(collider)) {
+                    continue;
+                }
+                const auto& metadata = m_registry.GetComponent<RType::ECS::ObstacleMetadata>(collider);
+
+                // Sync collider to visual entity position on initialization
+                if (metadata.visualEntity != RType::ECS::NULL_ENTITY &&
+                    m_registry.IsEntityAlive(metadata.visualEntity) &&
+                    m_registry.HasComponent<RType::ECS::Position>(metadata.visualEntity) &&
+                    m_registry.HasComponent<RType::ECS::Position>(collider)) {
+
+                    const auto& visualPos = m_registry.GetComponent<RType::ECS::Position>(metadata.visualEntity);
+                    auto& colliderPos = m_registry.GetComponent<RType::ECS::Position>(collider);
+
+                    // Set absolute position = visual position + offset
+                    colliderPos.x = visualPos.x + metadata.offsetX;
+                    colliderPos.y = visualPos.y + metadata.offsetY;
+
+                    std::cout << "[SERVER INIT] Collider synced: visual=(" << visualPos.x << "," << visualPos.y
+                              << ") offset=(" << metadata.offsetX << "," << metadata.offsetY
+                              << ") -> collider=(" << colliderPos.x << "," << colliderPos.y << ")" << std::endl;
+                }
+            }
+
             size_t obstaclesWithColliders = 0;
             for (auto obsEntity : createdEntities.obstacleColliders) {
                 if (m_registry.HasComponent<RType::ECS::Obstacle>(obsEntity) && m_registry.HasComponent<RType::ECS::BoxCollider>(obsEntity) && m_registry.HasComponent<RType::ECS::CollisionLayer>(obsEntity)) {
@@ -349,16 +376,49 @@ namespace network {
     }
 
     void GameServer::SendStateSnapshots() {
+        std::vector<InputAck> inputAcks;
+        auto players = m_registry.GetEntitiesWithComponent<RType::ECS::Player>();
+        for (const auto& [hash, connPlayer] : m_connectedPlayers) {
+            InputAck ack;
+            ack.playerHash = hash;
+            ack.lastProcessedSeq = connPlayer.lastInputSequence;
+            ack.serverPosX = 0.0f;
+            ack.serverPosY = 0.0f;
+
+            for (auto playerEntity : players) {
+                if (!m_registry.IsEntityAlive(playerEntity) ||
+                    !m_registry.HasComponent<RType::ECS::Player>(playerEntity))
+                    continue;
+                const auto& player = m_registry.GetComponent<RType::ECS::Player>(playerEntity);
+                if (player.playerHash == hash && m_registry.HasComponent<RType::ECS::Position>(playerEntity)) {
+                    const auto& pos = m_registry.GetComponent<RType::ECS::Position>(playerEntity);
+                    ack.serverPosX = pos.x;
+                    ack.serverPosY = pos.y;
+                    break;
+                }
+            }
+            inputAcks.push_back(ack);
+        }
+
         StatePacketHeader header;
         header.tick = m_currentTick;
         header.timestamp = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
         header.entityCount = static_cast<uint16_t>(m_entities.size());
         header.scrollOffset = m_scrollOffset;
+        header.inputAckCount = static_cast<uint8_t>(inputAcks.size());
 
-        std::vector<uint8_t> packet(sizeof(StatePacketHeader) + sizeof(EntityState) * m_entities.size());
+        size_t packetSize = sizeof(StatePacketHeader) +
+                           sizeof(InputAck) * inputAcks.size() +
+                           sizeof(EntityState) * m_entities.size();
+        std::vector<uint8_t> packet(packetSize);
         std::memcpy(packet.data(), &header, sizeof(StatePacketHeader));
 
         size_t offset = sizeof(StatePacketHeader);
+        for (const auto& ack : inputAcks) {
+            std::memcpy(packet.data() + offset, &ack, sizeof(InputAck));
+            offset += sizeof(InputAck);
+        }
+
         for (const auto& entity : m_entities) {
             EntityState state;
             state.entityId = entity.id;
@@ -820,8 +880,16 @@ namespace network {
         }
 
         auto obstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
-        const size_t maxObstaclesPerSnapshot = 64;
+        const size_t maxObstaclesPerSnapshot = 256;  // Increased from 64 to support larger levels
+
+        static bool loggedObstacleCount = false;
+        if (!loggedObstacleCount) {
+            std::cout << "[SERVER OBSTACLE SYNC] Total obstacles with Obstacle component: " << obstacles.size() << std::endl;
+            loggedObstacleCount = true;
+        }
+
         size_t obstacleCount = 0;
+        static int serverObstacleLog = 0;
         for (auto obstacleEntity : obstacles) {
             if (!m_registry.IsEntityAlive(obstacleEntity) ||
                 !m_registry.HasComponent<Position>(obstacleEntity)) {
@@ -829,6 +897,20 @@ namespace network {
             }
 
             const auto& pos = m_registry.GetComponent<Position>(obstacleEntity);
+
+            // Debug: Log first few obstacle positions sent to clients
+            if (serverObstacleLog < 5) {
+                std::cout << "[SERVER SEND] Obstacle " << obstacleEntity
+                          << " sending pos=(" << pos.x << "," << pos.y << ")";
+                if (m_registry.HasComponent<RType::ECS::ObstacleMetadata>(obstacleEntity)) {
+                    const auto& meta = m_registry.GetComponent<RType::ECS::ObstacleMetadata>(obstacleEntity);
+                    std::cout << " uniqueId=" << meta.uniqueId
+                              << " visualEntity=" << meta.visualEntity
+                              << " offset=(" << meta.offsetX << "," << meta.offsetY << ")";
+                }
+                std::cout << std::endl;
+                serverObstacleLog++;
+            }
 
             GameEntity entity;
             entity.id = static_cast<uint32_t>(obstacleEntity);
@@ -850,6 +932,12 @@ namespace network {
             if (obstacleCount >= maxObstaclesPerSnapshot) {
                 break;
             }
+        }
+
+        static bool loggedObstacleSend = false;
+        if (!loggedObstacleSend) {
+            std::cout << "[SERVER OBSTACLE SYNC] Added " << obstacleCount << " obstacles to network snapshot" << std::endl;
+            loggedObstacleSend = true;
         }
 
         // Sync powerups

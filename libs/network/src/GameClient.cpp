@@ -185,8 +185,19 @@ namespace network {
         m_lastScrollOffset = header->scrollOffset;
 
         size_t offset = sizeof(StatePacketHeader);
-        std::vector<EntityState> entities;
 
+        std::vector<InputAck> inputAcks;
+        for (uint8_t i = 0; i < header->inputAckCount; i++) {
+            if (offset + sizeof(InputAck) > data.size())
+                break;
+
+            InputAck ack;
+            std::memcpy(&ack, data.data() + offset, sizeof(InputAck));
+            inputAcks.push_back(ack);
+            offset += sizeof(InputAck);
+        }
+
+        std::vector<EntityState> entities;
         for (uint16_t i = 0; i < header->entityCount; i++) {
             if (offset + sizeof(EntityState) > data.size())
                 break;
@@ -199,7 +210,7 @@ namespace network {
         }
 
         if (m_stateCallback) {
-            m_stateCallback(header->tick, entities);
+            m_stateCallback(header->tick, entities, inputAcks);
         }
     }
 

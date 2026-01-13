@@ -164,6 +164,14 @@ namespace network {
         uint8_t fireRate = 20;
     };
 
+    // Input acknowledgment per player (sent with STATE packet)
+    struct InputAck {
+        uint64_t playerHash = 0;
+        uint32_t lastProcessedSeq = 0;
+        float serverPosX = 0.0f;
+        float serverPosY = 0.0f;
+    };
+
     // STATE packet (Server → Client)
     struct StatePacketHeader {
         uint8_t type = static_cast<uint8_t>(GamePacket::STATE);
@@ -171,6 +179,7 @@ namespace network {
         uint32_t timestamp = 0;    // Server timestamp (ms)
         uint16_t entityCount = 0;  // Number of entities following
         float scrollOffset = 0.0f; // Background scroll offset
+        uint8_t inputAckCount = 0;
     };
 
     // PING packet
