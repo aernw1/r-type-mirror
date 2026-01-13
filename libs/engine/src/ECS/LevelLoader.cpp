@@ -454,6 +454,106 @@ namespace RType {
                 boss.x, boss.y, boss.health);
         }
 
+        std::string LevelLoader::SerializeToString(const LevelData& level) {
+            json j;
+
+            j["name"] = level.name;
+
+            if (!level.textures.empty() || !level.fonts.empty()) {
+                j["assets"] = json::object();
+
+                if (!level.textures.empty()) {
+                    j["assets"]["textures"] = json::object();
+                    for (const auto& [key, path] : level.textures) {
+                        j["assets"]["textures"][key] = path;
+                    }
+                }
+
+                if (!level.fonts.empty()) {
+                    j["assets"]["fonts"] = json::object();
+                    for (const auto& [key, font] : level.fonts) {
+                        j["assets"]["fonts"][key] = {
+                            {"path", font.path},
+                            {"size", font.size}
+                        };
+                    }
+                }
+            }
+
+            j["background"] = {
+                {"texture", level.background.texture},
+                {"scrollSpeed", level.background.scrollSpeed},
+                {"copies", level.background.copies},
+                {"layer", level.background.layer}
+            };
+
+            j["obstacles"] = json::array();
+            for (const auto& obs : level.obstacles) {
+                json obsJson = {
+                    {"texture", obs.texture},
+                    {"position", {{"x", obs.x}, {"y", obs.y}}},
+                    {"scaleWidth", obs.scaleWidth},
+                    {"scaleHeight", obs.scaleHeight},
+                    {"scrollSpeed", obs.scrollSpeed},
+                    {"layer", obs.layer}
+                };
+
+                if (!obs.colliders.empty()) {
+                    obsJson["colliders"] = json::array();
+                    for (const auto& col : obs.colliders) {
+                        obsJson["colliders"].push_back({
+                            {"x", col.x},
+                            {"y", col.y},
+                            {"width", col.width},
+                            {"height", col.height}
+                        });
+                    }
+                }
+
+                j["obstacles"].push_back(obsJson);
+            }
+
+            j["enemies"] = json::array();
+            for (const auto& enemy : level.enemies) {
+                j["enemies"].push_back({
+                    {"type", enemy.type},
+                    {"position", {{"x", enemy.x}, {"y", enemy.y}}}
+                });
+            }
+
+            j["playerSpawns"] = json::array();
+            for (const auto& spawn : level.playerSpawns) {
+                j["playerSpawns"].push_back({
+                    {"x", spawn.x},
+                    {"y", spawn.y}
+                });
+            }
+
+            return j.dump(4);
+        }
+
+        void LevelLoader::SaveToFile(const LevelData& level, const std::string& path) {
+            try {
+                std::string jsonString = SerializeToString(level);
+
+                std::ofstream file(path);
+                if (!file.is_open()) {
+                    throw std::runtime_error("Failed to open file for writing: " + path);
+                }
+
+                file << jsonString;
+                file.close();
+
+                Core::Logger::Info("Successfully saved level '{}' to {}",
+                                   level.name.empty() ? "unnamed" : level.name,
+                                   path);
+
+            } catch (const std::exception& e) {
+                Core::Logger::Error("Failed to save level: {}", e.what());
+                throw;
+            }
+        }
+
     }
 
 }

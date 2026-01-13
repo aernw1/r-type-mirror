@@ -6,6 +6,7 @@
 #include "ECS/Registry.hpp"
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -26,6 +27,7 @@ namespace RType {
             void InitializePropertiesPanel();
             void InitializeColliderPanel();
             void UpdateHover(Math::Vector2 mouseScreen);
+            bool HandleActionClick(Math::Vector2 mouseScreen);
             std::optional<EditorPaletteSelection> HandleClick(Math::Vector2 mouseScreen);
             void SetActiveSelection(const EditorPaletteSelection& selection);
             const EditorPaletteSelection& GetActiveSelection() const { return m_activeSelection; }
@@ -33,6 +35,7 @@ namespace RType {
                                      EditableProperty activeProperty,
                                      const std::string& inputBuffer);
             void UpdateColliderPanel(const EditorEntityData* selected, int selectedColliderIndex);
+            void SetOnSaveRequested(const std::function<void()>& callback);
 
         private:
             struct PaletteEntry {
@@ -52,9 +55,19 @@ namespace RType {
                 ECS::Entity valueEntity = ECS::NULL_ENTITY;
             };
 
+            struct ActionButton {
+                std::string label;
+                Math::Rectangle bounds;
+                ECS::Entity textEntity = ECS::NULL_ENTITY;
+                bool hovered = false;
+                std::function<void()> onClick;
+            };
+
             void createCategoryLabel(const std::string& label, float y);
             void createPaletteButton(PaletteEntry entry, float y);
+            void InitializeToolbar();
             void refreshPaletteVisuals();
+            void refreshActionButtons();
 
             Renderer::IRenderer* m_renderer;
             EditorAssetLibrary& m_assets;
@@ -64,6 +77,7 @@ namespace RType {
             Renderer::FontId m_fontMedium;
 
             std::vector<PaletteEntry> m_entries;
+            std::vector<ActionButton> m_actionButtons;
             EditorPaletteSelection m_activeSelection;
             std::vector<PropertyField> m_propertyFields;
             ECS::Entity m_propertiesHeader = ECS::NULL_ENTITY;
@@ -73,6 +87,8 @@ namespace RType {
             ECS::Entity m_colliderPanelHeader = ECS::NULL_ENTITY;
             ECS::Entity m_colliderCountEntity = ECS::NULL_ENTITY;
             ECS::Entity m_colliderHintEntity = ECS::NULL_ENTITY;
+
+            std::function<void()> m_onSaveRequested;
         };
 
     }

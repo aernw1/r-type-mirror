@@ -9,6 +9,7 @@
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include <stdexcept>
+#include <filesystem>
 
 namespace RType {
     namespace Client {
@@ -20,11 +21,43 @@ namespace RType {
         bool EditorFileManager::SaveLevel(const std::string& path,
                                            const std::vector<EditorEntityData>& entities,
                                            const std::string& levelName) {
-            (void)path;
-            (void)entities;
-            (void)levelName;
-            m_lastError = "Save functionality not yet implemented";
-            Core::Logger::Warning("[EditorFileManager] {}", m_lastError);
+            m_lastError.clear();
+            ECS::LevelData levelData = GatherLevelData(entities, levelName);
+
+            std::vector<std::filesystem::path> candidatePaths;
+            candidatePaths.emplace_back(std::filesystem::path("..") / path);
+            candidatePaths.emplace_back(path);
+
+            std::string lastFailure;
+
+            for (const auto& candidate : candidatePaths) {
+                try {
+                    if (candidate.has_parent_path()) {
+                        std::error_code ec;
+                        std::filesystem::create_directories(candidate.parent_path(), ec);
+                        if (ec) {
+                            throw std::runtime_error("Failed to create directories for "
+                                                     + candidate.parent_path().string() + ": " + ec.message());
+                        }
+                    }
+
+                    ECS::LevelLoader::SaveToFile(levelData, candidate.string());
+
+                    Core::Logger::Info("[EditorFileManager] Level '{}' saved to {}",
+                                       levelName, candidate.string());
+                    return true;
+
+                } catch (const std::exception& e) {
+                    lastFailure = e.what();
+                    Core::Logger::Warning("[EditorFileManager] Save attempt failed for {}: {}",
+                                          candidate.string(), e.what());
+                }
+            }
+
+            m_lastError = lastFailure.empty()
+                ? "Save failed: no valid path candidates"
+                : std::string("Save failed: ") + lastFailure;
+            Core::Logger::Error("[EditorFileManager] {}", m_lastError);
             return false;
         }
 

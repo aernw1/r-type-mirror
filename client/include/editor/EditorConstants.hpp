@@ -18,12 +18,17 @@ namespace RType {
                 constexpr float PALETTE_PANEL_WIDTH = 220.0f;
                 constexpr float PALETTE_BUTTON_HEIGHT = 22.0f;
                 constexpr float PALETTE_START_Y = 80.0f;
+                constexpr float TOOLBAR_START_Y = 45.0f;
+                constexpr float TOOLBAR_BUTTON_HEIGHT = 24.0f;
+                constexpr float TOOLBAR_BUTTON_GAP = 8.0f;
 
                 constexpr float PROPERTY_PANEL_X = 920.0f;
                 constexpr float PROPERTY_PANEL_WIDTH = 340.0f;
                 constexpr float PROPERTY_PANEL_START_Y = 90.0f;
                 constexpr float PROPERTY_ROW_HEIGHT = 28.0f;
                 constexpr float PROPERTY_VALUE_OFFSET_X = 100.0f;
+                constexpr float TOOLBAR_RIGHT_X = PROPERTY_PANEL_X;
+                constexpr float TOOLBAR_RIGHT_WIDTH = PROPERTY_PANEL_WIDTH;
 
                 constexpr float STATUS_BAR_X = 10.0f;
                 constexpr float STATUS_BAR_Y = 10.0f;

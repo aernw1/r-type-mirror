@@ -38,24 +38,23 @@ namespace RType {
                 m_camera.x += panSpeed * (1.0f / 60.0f) / m_camera.zoom;
             }
 
-            // Zoom (single action per key press)
-            // Note: Zoom uses manual state tracking since continuous zoom is desired
-            // EditorInputHandler would be better suited for discrete actions
-            static bool plusKeyPressed = false;
-            static bool minusKeyPressed = false;
+            static bool zoomInKeyPressed = false;
+            static bool zoomOutKeyPressed = false;
 
-            if (m_renderer->IsKeyPressed(Renderer::Key::Num0) && !plusKeyPressed) {
-                plusKeyPressed = true;
+            bool isZoomInPressed = m_renderer->IsKeyPressed(Renderer::Key::X);
+            if (isZoomInPressed && !zoomInKeyPressed) {
+                zoomInKeyPressed = true;
                 m_camera.zoom += zoomSpeed;
-            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Num0)) {
-                plusKeyPressed = false;
+            } else if (!isZoomInPressed) {
+                zoomInKeyPressed = false;
             }
 
-            if (m_renderer->IsKeyPressed(Renderer::Key::Num9) && !minusKeyPressed) {
-                minusKeyPressed = true;
+            bool isZoomOutPressed = m_renderer->IsKeyPressed(Renderer::Key::C);
+            if (isZoomOutPressed && !zoomOutKeyPressed) {
+                zoomOutKeyPressed = true;
                 m_camera.zoom -= zoomSpeed;
-            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Num9)) {
-                minusKeyPressed = false;
+            } else if (!isZoomOutPressed) {
+                zoomOutKeyPressed = false;
             }
 
             m_camera.x = std::clamp(m_camera.x, m_camera.minX, m_camera.maxX);
