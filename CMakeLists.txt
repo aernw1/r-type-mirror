@@ -43,8 +43,21 @@ target_link_libraries(r-type_server PRIVATE rtype_network)
 add_executable(r-type_client
     client/main.cpp
     client/src/MenuState.cpp
+    client/src/room/RoomListState.cpp
     client/src/LobbyState.cpp
     client/src/GameState.cpp
+    client/src/ResultsState.cpp
+    client/src/EditorState.cpp
+    client/src/editor/EditorCanvasManager.cpp
+    client/src/editor/EditorAssetLibrary.cpp
+    client/src/editor/EditorUIManager.cpp
+    client/src/editor/EditorEntityManager.cpp
+    client/src/editor/EditorFileManager.cpp
+    # Editor utilities
+    client/src/editor/EditorInputHandler.cpp
+    client/src/editor/EditorDrawing.cpp
+    client/src/editor/EditorPropertyManager.cpp
+    client/src/editor/EditorColliderManager.cpp
 )
 target_include_directories(r-type_client PRIVATE
     ${CMAKE_SOURCE_DIR}/client/include

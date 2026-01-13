@@ -5,6 +5,8 @@ add_library(rtype_network
     src/Deserializer.cpp
     src/LobbyServer.cpp
     src/LobbyClient.cpp
+    src/RoomManager.cpp
+    src/RoomClient.cpp
     src/GameServer.cpp
     src/GameClient.cpp
 )

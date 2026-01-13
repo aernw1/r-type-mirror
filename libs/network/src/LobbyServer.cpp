@@ -131,6 +131,7 @@ namespace network {
             if (_players[i] && i != clientIdx) {
                 Serializer existingPlayerPayload;
                 existingPlayerPayload.writeU8(_players[i]->number);
+                existingPlayerPayload.writeU64(_players[i]->hash);
                 existingPlayerPayload.writeString(_players[i]->name, PLAYER_NAME_SIZE);
                 sendTo(clientIdx, LobbyPacket::PLAYER_JOIN, existingPlayerPayload.finalize());
 
@@ -144,6 +145,7 @@ namespace network {
 
         Serializer joinPayload;
         joinPayload.writeU8(player.number);
+        joinPayload.writeU64(player.hash);
         joinPayload.writeString(player.name, PLAYER_NAME_SIZE);
         broadcast(LobbyPacket::PLAYER_JOIN, joinPayload.finalize());
 

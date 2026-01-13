@@ -48,6 +48,17 @@ namespace RType {
             float y = 0.0f;
         };
 
+        struct BossDef {
+            std::string texture;
+            float x = 0.0f;
+            float y = 0.0f;
+            float width = 200.0f;
+            float height = 200.0f;
+            int health = 1000;
+            float scrollSpeed = -300.0f;
+            int attackPattern = 1;
+        };
+
         struct PlayerSpawnDef {
             float x = 100.0f;
             float y = 360.0f;
@@ -90,6 +101,7 @@ namespace RType {
             std::vector<ObstacleDef> obstacles;
             std::vector<EnemyDef> enemies;
             std::vector<PlayerSpawnDef> playerSpawns;
+            std::optional<BossDef> boss;
         };
 
         struct LoadedAssets {
@@ -103,12 +115,16 @@ namespace RType {
             std::vector<Entity> obstacleVisuals;
             std::vector<Entity> obstacleColliders;
             std::vector<Entity> enemies;
+            Entity boss = NULL_ENTITY;
         };
 
         class LevelLoader {
         public:
             static LevelData LoadFromFile(const std::string& path);
             static LevelData LoadFromString(const std::string& jsonString);
+
+            static std::string SerializeToString(const LevelData& level);
+            static void SaveToFile(const LevelData& level, const std::string& path);
 
             static LoadedAssets LoadAssets(
                 const LevelData& level,
@@ -159,6 +175,11 @@ namespace RType {
             static void CreateServerEnemies(
                 Registry& registry,
                 const std::vector<EnemyDef>& enemies,
+                CreatedEntities& entities);
+
+            static void CreateServerBoss(
+                Registry& registry,
+                const std::optional<BossDef>& boss,
                 CreatedEntities& entities);
         };
 

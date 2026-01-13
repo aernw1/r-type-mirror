@@ -7,6 +7,9 @@
 
 #include "MenuState.hpp"
 #include "LobbyState.hpp"
+#include "EditorState.hpp"
+#include "editor/EditorCanvasManager.hpp"
+#include "RoomListState.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include <iostream>
@@ -96,18 +99,26 @@ namespace RType {
             subtitleLabel.centered = true;
             m_registry.AddComponent(m_subtitleEntity, std::move(subtitleLabel));
 
-            m_playTextEntity = m_registry.CreateEntity();
-            m_entities.push_back(m_playTextEntity);
-            m_registry.AddComponent(m_playTextEntity, Position{640.0f, 380.0f});
-            TextLabel playLabel("PRESS ENTER TO START", m_fontMedium, 28);
-            playLabel.color = {1.0f, 0.08f, 0.58f, 1.0f};
-            playLabel.centered = true;
-            m_registry.AddComponent(m_playTextEntity, std::move(playLabel));
+            const char* menuLabels[] = {"PLAY", "LEVEL EDITOR", "SETTINGS", "QUIT"};
+            float startY = 360.0f;
+            float itemSpacing = 60.0f;
+
+            for (int i = 0; i < 4; i++) {
+                Entity menuItem = m_registry.CreateEntity();
+                m_entities.push_back(menuItem);
+                m_menuItems.push_back(menuItem);
+
+                m_registry.AddComponent(menuItem, Position{640.0f, startY + i * itemSpacing});
+                TextLabel label(menuLabels[i], m_fontMedium, 24);
+                label.color = {0.7f, 0.7f, 0.7f, 1.0f};
+                label.centered = true;
+                m_registry.AddComponent(menuItem, std::move(label));
+            }
 
             Entity controlsText = m_registry.CreateEntity();
             m_entities.push_back(controlsText);
-            m_registry.AddComponent(controlsText, Position{640.0f, 480.0f});
-            TextLabel controlsLabel("CONTROLS: ARROWS = MOVE  |  SPACE = SHOOT", m_fontSmall, 14);
+            m_registry.AddComponent(controlsText, Position{640.0f, 620.0f});
+            TextLabel controlsLabel("USE ARROWS TO NAVIGATE  |  ENTER TO SELECT", m_fontSmall, 12);
             controlsLabel.color = {0.5f, 0.86f, 1.0f, 0.85f};
             controlsLabel.centered = true;
             m_registry.AddComponent(controlsText, std::move(controlsLabel));
@@ -129,33 +140,81 @@ namespace RType {
                 auto& titleLabel = m_registry.GetComponent<TextLabel>(m_titleEntity);
                 titleLabel.color.a = 0.7f + (m_titlePulse - 1.0f);
             }
+        }
 
-            float blinkSpeed = 1.5f;
-            float blink = (std::sin(m_animTime * blinkSpeed * 3.14159f) + 1.0f) * 0.5f;
+        void MenuState::updateMenuSelection() {
+            for (size_t i = 0; i < m_menuItems.size(); i++) {
+                if (m_registry.IsEntityAlive(m_menuItems[i])) {
+                    auto& label = m_registry.GetComponent<TextLabel>(m_menuItems[i]);
 
-            if (m_playTextEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_playTextEntity)) {
-                auto& playLabel = m_registry.GetComponent<TextLabel>(m_playTextEntity);
-                playLabel.color.a = 0.5f + blink * 0.5f;
+                    if (static_cast<int>(i) == m_selectedIndex) {
+                        float pulse = std::sin(m_animTime * 4.0f) * 0.3f + 0.7f;
+                        label.color = {1.0f, 0.08f + pulse * 0.5f, 0.58f, 1.0f};
+                    } else {
+                        label.color = {0.5f, 0.5f, 0.5f, 0.8f};
+                    }
+                }
             }
         }
 
         void MenuState::HandleInput() {
-            if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_playKeyPressed) {
-                m_playKeyPressed = true;
+            if (m_renderer->IsKeyPressed(Renderer::Key::Up) && !m_upKeyPressed) {
+                m_upKeyPressed = true;
+                m_selectedIndex--;
+                if (m_selectedIndex < 0) {
+                    m_selectedIndex = static_cast<int>(MenuItem::COUNT) - 1;
+                }
+            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Up)) {
+                m_upKeyPressed = false;
+            }
 
-                std::cout << "[MenuState] Starting game... Transitioning to Lobby" << std::endl;
-                std::cout << "[MenuState] Connecting to " << m_context.serverIp << ":" << m_context.serverPort
-                          << " as '" << m_context.playerName << "'" << std::endl;
+            if (m_renderer->IsKeyPressed(Renderer::Key::Down) && !m_downKeyPressed) {
+                m_downKeyPressed = true;
+                m_selectedIndex++;
+                if (m_selectedIndex >= static_cast<int>(MenuItem::COUNT)) {
+                    m_selectedIndex = 0;
+                }
+            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Down)) {
+                m_downKeyPressed = false;
+            }
 
-                m_machine.PushState(std::make_unique<LobbyState>(m_machine, m_context));
+            if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_enterKeyPressed) {
+                m_enterKeyPressed = true;
+
+                switch (static_cast<MenuItem>(m_selectedIndex)) {
+                    case MenuItem::PLAY:
+                        std::cout << "[MenuState] Starting game... Transitioning to Room Selection" << std::endl;
+                        std::cout << "[MenuState] Connecting to " << m_context.serverIp << ":" << m_context.serverPort << " as '" << m_context.playerName << "'" << std::endl;
+                        m_machine.PushState(std::make_unique<RoomListState>(m_machine, m_context));
+                        break;
+
+                    case MenuItem::EDITOR:
+                        std::cout << "[MenuState] Opening Level Editor..." << std::endl;
+                        m_machine.PushState(std::make_unique<EditorState>(m_machine, m_context));
+                        break;
+
+                    case MenuItem::SETTINGS:
+                        std::cout << "[MenuState] Settings not yet implemented" << std::endl;
+                        // TODO: Implement settings state
+                        break;
+
+                    case MenuItem::QUIT:
+                        std::cout << "[MenuState] Quitting..." << std::endl;
+                        m_machine.PopState();
+                        break;
+
+                    default:
+                        break;
+                }
 
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
-                m_playKeyPressed = false;
+                m_enterKeyPressed = false;
             }
         }
 
         void MenuState::Update(float dt) {
             updateAnimations(dt);
+            updateMenuSelection();
         }
 
         void MenuState::Draw() {

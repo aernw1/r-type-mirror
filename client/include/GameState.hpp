@@ -78,6 +78,13 @@ namespace RType {
             void updateHUD();
             void renderChargeBar();
             void renderHealthBars();
+            void renderBossHealthBar();
+            void updateBossHealthBar();
+            void initializeBossHealthBar();
+            void destroyBossHealthBar();
+            void renderGameOverOverlay();
+            void triggerGameOverIfNeeded();
+            void enterResultsScreen();
 
             // ECS systems
             void createSystems();
@@ -187,6 +194,8 @@ namespace RType {
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
             Renderer::FontId m_hudFontSmall = Renderer::INVALID_FONT_ID;
+            Renderer::FontId m_gameOverFontLarge = Renderer::INVALID_FONT_ID;
+            Renderer::FontId m_gameOverFontMedium = Renderer::INVALID_FONT_ID;
 
             // HUD entities - local player info (left side)
             RType::ECS::Entity m_hudPlayerEntity = RType::ECS::NULL_ENTITY;
@@ -201,6 +210,15 @@ namespace RType {
             uint32_t m_playerScore = 0;
             int m_playerLives = 3;
             float m_scoreAccumulator = 0.0f; // For time-based score testing
+
+            // Game Over overlay
+            bool m_isGameOver = false;
+            float m_gameOverElapsed = 0.0f;
+            bool m_gameOverEnterPressed = false;
+            bool m_gameOverEscapePressed = false;
+            RType::ECS::Entity m_gameOverTitleEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_gameOverScoreEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_gameOverHintEntity = RType::ECS::NULL_ENTITY;
 
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;
@@ -219,6 +237,17 @@ namespace RType {
             RType::ECS::LoadedAssets m_levelAssets;
             RType::ECS::CreatedEntities m_levelEntities;
             std::string m_currentLevelPath = "assets/levels/level1.json";
+
+            // Boss health bar
+            struct {
+                bool active = false;
+                int currentHealth = 0;
+                int maxHealth = 1000;
+                uint32_t bossNetworkId = 0;
+                RType::ECS::Entity titleEntity = RType::ECS::NULL_ENTITY;
+                RType::ECS::Entity barBackgroundEntity = RType::ECS::NULL_ENTITY;
+                RType::ECS::Entity barForegroundEntity = RType::ECS::NULL_ENTITY;
+            } m_bossHealthBar;
         };
 
     }
