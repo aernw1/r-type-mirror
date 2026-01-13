@@ -6,6 +6,7 @@
 */
 
 #include "AsioNetworkModule.hpp"
+#include <array>
 #include <system_error>
 
 namespace Network {
@@ -40,8 +41,14 @@ namespace Network {
         data.config = config;
         data.isServer = false;
 
-        if (config.reuseAddress) {
-            data.socket->set_option(asio::socket_base::reuse_address(true));
+        try {
+            // Ensure native handle exists before applying options.
+            data.socket->open(asio::ip::tcp::v4());
+            if (config.reuseAddress) {
+                data.socket->set_option(asio::socket_base::reuse_address(true));
+            }
+        } catch (...) {
+            setLastError(SocketError::Unknown);
         }
 
         m_tcpSockets[id] = std::move(data);
@@ -58,6 +65,12 @@ namespace Network {
         }
 
         try {
+            if (!it->second.socket->is_open()) {
+                it->second.socket->open(asio::ip::tcp::v4());
+                if (it->second.config.reuseAddress) {
+                    it->second.socket->set_option(asio::socket_base::reuse_address(true));
+                }
+            }
             auto asioEndpoint = toAsioTcpEndpoint(endpoint);
             it->second.socket->connect(asioEndpoint);
             it->second.localEndpoint = fromAsioTcpEndpoint(it->second.socket->local_endpoint());
@@ -84,9 +97,27 @@ namespace Network {
         }
 
         try {
+            // Server sockets should bind on the acceptor (not on a separate socket),
+            // otherwise ListenTcp() would attempt to bind the same port twice.
             asio::ip::tcp::endpoint endpoint(asio::ip::tcp::v4(), port);
-            it->second.socket->bind(endpoint);
-            it->second.localEndpoint = fromAsioTcpEndpoint(it->second.socket->local_endpoint());
+
+            if (!it->second.acceptor) {
+                it->second.acceptor = std::make_unique<asio::ip::tcp::acceptor>(m_ioContext);
+                it->second.acceptor->open(endpoint.protocol());
+                if (it->second.config.reuseAddress) {
+                    it->second.acceptor->set_option(asio::socket_base::reuse_address(true));
+                }
+            }
+
+            it->second.acceptor->bind(endpoint);
+            it->second.localEndpoint = fromAsioTcpEndpoint(it->second.acceptor->local_endpoint());
+            it->second.isServer = true;
+
+            // Close/remove the unused socket handle for server mode.
+            if (it->second.socket && it->second.socket->is_open()) {
+                it->second.socket->close();
+            }
+            it->second.socket.reset();
             setLastError(SocketError::None);
             return true;
         } catch (...) {
@@ -105,10 +136,26 @@ namespace Network {
 
         try {
             if (!it->second.acceptor) {
+                // Back-compat path: if BindTcp() bound a socket (older behavior), close it
+                // BEFORE binding the acceptor to the same endpoint.
+                if (!it->second.socket) {
+                    setLastError(SocketError::InvalidSocket);
+                    return false;
+                }
+
                 auto endpoint = it->second.socket->local_endpoint();
-                it->second.acceptor = std::make_unique<asio::ip::tcp::acceptor>(m_ioContext, endpoint);
-                it->second.socket->close();
+                if (it->second.socket->is_open()) {
+                    it->second.socket->close();
+                }
                 it->second.socket.reset();
+
+                it->second.acceptor = std::make_unique<asio::ip::tcp::acceptor>(m_ioContext);
+                it->second.acceptor->open(endpoint.protocol());
+                if (it->second.config.reuseAddress) {
+                    it->second.acceptor->set_option(asio::socket_base::reuse_address(true));
+                }
+                it->second.acceptor->bind(endpoint);
+                it->second.localEndpoint = fromAsioTcpEndpoint(it->second.acceptor->local_endpoint());
                 it->second.isServer = true;
             }
             it->second.acceptor->listen(backlog);
@@ -195,42 +242,55 @@ namespace Network {
             return std::nullopt;
         }
 
-        try {
-            it->second.socket->non_blocking(true);
+        it->second.socket->non_blocking(true);
 
-            std::uint8_t sizeBytes[4];
-            std::size_t bytesRead = it->second.socket->read_some(asio::buffer(sizeBytes, 4));
+        std::array<std::uint8_t, 4096> temp{};
+        asio::error_code ec;
+        std::size_t bytesRead = it->second.socket->read_some(asio::buffer(temp), ec);
 
-            if (bytesRead < 4) {
-                setLastError(SocketError::None);
-                return std::nullopt;
-            }
-
-            std::uint32_t size = static_cast<std::uint32_t>(sizeBytes[0]) |
-                                (static_cast<std::uint32_t>(sizeBytes[1]) << 8) |
-                                (static_cast<std::uint32_t>(sizeBytes[2]) << 16) |
-                                (static_cast<std::uint32_t>(sizeBytes[3]) << 24);
-
-            if (size > maxSize) {
-                setLastError(SocketError::BufferOverflow);
-                return std::nullopt;
-            }
-
-            std::vector<std::uint8_t> data(size);
-            asio::read(*it->second.socket, asio::buffer(data));
-
-            setLastError(SocketError::None);
-            return data;
-        } catch (const std::system_error& e) {
-            if (e.code() == asio::error::would_block) {
-                setLastError(SocketError::None);
-            } else if (e.code() == asio::error::eof || e.code() == asio::error::connection_reset) {
-                setLastError(SocketError::Disconnected);
-            } else {
-                setLastError(SocketError::Unknown);
-            }
+        if (!ec && bytesRead > 0) {
+            auto& buf = it->second.recvBuffer;
+            buf.insert(buf.end(), temp.begin(), temp.begin() + static_cast<std::ptrdiff_t>(bytesRead));
+        } else if (ec == asio::error::would_block) {
+            // No data available right now.
+        } else if (ec == asio::error::eof || ec == asio::error::connection_reset) {
+            setLastError(SocketError::Disconnected);
+            return std::nullopt;
+        } else if (ec) {
+            setLastError(SocketError::Unknown);
             return std::nullopt;
         }
+
+        auto& buffer = it->second.recvBuffer;
+        if (buffer.size() < 4) {
+            setLastError(SocketError::None);
+            return std::nullopt;
+        }
+
+        std::uint32_t size = static_cast<std::uint32_t>(buffer[0]) |
+                            (static_cast<std::uint32_t>(buffer[1]) << 8) |
+                            (static_cast<std::uint32_t>(buffer[2]) << 16) |
+                            (static_cast<std::uint32_t>(buffer[3]) << 24);
+
+        if (size > maxSize) {
+            // Protocol violation / too-large message: drop buffered data to avoid getting stuck.
+            buffer.clear();
+            setLastError(SocketError::BufferOverflow);
+            return std::nullopt;
+        }
+
+        if (buffer.size() < 4 + static_cast<std::size_t>(size)) {
+            setLastError(SocketError::None);
+            return std::nullopt;
+        }
+
+        std::vector<std::uint8_t> data;
+        data.reserve(size);
+        data.insert(data.end(), buffer.begin() + 4, buffer.begin() + 4 + static_cast<std::ptrdiff_t>(size));
+
+        buffer.erase(buffer.begin(), buffer.begin() + 4 + static_cast<std::ptrdiff_t>(size));
+        setLastError(SocketError::None);
+        return data;
     }
 
     SocketId AsioNetworkModule::CreateUdpSocket(const SocketConfig& config) {

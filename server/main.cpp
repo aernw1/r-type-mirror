@@ -7,12 +7,14 @@
 
 #include "RoomManager.hpp"
 #include "GameServer.hpp"
+#include "AsioNetworkModule.hpp"
 #include <iostream>
 #include <thread>
 #include <chrono>
 #include <string>
 #include <atomic>
 #include <optional>
+#include <memory>
 
 int main(int argc, char* argv[]) {
     uint16_t port = 4242;
@@ -28,7 +30,10 @@ int main(int argc, char* argv[]) {
 
     std::cout << "\n=== Starting R-Type server with room support on port " << port << " ===" << std::endl;
 
-    network::RoomManager roomManager(port, MAX_ROOMS, minPlayers);
+    auto networkModule = std::make_shared<Network::AsioNetworkModule>();
+    networkModule->Initialize(nullptr);
+
+    network::RoomManager roomManager(networkModule.get(), port, MAX_ROOMS, minPlayers);
 
     std::atomic<bool> gameStarted{false};
     std::optional<uint32_t> startedRoomId;
@@ -57,7 +62,7 @@ int main(int argc, char* argv[]) {
             std::cout << "Starting UDP GameServer on port " << port << " with " << gamePlayers.size() << " players..." << std::endl;
             std::cout << "Level: " << levelPath << std::endl;
 
-            network::GameServer gameServer(port, gamePlayers, levelPath);
+            network::GameServer gameServer(networkModule.get(), port, gamePlayers, levelPath);
             gameServer.Run();
 
             std::cout << "\n=== Game ended in room " << *startedRoomId << ". Room available again. ===" << std::endl;

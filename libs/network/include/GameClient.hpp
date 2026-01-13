@@ -8,8 +8,7 @@
 #pragma once
 
 #include "Protocol.hpp"
-#include "Endpoint.hpp"
-#include <asio.hpp>
+#include "INetworkModule.hpp"
 #include <vector>
 #include <chrono>
 #include <atomic>
@@ -19,7 +18,8 @@ namespace network {
 
     class GameClient {
     public:
-        GameClient(const std::string& serverIp, uint16_t serverPort, const PlayerInfo& localPlayer);
+        GameClient(Network::INetworkModule* network, const std::string& serverIp, uint16_t serverPort,
+            const PlayerInfo& localPlayer);
         ~GameClient();
 
         bool ConnectToServer();
@@ -36,7 +36,6 @@ namespace network {
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
 
-        // Network communication (called by game loop)
         void SendInput(uint8_t inputs);
         void ReceivePackets();
     private:
@@ -47,9 +46,9 @@ namespace network {
 
         uint8_t GenerateRandomInputs();
 
-        asio::io_context m_ioContext;
-        asio::ip::udp::socket m_socket;
-        Endpoint m_serverEndpoint;
+        Network::INetworkModule* m_network = nullptr;
+        Network::SocketId m_udpSocket = Network::INVALID_SOCKET_ID;
+        Network::Endpoint m_serverEndpoint;
 
         PlayerInfo m_localPlayer;
 

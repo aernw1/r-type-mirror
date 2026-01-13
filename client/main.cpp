@@ -8,6 +8,7 @@
 #include "GameStateMachine.hpp"
 #include "MenuState.hpp"
 #include "Renderer/SFMLRenderer.hpp"
+#include "AsioNetworkModule.hpp"
 #include <iostream>
 #include <memory>
 
@@ -33,6 +34,8 @@ int main(int argc, char* argv[]) {
     std::cout << "=====================" << std::endl;
 
     auto renderer = std::make_shared<Renderer::SFMLRenderer>();
+    auto networkModule = std::make_shared<Network::AsioNetworkModule>();
+    networkModule->Initialize(nullptr);
 
     Renderer::WindowConfig config;
     config.title = "R-Type - " + playerName;
@@ -49,6 +52,7 @@ int main(int argc, char* argv[]) {
 
     RType::Client::GameContext context;
     context.renderer = renderer;
+    context.networkModule = networkModule;
     context.serverIp = serverIp;
     context.serverPort = serverPort;
     context.playerName = playerName;

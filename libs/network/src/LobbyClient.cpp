@@ -12,14 +12,15 @@
 
 namespace network {
 
-    LobbyClient::LobbyClient(const std::string& serverAddr, uint16_t port) : _socket(serverAddr, port) {
+    LobbyClient::LobbyClient(Network::INetworkModule* network, const std::string& serverAddr, uint16_t port)
+        : _socket(network, serverAddr, port) {
         if (_socket.isConnected())
             std::cout << "[LobbyClient] Connected to server" << std::endl;
         else
             std::cout << "[LobbyClient] Failed to connect to server" << std::endl;
     }
 
-    LobbyClient::LobbyClient(TcpSocket&& socket) : _socket(std::move(socket)) {
+    LobbyClient::LobbyClient(NetworkTcpSocket&& socket) : _socket(std::move(socket)) {
         std::cout << "[LobbyClient] Using existing socket connection" << std::endl;
     }
 

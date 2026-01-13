@@ -13,21 +13,26 @@
 
 namespace network {
 
-    GameClient::GameClient(const std::string& serverIp, uint16_t serverPort, const PlayerInfo& localPlayer) : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0)), m_serverEndpoint(serverIp, serverPort), m_localPlayer(localPlayer) {
-        m_socket.non_blocking(true);
+    GameClient::GameClient(Network::INetworkModule* network, const std::string& serverIp, uint16_t serverPort,
+        const PlayerInfo& localPlayer)
+        : m_network(network), m_serverEndpoint(serverIp, serverPort), m_localPlayer(localPlayer) {
 
-        asio::socket_base::receive_buffer_size option(1024 * 1024);
-        m_socket.set_option(option);
+        m_udpSocket = m_network->CreateUdpSocket();
+        m_network->BindUdp(m_udpSocket, 0);
 
         m_inputGenerator = [this]() { return GenerateRandomInputs(); };
     }
 
     GameClient::~GameClient() {
         Stop();
+        if (m_network && m_udpSocket != Network::INVALID_SOCKET_ID) {
+            m_network->CloseSocket(m_udpSocket);
+            m_udpSocket = Network::INVALID_SOCKET_ID;
+        }
     }
 
     bool GameClient::ConnectToServer() {
-        std::cout << "[Client " << m_localPlayer.name << "] Connecting to " << m_serverEndpoint.address() << ":" << m_serverEndpoint.port() << std::endl;
+        std::cout << "[Client " << m_localPlayer.name << "] Connecting to " << m_serverEndpoint.address << ":" << m_serverEndpoint.port << std::endl;
 
         HelloPacket hello;
         hello.playerHash = m_localPlayer.hash;
@@ -36,7 +41,7 @@ namespace network {
         std::vector<uint8_t> packet(sizeof(HelloPacket));
         std::memcpy(packet.data(), &hello, sizeof(HelloPacket));
 
-        m_socket.send_to(asio::buffer(packet), m_serverEndpoint.raw());
+        m_network->SendUdp(m_udpSocket, packet, m_serverEndpoint);
         m_packetsSent++;
 
         auto startTime = std::chrono::steady_clock::now();
@@ -114,32 +119,21 @@ namespace network {
         std::vector<uint8_t> packet(sizeof(InputPacket));
         std::memcpy(packet.data(), &input, sizeof(InputPacket));
 
-        m_socket.send_to(asio::buffer(packet), m_serverEndpoint.raw());
+        m_network->SendUdp(m_udpSocket, packet, m_serverEndpoint);
         m_packetsSent++;
     }
 
     void GameClient::ReceivePackets() {
         int packetsRead = 0;
         while (packetsRead < 100) {
-            std::vector<uint8_t> buffer(65536);
-
-            try {
-                asio::ip::udp::endpoint rawEndpoint;
-                size_t bytes = m_socket.receive_from(asio::buffer(buffer), rawEndpoint);
-
-                if (bytes > 0) {
-                    buffer.resize(bytes);
-                    HandlePacket(buffer);
-                    m_packetsReceived++;
-                    packetsRead++;
-                }
-            } catch (const asio::system_error& e) {
-                if (e.code() == asio::error::would_block) {
-                    break;
-                } else {
-                    std::cerr << "[Client " << m_localPlayer.name << "] Error receiving: " << e.what() << std::endl;
-                    break;
-                }
+            auto packet = m_network->ReceiveUdp(m_udpSocket, 65536);
+            if (!packet) {
+                break;
+            }
+            if (!packet->data.empty()) {
+                HandlePacket(packet->data);
+                m_packetsReceived++;
+                packetsRead++;
             }
         }
 

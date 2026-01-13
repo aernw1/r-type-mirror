@@ -48,10 +48,13 @@ namespace network {
 
     const std::array<EnemyStats, 5> GameServer::s_enemyStats = {{{220.0f, 100, 8, 1.0f, -50.0f, 25.0f, 25, BasicMovementPattern}, {200.0f, 50, 3, 0.5f, -50.0f, 20.0f, 20, FastMovementPattern}, {220.0f, 200, 18, 1.8f, -30.0f, -20.0f, 30, TankMovementPattern}, {75.0f, 255, 50, 0.5f, -30.0f, 45.0f, 50, BossMovementPattern}, {100.0f, 100, 10, 1.5f, -30.0f, 45.0f, 25, FormationMovementPattern}}};
 
-    GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath) : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)), m_expectedPlayers(expectedPlayers), m_lastSpawnTime(std::chrono::steady_clock::now()), m_levelPath(levelPath) {
+    GameServer::GameServer(Network::INetworkModule* network, uint16_t port,
+        const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath)
+        : m_network(network), m_expectedPlayers(expectedPlayers),
+          m_lastSpawnTime(std::chrono::steady_clock::now()), m_levelPath(levelPath) {
 
-        asio::socket_base::send_buffer_size sendOption(1024 * 1024);
-        m_socket.set_option(sendOption);
+        m_udpSocket = m_network->CreateUdpSocket();
+        m_network->BindUdp(m_udpSocket, port);
 
         m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
         m_bossSystem = std::make_unique<RType::ECS::BossSystem>();
@@ -88,6 +91,10 @@ namespace network {
 
     GameServer::~GameServer() {
         Stop();
+        if (m_network && m_udpSocket != Network::INVALID_SOCKET_ID) {
+            m_network->CloseSocket(m_udpSocket);
+            m_udpSocket = Network::INVALID_SOCKET_ID;
+        }
     }
 
     void GameServer::Run() {
@@ -186,23 +193,10 @@ namespace network {
     }
 
     void GameServer::WaitForAllPlayers() {
-        m_socket.non_blocking(true);
-
         while (m_connectedPlayers.size() < m_expectedPlayers.size()) {
-            std::vector<uint8_t> buffer(1024);
-            asio::ip::udp::endpoint rawEndpoint;
-
-            try {
-                size_t bytes = m_socket.receive_from(asio::buffer(buffer), rawEndpoint);
-                if (bytes > 0) {
-                    buffer.resize(bytes);
-                    Endpoint clientEndpoint(rawEndpoint);
-                    HandleHello(buffer, clientEndpoint);
-                }
-            } catch (const asio::system_error& e) {
-                if (e.code() != asio::error::would_block) {
-                    std::cerr << "Error receiving: " << e.what() << std::endl;
-                }
+            auto packet = m_network->ReceiveUdp(m_udpSocket, 1024);
+            if (packet && !packet->data.empty()) {
+                HandleHello(packet->data, packet->from);
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -212,25 +206,21 @@ namespace network {
     }
 
     void GameServer::ProcessIncomingPackets() {
-        std::vector<uint8_t> buffer(1024);
-        asio::ip::udp::endpoint rawEndpoint;
-
-        try {
-            size_t bytes = m_socket.receive_from(asio::buffer(buffer), rawEndpoint);
-            if (bytes > 0) {
-                buffer.resize(bytes);
-                Endpoint clientEndpoint(rawEndpoint);
-                HandlePacket(buffer, clientEndpoint);
-                m_packetsReceived++;
+        int packetsRead = 0;
+        while (packetsRead < 100) {
+            auto packet = m_network->ReceiveUdp(m_udpSocket, 1024);
+            if (!packet) {
+                break;
             }
-        } catch (const asio::system_error& e) {
-            if (e.code() != asio::error::would_block) {
-                std::cerr << "Error receiving: " << e.what() << std::endl;
+            if (!packet->data.empty()) {
+                HandlePacket(packet->data, packet->from);
+                m_packetsReceived++;
+                packetsRead++;
             }
         }
     }
 
-    void GameServer::HandlePacket(const std::vector<uint8_t>& data, const Endpoint& from) {
+    void GameServer::HandlePacket(const std::vector<uint8_t>& data, const Network::Endpoint& from) {
         if (data.empty())
             return;
 
@@ -251,7 +241,7 @@ namespace network {
         }
     }
 
-    void GameServer::HandleHello(const std::vector<uint8_t>& data, const Endpoint& from) {
+    void GameServer::HandleHello(const std::vector<uint8_t>& data, const Network::Endpoint& from) {
         if (data.size() < sizeof(HelloPacket))
             return;
 
@@ -285,7 +275,7 @@ namespace network {
         }
     }
 
-    void GameServer::HandleInput(const std::vector<uint8_t>& data, const Endpoint& /*from*/) {
+    void GameServer::HandleInput(const std::vector<uint8_t>& data, const Network::Endpoint& /*from*/) {
         if (data.size() < sizeof(InputPacket))
             return;
 
@@ -343,7 +333,7 @@ namespace network {
         }
     }
 
-    void GameServer::HandlePing(const std::vector<uint8_t>& data, const Endpoint& from) {
+    void GameServer::HandlePing(const std::vector<uint8_t>& data, const Network::Endpoint& from) {
         if (data.size() < sizeof(PingPacket))
             return;
 
@@ -399,12 +389,15 @@ namespace network {
         Broadcast(packet);
     }
 
-    void GameServer::SendTo(const std::vector<uint8_t>& data, const Endpoint& to) {
+    void GameServer::SendTo(const std::vector<uint8_t>& data, const Network::Endpoint& to) {
+        if (!m_network || m_udpSocket == Network::INVALID_SOCKET_ID) {
+            return;
+        }
         try {
-            m_socket.send_to(asio::buffer(data), to.raw());
+            m_network->SendUdp(m_udpSocket, data, to);
             m_packetsSent++;
         } catch (const std::exception& e) {
-            std::cerr << "Error sending to " << to.address() << ":" << to.port() << " - " << e.what() << std::endl;
+            std::cerr << "Error sending to " << to.address << ":" << to.port << " - " << e.what() << std::endl;
         }
     }
 

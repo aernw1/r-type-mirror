@@ -1,6 +1,6 @@
-# Network module (shared library plugin)
 add_library(rtype_asio_network SHARED
     src/AsioNetworkModule.cpp
+    src/AsioNetworkModuleExports.cpp
 )
 
 target_include_directories(rtype_asio_network PUBLIC
@@ -23,7 +23,6 @@ if(WIN32)
     )
 endif()
 
-# Legacy network library (will be refactored to use INetworkModule)
 add_library(rtype_network
     src/TcpSocket.cpp
     src/TcpServer.cpp
@@ -35,6 +34,7 @@ add_library(rtype_network
     src/RoomClient.cpp
     src/GameServer.cpp
     src/GameClient.cpp
+    src/NetworkTcpSocket.cpp
 )
 
 target_include_directories(rtype_network PUBLIC
@@ -42,7 +42,12 @@ target_include_directories(rtype_network PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libs/engine/include>
 )
 
-target_link_libraries(rtype_network PUBLIC asio Threads::Threads nlohmann_json::nlohmann_json rtype_ecs)
+target_link_libraries(rtype_network PUBLIC
+    asio
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    rtype_ecs
+)
 
 if(WIN32)
     target_compile_definitions(rtype_network PUBLIC

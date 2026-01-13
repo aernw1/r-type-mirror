@@ -38,7 +38,7 @@ add_subdirectory(libs/engine)
 add_subdirectory(libs/network)
 
 add_executable(r-type_server server/main.cpp)
-target_link_libraries(r-type_server PRIVATE rtype_network)
+target_link_libraries(r-type_server PRIVATE rtype_network rtype_asio_network)
 
 add_executable(r-type_client
     client/main.cpp
@@ -64,20 +64,24 @@ target_include_directories(r-type_client PRIVATE
 )
 target_link_libraries(r-type_client PRIVATE
     rtype_network
+    rtype_asio_network
     rtype_ecs
     rtype_core
     rtype_sfml_renderer
 )
 
 add_executable(test_lobby tests/test_lobby.cpp)
-target_link_libraries(test_lobby PRIVATE rtype_network)
+target_link_libraries(test_lobby PRIVATE rtype_network rtype_asio_network)
 
 add_executable(test_sparse_array tests/test_sparse_array.cpp)
 target_link_libraries(test_sparse_array PRIVATE rtype_ecs)
 
 add_executable(test_udp_protocol tests/test_udp_protocol.cpp)
-target_link_libraries(test_udp_protocol PRIVATE rtype_network)
+target_link_libraries(test_udp_protocol PRIVATE rtype_network rtype_asio_network)
 message(STATUS "test_udp_protocol will be built (UDP game protocol test)")
+
+add_executable(test_tcp_framing tests/test_tcp_framing.cpp)
+target_link_libraries(test_tcp_framing PRIVATE rtype_asio_network)
 
 if(TARGET rtype_sfml_renderer)
     add_executable(test_renderer tests/test_renderer.cpp)

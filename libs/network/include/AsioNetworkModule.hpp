@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 namespace Network {
 
@@ -53,6 +54,7 @@ namespace Network {
             SocketConfig config;
             Endpoint localEndpoint;
             bool isServer = false;
+            std::vector<std::uint8_t> recvBuffer;
         };
 
         struct UdpSocketData {
@@ -76,20 +78,4 @@ namespace Network {
         mutable std::mutex m_mutex;
     };
 
-}
-
-extern "C" {
-    #if defined(_WIN32) || defined(_WIN64)
-        #define RTYPE_MODULE_EXPORT __declspec(dllexport)
-    #else
-        #define RTYPE_MODULE_EXPORT __attribute__((visibility("default")))
-    #endif
-
-    RTYPE_MODULE_EXPORT RType::Core::IModule* CreateModule() {
-        return new Network::AsioNetworkModule();
-    }
-
-    RTYPE_MODULE_EXPORT void DestroyModule(RType::Core::IModule* module) {
-        delete module;
-    }
 }

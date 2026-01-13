@@ -8,7 +8,7 @@
 #pragma once
 
 #include "Protocol.hpp"
-#include "Endpoint.hpp"
+#include "INetworkModule.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/MovementSystem.hpp"
@@ -32,7 +32,6 @@
 #include "ECS/ShootingSystem.hpp"
 #include "ECS/ForcePodSystem.hpp"
 #include "ECS/ShieldSystem.hpp"
-#include <asio.hpp>
 #include <vector>
 #include <unordered_map>
 #include <memory>
@@ -71,7 +70,7 @@ namespace network {
 
     struct ConnectedPlayer {
         PlayerInfo info;
-        Endpoint endpoint;
+        Network::Endpoint endpoint;
         std::chrono::steady_clock::time_point lastPingTime;
         uint32_t lastInputSequence = 0;
         bool alive = true;
@@ -94,7 +93,9 @@ namespace network {
 
     class GameServer {
     public:
-        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath = "assets/levels/level1.json");
+        GameServer(Network::INetworkModule* network, uint16_t port,
+            const std::vector<PlayerInfo>& expectedPlayers,
+            const std::string& levelPath = "assets/levels/level1.json");
         ~GameServer();
 
         void Run();
@@ -110,12 +111,12 @@ namespace network {
         void WaitForAllPlayers();
         void ProcessIncomingPackets();
         void SendStateSnapshots();
-        void HandlePacket(const std::vector<uint8_t>& data, const Endpoint& from);
-        void HandleHello(const std::vector<uint8_t>& data, const Endpoint& from);
-        void HandleInput(const std::vector<uint8_t>& data, const Endpoint& from);
-        void HandlePing(const std::vector<uint8_t>& data, const Endpoint& from);
+        void HandlePacket(const std::vector<uint8_t>& data, const Network::Endpoint& from);
+        void HandleHello(const std::vector<uint8_t>& data, const Network::Endpoint& from);
+        void HandleInput(const std::vector<uint8_t>& data, const Network::Endpoint& from);
+        void HandlePing(const std::vector<uint8_t>& data, const Network::Endpoint& from);
 
-        void SendTo(const std::vector<uint8_t>& data, const Endpoint& to);
+        void SendTo(const std::vector<uint8_t>& data, const Network::Endpoint& to);
         void Broadcast(const std::vector<uint8_t>& data);
 
         void UpdateGameLogic(float dt);
@@ -134,8 +135,8 @@ namespace network {
 
         uint32_t GetNextEntityId() { return m_nextEntityId++; }
 
-        asio::io_context m_ioContext;
-        asio::ip::udp::socket m_socket;
+        Network::INetworkModule* m_network = nullptr;
+        Network::SocketId m_udpSocket = Network::INVALID_SOCKET_ID;
         std::vector<PlayerInfo> m_expectedPlayers;
         std::unordered_map<uint64_t, ConnectedPlayer> m_connectedPlayers;
         const std::chrono::seconds DISCONNECT_TIMEOUT{10};

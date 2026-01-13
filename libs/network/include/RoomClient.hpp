@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "TcpSocket.hpp"
+#include "NetworkTcpSocket.hpp"
 #include "Protocol.hpp"
 #include "Serializer.hpp"
 #include "Deserializer.hpp"
@@ -19,7 +19,7 @@ namespace network {
 
     class RoomClient {
     public:
-        RoomClient(const std::string& serverAddr, uint16_t port);
+        RoomClient(Network::INetworkModule* network, const std::string& serverAddr, uint16_t port);
 
         void requestRooms();
         void createRoom(const std::string& roomName);
@@ -31,7 +31,7 @@ namespace network {
         uint32_t getJoinedRoomId() const { return _joinedRoomId; }
         const std::vector<RoomInfo>& getRooms() const { return _rooms; }
 
-        TcpSocket releaseSocket() { return std::move(_socket); }
+        NetworkTcpSocket releaseSocket() { return std::move(_socket); }
 
         void onRoomList(std::function<void(const std::vector<RoomInfo>&)> callback) { _onRoomList = callback; }
         void onRoomCreated(std::function<void(uint32_t roomId)> callback) { _onRoomCreated = callback; }
@@ -48,7 +48,7 @@ namespace network {
 
         void send(LobbyPacket type, const std::vector<uint8_t>& payload = {});
 
-        TcpSocket _socket;
+        NetworkTcpSocket _socket;
         std::vector<RoomInfo> _rooms;
         bool _joinedRoom = false;
         uint32_t _joinedRoomId = 0;
