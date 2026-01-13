@@ -445,6 +445,9 @@ namespace network {
         m_scoreSystem->Update(m_registry, dt);
         m_healthSystem->Update(m_registry, dt);
 
+        // Check if boss is defeated for level progression
+        CheckBossDefeated();
+
         UpdateLegacyEntitiesFromRegistry();
         CleanupDeadEntities();
 
@@ -972,6 +975,29 @@ namespace network {
         }
 
         return currentState;
+    }
+
+    void GameServer::CheckBossDefeated() {
+        if (m_bossDefeated) {
+            return;
+        }
+
+        auto killedBosses = m_registry.GetEntitiesWithComponent<RType::ECS::BossKilled>();
+
+        if (!killedBosses.empty()) {
+            m_bossDefeated = true;
+            m_levelComplete = true;
+
+            std::cout << "[GameServer] Boss defeated! Level complete - broadcasting to clients" << std::endl;
+
+            LevelCompletePacket levelComplete;
+            levelComplete.completedLevel = 1;  // TODO: Track actual level number
+            levelComplete.nextLevel = 0;        // 0 = no more levels (victory screen)
+
+            std::vector<uint8_t> data(sizeof(LevelCompletePacket));
+            std::memcpy(data.data(), &levelComplete, sizeof(LevelCompletePacket));
+            Broadcast(data);
+        }
     }
 
 }

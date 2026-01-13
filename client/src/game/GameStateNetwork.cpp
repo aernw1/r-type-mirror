@@ -597,5 +597,20 @@ namespace RType {
             }
         }
 
+        void InGameState::OnLevelComplete(uint8_t completedLevel, uint8_t nextLevel) {
+            Core::Logger::Info("[InGameState] Level {} complete! Next level: {}",
+                              static_cast<int>(completedLevel),
+                              static_cast<int>(nextLevel));
+
+            m_levelProgress.levelComplete = true;
+            m_levelProgress.bossDefeated = true;
+
+            if (nextLevel == 0) {
+                Core::Logger::Info("[InGameState] All levels complete - Victory!");
+            } else {
+                Core::Logger::Info("[InGameState] Preparing to load level {}", static_cast<int>(nextLevel));
+            }
+        }
+
     }
 }

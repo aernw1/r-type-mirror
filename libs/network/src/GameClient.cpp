@@ -166,6 +166,9 @@ namespace network {
         case GamePacket::PONG:
             HandlePong(data);
             break;
+        case GamePacket::LEVEL_COMPLETE:
+            HandleLevelComplete(data);
+            break;
         default:
             break;
         }
@@ -219,6 +222,20 @@ namespace network {
 
         uint32_t rtt = now - pong->timestamp;
         (void)rtt;
+    }
+
+    void GameClient::HandleLevelComplete(const std::vector<uint8_t>& data) {
+        if (data.size() < sizeof(LevelCompletePacket))
+            return;
+
+        const LevelCompletePacket* packet = reinterpret_cast<const LevelCompletePacket*>(data.data());
+
+        std::cout << "[GameClient] Level " << static_cast<int>(packet->completedLevel)
+                  << " complete! Next level: " << static_cast<int>(packet->nextLevel) << std::endl;
+
+        if (m_levelCompleteCallback) {
+            m_levelCompleteCallback(packet->completedLevel, packet->nextLevel);
+        }
     }
 
     uint8_t GameClient::GenerateRandomInputs() {

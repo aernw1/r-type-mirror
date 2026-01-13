@@ -26,6 +26,7 @@ namespace RType {
 
             if (m_context.networkClient) {
                 m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities) { this->OnServerStateUpdate(tick, entities); });
+                m_context.networkClient->SetLevelCompleteCallback([this](uint8_t completedLevel, uint8_t nextLevel) { this->OnLevelComplete(completedLevel, nextLevel); });
             } else {
                 Core::Logger::Warning("[GameState] No network client available");
             }
