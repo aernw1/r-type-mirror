@@ -26,8 +26,11 @@ namespace RType {
 
         void EditorUIManager::InitializePalette() {
             m_entries.clear();
+            m_actionButtons.clear();
             float cursorY = UI::PALETTE_START_Y;
             m_activeSelection = EditorPaletteSelection{};
+
+            InitializeToolbar();
 
             createCategoryLabel("TOOLS", cursorY);
             cursorY += UI::PALETTE_BUTTON_HEIGHT;
@@ -175,9 +178,30 @@ namespace RType {
                 }
             }
 
+            for (auto& button : m_actionButtons) {
+                bool inside = EditorGeometry::PointInRect(mouseScreen, button.bounds);
+                if (button.hovered != inside) {
+                    button.hovered = inside;
+                    hoverChanged = true;
+                }
+            }
+
             if (hoverChanged) {
                 refreshPaletteVisuals();
+                refreshActionButtons();
             }
+        }
+
+        bool EditorUIManager::HandleActionClick(Math::Vector2 mouseScreen) {
+            for (const auto& button : m_actionButtons) {
+                if (EditorGeometry::PointInRect(mouseScreen, button.bounds)) {
+                    if (button.onClick) {
+                        button.onClick();
+                    }
+                    return true;
+                }
+            }
+            return false;
         }
 
         std::optional<EditorPaletteSelection> EditorUIManager::HandleClick(Math::Vector2 mouseScreen) {
@@ -198,6 +222,7 @@ namespace RType {
         void EditorUIManager::SetActiveSelection(const EditorPaletteSelection& selection) {
             m_activeSelection = selection;
             refreshPaletteVisuals();
+            refreshActionButtons();
         }
 
         void EditorUIManager::UpdatePropertyPanel(const EditorEntityData* selected,
@@ -309,6 +334,33 @@ namespace RType {
             m_entries.push_back(std::move(entry));
         }
 
+        void EditorUIManager::InitializeToolbar() {
+            float buttonY = UI::TOOLBAR_START_Y;
+            ActionButton saveButton;
+            saveButton.label = "SAVE LEVEL";
+            saveButton.bounds.position = {UI::TOOLBAR_RIGHT_X, buttonY - (UI::TOOLBAR_BUTTON_HEIGHT / 2.0f)};
+            saveButton.bounds.size = {UI::TOOLBAR_RIGHT_WIDTH, UI::TOOLBAR_BUTTON_HEIGHT};
+
+            float textX = UI::TOOLBAR_RIGHT_X + 10.0f;
+            ECS::Entity entity = m_registry.CreateEntity();
+            m_trackedEntities.push_back(entity);
+            m_registry.AddComponent(entity, ECS::Position{textX, buttonY});
+
+            ECS::TextLabel label(saveButton.label, m_fontMedium, 14);
+            label.centered = false;
+            label.color = Colors::UI_TEXT;
+            m_registry.AddComponent(entity, std::move(label));
+
+            saveButton.textEntity = entity;
+            saveButton.onClick = [this]() {
+                if (m_onSaveRequested) {
+                    m_onSaveRequested();
+                }
+            };
+
+            m_actionButtons.push_back(std::move(saveButton));
+        }
+
 
         void EditorUIManager::refreshPaletteVisuals() {
             for (auto& entry : m_entries) {
@@ -330,6 +382,20 @@ namespace RType {
                     label.color = {0.75f, 0.75f, 0.8f, 1.0f};
                 }
             }
+        }
+
+        void EditorUIManager::refreshActionButtons() {
+            for (auto& button : m_actionButtons) {
+                if (!m_registry.IsEntityAlive(button.textEntity)) {
+                    continue;
+                }
+                auto& label = m_registry.GetComponent<ECS::TextLabel>(button.textEntity);
+                label.color = button.hovered ? Colors::UI_HOVER : Colors::UI_TEXT;
+            }
+        }
+
+        void EditorUIManager::SetOnSaveRequested(const std::function<void()>& callback) {
+            m_onSaveRequested = callback;
         }
 
         void EditorUIManager::UpdateColliderPanel(const EditorEntityData* selected, int selectedColliderIndex) {

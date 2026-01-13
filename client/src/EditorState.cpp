@@ -75,6 +75,9 @@ namespace RType {
             m_entityManager = std::make_unique<EditorEntityManager>(m_renderer.get(), m_registry, *m_assetLibrary);
             m_uiManager = std::make_unique<EditorUIManager>(m_renderer.get(), *m_assetLibrary, m_registry, m_entities, m_fontSmall, m_fontMedium);
             m_uiManager->InitializePalette();
+            m_uiManager->SetOnSaveRequested([this]() {
+                saveCurrentLevel();
+            });
             m_selection = m_uiManager->GetActiveSelection();
 
             m_propertyManager->SetOnPropertyChanged([this](EditorEntityData& entity) {
@@ -127,18 +130,7 @@ namespace RType {
             m_inputHandler->HandleKeyPress(Renderer::Key::S, [this]() {
                 if (m_renderer->IsKeyPressed(Renderer::Key::LControl) ||
                     m_renderer->IsKeyPressed(Renderer::Key::RControl)) {
-
-                    std::string path = m_currentLevelPath.empty()
-                        ? "assets/levels/custom_level.json"
-                        : m_currentLevelPath;
-
-                    if (m_fileManager->SaveLevel(path, m_entityManager->GetEntities(), m_levelName)) {
-                        Core::Logger::Info("[EditorState] Level saved to {}", path);
-                        m_hasUnsavedChanges = false;
-                        m_currentLevelPath = path;
-                    } else {
-                        Core::Logger::Error("[EditorState] Failed to save: {}", m_fileManager->GetLastError());
-                    }
+                    saveCurrentLevel();
                 }
             });
 
@@ -183,12 +175,16 @@ namespace RType {
                 bool consumedByUI = false;
 
                 if (m_uiManager) {
-                    auto selection = m_uiManager->HandleClick(mouseScreen);
-                    if (selection.has_value()) {
-                        m_selection = selection.value();
+                    if (m_uiManager->HandleActionClick(mouseScreen)) {
                         consumedByUI = true;
-                        if (m_propertyManager) {
-                            m_propertyManager->ClearInput();
+                    } else {
+                        auto selection = m_uiManager->HandleClick(mouseScreen);
+                        if (selection.has_value()) {
+                            m_selection = selection.value();
+                            consumedByUI = true;
+                            if (m_propertyManager) {
+                                m_propertyManager->ClearInput();
+                            }
                         }
                     }
                 }
@@ -317,6 +313,24 @@ namespace RType {
                     m_propertyManager->ClearInput();
                 }
                 updatePropertyPanel();
+            }
+        }
+
+        void EditorState::saveCurrentLevel() {
+            if (!m_fileManager || !m_entityManager) {
+                return;
+            }
+
+            std::string path = m_currentLevelPath.empty()
+                ? "assets/levels/custom_level.json"
+                : m_currentLevelPath;
+
+            if (m_fileManager->SaveLevel(path, m_entityManager->GetEntities(), m_levelName)) {
+                Core::Logger::Info("[EditorState] Level saved to {}", path);
+                m_hasUnsavedChanges = false;
+                m_currentLevelPath = path;
+            } else {
+                Core::Logger::Error("[EditorState] Failed to save: {}", m_fileManager->GetLastError());
             }
         }
 

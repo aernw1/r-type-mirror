@@ -78,6 +78,7 @@ namespace RType {
             void handleSelectionAt(const Math::Vector2& mouseWorld);
             void updatePropertyPanel();
             void deleteSelectedEntity();
+            void saveCurrentLevel();
         };
 
     }
