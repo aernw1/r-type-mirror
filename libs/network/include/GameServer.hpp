@@ -122,6 +122,7 @@ namespace network {
         void SpawnPlayer(uint64_t hash, float x, float y);
         void SpawnEnemy();
         bool IsBossActive() const;
+        void CheckBossDefeated();
         void SpawnEnemyBullet(uint32_t enemyId, float x, float y, uint8_t enemyType);
         void SpawnBullet(uint64_t ownerHash, float x, float y);
         void UpdateBullets(float dt);
@@ -179,6 +180,10 @@ namespace network {
         static const std::array<EnemyStats, 5> s_enemyStats;
 
         std::string m_levelPath;
+
+        // Level progression
+        bool m_bossDefeated = false;
+        bool m_levelComplete = false;
     };
 
 }
