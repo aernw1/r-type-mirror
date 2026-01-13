@@ -244,6 +244,132 @@ namespace RType {
             renderHealthBars();
             renderBossHealthBar();
             renderGameOverOverlay();
+
+            // DEBUG: Visualize obstacle colliders
+            renderDebugColliders();
+        }
+
+        void InGameState::renderDebugColliders() {
+            static bool loggedVisualization = false;
+            static int frameCount = 0;
+            frameCount++;
+
+            if (!loggedVisualization) {
+                std::cout << "[DEBUG VIZ] m_obstacleSpriteEntities.size()=" << m_obstacleSpriteEntities.size() << std::endl;
+                std::cout << "[DEBUG VIZ] m_obstacleColliderEntities.size()=" << m_obstacleColliderEntities.size() << std::endl;
+
+                // Log all obstacle entities found in registry
+                auto allObstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
+                std::cout << "[DEBUG VIZ] Total Obstacle entities in registry: " << allObstacles.size() << std::endl;
+
+                int logged = 0;
+                for (auto entity : allObstacles) {
+                    if (!m_registry.IsEntityAlive(entity)) continue;
+                    if (!m_registry.HasComponent<Position>(entity) || !m_registry.HasComponent<BoxCollider>(entity)) continue;
+
+                    const auto& pos = m_registry.GetComponent<Position>(entity);
+                    const auto& box = m_registry.GetComponent<BoxCollider>(entity);
+
+                    bool isTracked = false;
+                    for (auto& tracked : m_obstacleColliderEntities) {
+                        if (tracked == entity) { isTracked = true; break; }
+                    }
+
+                    std::cout << "  Obstacle " << entity << ": pos=(" << pos.x << "," << pos.y
+                              << ") size=(" << box.width << "," << box.height << ")"
+                              << " tracked=" << (isTracked ? "YES" : "NO") << std::endl;
+
+                    if (++logged >= 10) {
+                        std::cout << "  ... (showing first 10 only)" << std::endl;
+                        break;
+                    }
+                }
+
+                loggedVisualization = true;
+            }
+
+            // Draw obstacle visual sprite positions (green dots)
+            for (auto& visual : m_obstacleSpriteEntities) {
+                if (!m_registry.IsEntityAlive(visual))
+                    continue;
+                if (!m_registry.HasComponent<Position>(visual))
+                    continue;
+
+                const auto& pos = m_registry.GetComponent<Position>(visual);
+
+                // Draw a small green circle at the visual entity's position
+                Renderer::Rectangle marker;
+                marker.position = Renderer::Vector2(pos.x - 3, pos.y - 3);
+                marker.size = Renderer::Vector2(6, 6);
+                m_renderer->DrawRectangle(marker, Renderer::Color(0.0f, 1.0f, 0.0f, 0.9f));
+            }
+
+            // Draw ALL entities with Obstacle component and BoxCollider
+            // This will catch any colliders not in m_obstacleColliderEntities
+            auto allObstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
+            for (auto entity : allObstacles) {
+                if (!m_registry.IsEntityAlive(entity))
+                    continue;
+                if (!m_registry.HasComponent<Position>(entity) ||
+                    !m_registry.HasComponent<BoxCollider>(entity))
+                    continue;
+
+                const auto& pos = m_registry.GetComponent<Position>(entity);
+                const auto& box = m_registry.GetComponent<BoxCollider>(entity);
+
+                // Check if this entity is in our tracked list
+                bool isTracked = false;
+                for (auto& tracked : m_obstacleColliderEntities) {
+                    if (tracked == entity) {
+                        isTracked = true;
+                        break;
+                    }
+                }
+
+                // Use different colors for tracked vs untracked colliders
+                Renderer::Color borderColor;
+                Renderer::Color fillColor;
+                if (isTracked) {
+                    // Tracked colliders: yellow border, red fill
+                    borderColor = Renderer::Color(1.0f, 1.0f, 0.0f, 0.6f);
+                    fillColor = Renderer::Color(1.0f, 0.0f, 0.0f, 0.4f);
+                } else {
+                    // UNTRACKED colliders: magenta border, blue fill (THESE ARE THE INVISIBLE ONES!)
+                    borderColor = Renderer::Color(1.0f, 0.0f, 1.0f, 0.9f);
+                    fillColor = Renderer::Color(0.0f, 0.0f, 1.0f, 0.6f);
+                }
+
+                // Draw border
+                Renderer::Rectangle borderRect;
+                borderRect.position = Renderer::Vector2(pos.x - 2, pos.y - 2);
+                borderRect.size = Renderer::Vector2(box.width + 4, box.height + 4);
+                m_renderer->DrawRectangle(borderRect, borderColor);
+
+                // Draw collider box
+                Renderer::Rectangle rect;
+                rect.position = Renderer::Vector2(pos.x, pos.y);
+                rect.size = Renderer::Vector2(box.width, box.height);
+                m_renderer->DrawRectangle(rect, fillColor);
+
+                // If this collider has metadata, draw a cyan dot
+                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
+                    const auto& metadata = m_registry.GetComponent<ObstacleMetadata>(entity);
+
+                    if (metadata.visualEntity != ECS::NULL_ENTITY &&
+                        m_registry.IsEntityAlive(metadata.visualEntity) &&
+                        m_registry.HasComponent<Position>(metadata.visualEntity)) {
+
+                        float colliderCenterX = pos.x + box.width / 2;
+                        float colliderCenterY = pos.y + box.height / 2;
+
+                        // Draw a cyan dot at collider center to show the link
+                        Renderer::Rectangle linkMarker;
+                        linkMarker.position = Renderer::Vector2(colliderCenterX - 2, colliderCenterY - 2);
+                        linkMarker.size = Renderer::Vector2(4, 4);
+                        m_renderer->DrawRectangle(linkMarker, Renderer::Color(0.0f, 1.0f, 1.0f, 0.8f));
+                    }
+                }
+            }
         }
 
         void InGameState::renderChargeBar() {

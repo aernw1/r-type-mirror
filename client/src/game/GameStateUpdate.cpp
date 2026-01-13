@@ -130,11 +130,241 @@ namespace RType {
                 m_movementSystem->Update(m_registry, dt);
             }
 
+            // IMPORTANT: Sync obstacle colliders BEFORE player prediction
+            // so collision checks use current frame positions
+            static bool loggedMode = false;
+            if (!loggedMode) {
+                std::cout << "[UPDATE MODE] m_isNetworkSession=" << m_isNetworkSession << std::endl;
+                loggedMode = true;
+            }
+
+            if (m_isNetworkSession) {
+                static bool loggedNetworkPath = false;
+                if (!loggedNetworkPath) {
+                    std::cout << "[UPDATE] Taking NETWORK session path" << std::endl;
+                    loggedNetworkPath = true;
+                }
+                // Scroll backgrounds
+                for (auto& bg : m_backgroundEntities) {
+                    if (!m_registry.IsEntityAlive(bg))
+                        continue;
+                    if (!m_registry.HasComponent<Position>(bg) ||
+                        !m_registry.HasComponent<Scrollable>(bg))
+                        continue;
+                    auto& pos = m_registry.GetComponent<Position>(bg);
+                    const auto& scrollable = m_registry.GetComponent<Scrollable>(bg);
+                    pos.x += scrollable.speed * dt;
+                }
+                // Scroll obstacle visuals
+                for (auto& visual : m_obstacleSpriteEntities) {
+                    if (!m_registry.IsEntityAlive(visual))
+                        continue;
+                    if (!m_registry.HasComponent<Position>(visual) ||
+                        !m_registry.HasComponent<Scrollable>(visual))
+                        continue;
+                    auto& pos = m_registry.GetComponent<Position>(visual);
+                    const auto& scrollable = m_registry.GetComponent<Scrollable>(visual);
+                    pos.x += scrollable.speed * dt;
+                }
+                // Synchronize collider positions to visual entities using ObstacleMetadata
+                // ONLY for obstacles that still have Scrollable (not yet synced via network)
+                static int syncDebugCounter = 0;
+                for (auto& collider : m_obstacleColliderEntities) {
+                    if (!m_registry.IsEntityAlive(collider) ||
+                        !m_registry.HasComponent<ObstacleMetadata>(collider) ||
+                        !m_registry.HasComponent<Position>(collider))
+                        continue;
+
+                    // Skip obstacles that are synced via network (no Scrollable component)
+                    if (!m_registry.HasComponent<Scrollable>(collider))
+                        continue;
+
+                    const auto& metadata = m_registry.GetComponent<ObstacleMetadata>(collider);
+
+                    // If visual entity exists, sync collider to visual position + offset
+                    if (metadata.visualEntity != ECS::NULL_ENTITY &&
+                        m_registry.IsEntityAlive(metadata.visualEntity) &&
+                        m_registry.HasComponent<Position>(metadata.visualEntity)) {
+
+                        const auto& visualPos = m_registry.GetComponent<Position>(metadata.visualEntity);
+                        auto& colliderPos = m_registry.GetComponent<Position>(collider);
+
+                        // Debug: Log first few syncs to verify it's running
+                        if (syncDebugCounter < 5) {
+                            std::cout << "[RUNTIME SYNC] Collider " << collider
+                                      << ": visual=(" << visualPos.x << "," << visualPos.y << ")"
+                                      << " offset=(" << metadata.offsetX << "," << metadata.offsetY << ")"
+                                      << " -> collider=(" << visualPos.x + metadata.offsetX << ","
+                                      << visualPos.y + metadata.offsetY << ")" << std::endl;
+                            syncDebugCounter++;
+                        }
+
+                        // Collider position = visual position + stored offset
+                        colliderPos.x = visualPos.x + metadata.offsetX;
+                        colliderPos.y = visualPos.y + metadata.offsetY;
+                    }
+                    // Fallback: if no visual (missing texture), scroll collider independently
+                    else if (m_registry.HasComponent<Scrollable>(collider)) {
+                        auto& pos = m_registry.GetComponent<Position>(collider);
+                        const auto& scrollable = m_registry.GetComponent<Scrollable>(collider);
+                        pos.x += scrollable.speed * dt;
+
+                        if (syncDebugCounter < 5) {
+                            std::cout << "[RUNTIME SYNC FALLBACK] Collider " << collider
+                                      << " scrolling independently at (" << pos.x << "," << pos.y << ")" << std::endl;
+                            syncDebugCounter++;
+                        }
+                    }
+                }
+            } else if (m_scrollingSystem) {
+                static bool loggedScrollingPath = false;
+                if (!loggedScrollingPath) {
+                    std::cout << "[UPDATE] Taking ScrollingSystem path (non-network)" << std::endl;
+                    loggedScrollingPath = true;
+                }
+                // Non-network mode: use ScrollingSystem which also handles sync
+                m_scrollingSystem->Update(m_registry, dt);
+            }
+
+            if (m_isNetworkSession && m_localPlayerEntity != ECS::NULL_ENTITY &&
+                m_registry.IsEntityAlive(m_localPlayerEntity) &&
+                m_registry.HasComponent<Position>(m_localPlayerEntity)) {
+                static bool loggedPrediction = false;
+                if (!loggedPrediction) {
+                    std::cout << "[UPDATE] Player prediction code is running" << std::endl;
+                    std::cout << "[UPDATE] m_obstacleColliderEntities.size()=" << m_obstacleColliderEntities.size() << std::endl;
+                    loggedPrediction = true;
+                }
+                auto& pos = m_registry.GetComponent<Position>(m_localPlayerEntity);
+
+                float newX = pos.x;
+                float newY = pos.y;
+                if (m_currentInputs & network::InputFlags::UP) {
+                    newY -= PREDICTION_SPEED * dt;
+                }
+                if (m_currentInputs & network::InputFlags::DOWN) {
+                    newY += PREDICTION_SPEED * dt;
+                }
+                if (m_currentInputs & network::InputFlags::LEFT) {
+                    newX -= PREDICTION_SPEED * dt;
+                }
+                if (m_currentInputs & network::InputFlags::RIGHT) {
+                    newX += PREDICTION_SPEED * dt;
+                }
+
+                newX = std::max(0.0f, std::min(newX, 1280.0f - 66.0f));
+                newY = std::max(0.0f, std::min(newY, 720.0f - 32.0f));
+
+                float playerW = 25.0f, playerH = 25.0f;
+                if (m_registry.HasComponent<BoxCollider>(m_localPlayerEntity)) {
+                    const auto& box = m_registry.GetComponent<BoxCollider>(m_localPlayerEntity);
+                    playerW = box.width;
+                    playerH = box.height;
+                }
+
+                bool blocked = false;
+                static int collisionDebugCounter = 0;
+                for (auto& collider : m_obstacleColliderEntities) {
+                    if (!m_registry.IsEntityAlive(collider) ||
+                        !m_registry.HasComponent<Position>(collider) ||
+                        !m_registry.HasComponent<BoxCollider>(collider))
+                        continue;
+                    const auto& obstPos = m_registry.GetComponent<Position>(collider);
+                    const auto& obstBox = m_registry.GetComponent<BoxCollider>(collider);
+
+                    bool wouldCollide =
+                        newX < obstPos.x + obstBox.width &&
+                        newX + playerW > obstPos.x &&
+                        newY < obstPos.y + obstBox.height &&
+                        newY + playerH > obstPos.y;
+
+                    if (wouldCollide) {
+                        if (collisionDebugCounter < 3) {
+                            std::cout << "[COLLISION DETECTED] Player at (" << newX << "," << newY
+                                      << ") size=(" << playerW << "," << playerH << ")"
+                                      << " vs Obstacle ENTITY=" << collider
+                                      << " at (" << obstPos.x << "," << obstPos.y << ")"
+                                      << " size=(" << obstBox.width << "," << obstBox.height << ")" << std::endl;
+
+                            // Check if this entity has ObstacleMetadata
+                            if (m_registry.HasComponent<ObstacleMetadata>(collider)) {
+                                const auto& meta = m_registry.GetComponent<ObstacleMetadata>(collider);
+                                std::cout << "  -> Has metadata: visualEntity=" << meta.visualEntity
+                                          << " offset=(" << meta.offsetX << "," << meta.offsetY << ")" << std::endl;
+
+                                // Check if visual entity actually exists and has drawable
+                                if (meta.visualEntity != ECS::NULL_ENTITY) {
+                                    bool alive = m_registry.IsEntityAlive(meta.visualEntity);
+                                    bool hasPos = m_registry.HasComponent<Position>(meta.visualEntity);
+                                    bool hasDrawable = m_registry.HasComponent<Drawable>(meta.visualEntity);
+                                    std::cout << "  -> Visual entity: alive=" << alive
+                                              << " hasPos=" << hasPos
+                                              << " hasDrawable=" << hasDrawable << std::endl;
+                                    if (hasPos) {
+                                        const auto& vPos = m_registry.GetComponent<Position>(meta.visualEntity);
+                                        std::cout << "  -> Visual position: (" << vPos.x << "," << vPos.y << ")" << std::endl;
+                                    }
+                                }
+                            } else {
+                                std::cout << "  -> NO METADATA!" << std::endl;
+                            }
+                            collisionDebugCounter++;
+                        }
+                        blocked = true;
+                        float overlapLeft = (newX + playerW) - obstPos.x;
+                        float overlapRight = (obstPos.x + obstBox.width) - newX;
+                        float overlapTop = (newY + playerH) - obstPos.y;
+                        float overlapBottom = (obstPos.y + obstBox.height) - newY;
+
+                        float minOverlapX = std::min(overlapLeft, overlapRight);
+                        float minOverlapY = std::min(overlapTop, overlapBottom);
+
+                        if (minOverlapX < minOverlapY) {
+                            if (overlapLeft < overlapRight) {
+                                newX = obstPos.x - playerW - 0.5f;
+                            } else {
+                                newX = obstPos.x + obstBox.width + 0.5f;
+                            }
+                        } else {
+                            if (overlapTop < overlapBottom) {
+                                newY = obstPos.y - playerH - 0.5f;
+                            } else {
+                                newY = obstPos.y + obstBox.height + 0.5f;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                newX = std::max(0.0f, std::min(newX, 1280.0f - 66.0f));
+                newY = std::max(0.0f, std::min(newY, 720.0f - 32.0f));
+
+                pos.x = newX;
+                pos.y = newY;
+
+                PredictedInput prediction;
+                prediction.sequence = m_inputSequence;
+                prediction.inputs = m_currentInputs;
+                prediction.predictedX = newX;
+                prediction.predictedY = newY;
+                prediction.deltaTime = dt;
+                m_inputHistory.push_back(prediction);
+
+                while (m_inputHistory.size() > MAX_INPUT_HISTORY) {
+                    m_inputHistory.pop_front();
+                }
+
+                m_predictedX = newX;
+                m_predictedY = newY;
+
+                (void)blocked;
+            }
+
             auto entities = m_registry.GetEntitiesWithComponent<Position>();
             for (auto entity : entities) {
                 if (m_registry.HasComponent<Velocity>(entity)) {
                     auto& pos = m_registry.GetComponent<Position>(entity);
-                    if (entity == m_localPlayerEntity) {
+                    if (entity == m_localPlayerEntity && !m_isNetworkSession) {
                         pos.x = std::max(0.0f, std::min(pos.x, 1280.0f - 66.0f));
                         pos.y = std::max(0.0f, std::min(pos.y, 720.0f - 32.0f));
                     }
@@ -161,9 +391,7 @@ namespace RType {
                 m_healthSystem->Update(m_registry, dt);
             }
 
-            if (m_scrollingSystem) {
-                m_scrollingSystem->Update(m_registry, dt);
-            }
+            // Scrolling already handled earlier (before player prediction)
             m_localScrollOffset += -150.0f * dt;
 
             if (m_shieldSystem) {
@@ -174,11 +402,7 @@ namespace RType {
             }
 
             if (m_shootingSystem) {
-                if (m_context.networkClient) {
-                    m_shootingSystem->Update(m_registry, dt);
-                } else {
-                    m_shootingSystem->Update(m_registry, dt);
-                }
+                m_shootingSystem->Update(m_registry, dt);
             }
 
             for (auto& bg : m_backgroundEntities) {
@@ -190,6 +414,56 @@ namespace RType {
                 }
             }
 
+            if (m_isNetworkSession) {
+                std::vector<uint32_t> toRemove;
+                for (auto& [networkId, interpState] : m_interpolationStates) {
+                    auto entityIt = m_networkEntityMap.find(networkId);
+                    if (entityIt == m_networkEntityMap.end()) {
+                        toRemove.push_back(networkId);
+                        continue;
+                    }
+
+                    ECS::Entity entity = entityIt->second;
+                    if (!m_registry.IsEntityAlive(entity)) {
+                        toRemove.push_back(networkId);
+                        continue;
+                    }
+
+                    if (!m_registry.HasComponent<Position>(entity)) {
+                        continue;
+                    }
+
+                    interpState.interpTime += dt;
+                    float t = interpState.interpTime / interpState.interpDuration;
+                    if (t > 1.0f) {
+                        t = 1.0f;
+                    }
+
+                    auto& pos = m_registry.GetComponent<Position>(entity);
+                    pos.x = interpState.prevX + (interpState.targetX - interpState.prevX) * t;
+                    pos.y = interpState.prevY + (interpState.targetY - interpState.prevY) * t;
+
+                    if (m_registry.HasComponent<Player>(entity)) {
+                        UpdatePlayerNameLabelPosition(entity, pos.x, pos.y);
+                    }
+                }
+                for (uint32_t id : toRemove) {
+                    m_interpolationStates.erase(id);
+                }
+
+                for (auto& [networkId, ecsEntity] : m_networkEntityMap) {
+                    if (!m_registry.IsEntityAlive(ecsEntity)) continue;
+                    if (!m_registry.HasComponent<Position>(ecsEntity)) continue;
+                    if (!m_registry.HasComponent<Velocity>(ecsEntity)) continue;
+                    if (m_interpolationStates.count(networkId) > 0) continue;
+                    if (ecsEntity == m_localPlayerEntity) continue;
+
+                    auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                    const auto& vel = m_registry.GetComponent<Velocity>(ecsEntity);
+                    pos.x += vel.dx * dt;
+                    pos.y += vel.dy * dt;
+                }
+            }
             updateHUD();
         }
 

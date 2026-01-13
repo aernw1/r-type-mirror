@@ -17,17 +17,36 @@ using namespace RType::ECS;
 namespace RType {
     namespace Client {
 
-        void InGameState::OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities) {
+        void InGameState::OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks) {
             auto now = std::chrono::steady_clock::now();
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 
             static int stateLog = 0;
+            static bool loggedObstacleTypes = false;
             if (stateLog++ % 60 == 0) {
                 std::cout << "[CLIENT RECV STATE] t=" << ms << " tick=" << tick << " entities=" << entities.size() << std::endl;
+
+                if (!loggedObstacleTypes) {
+                    int obstacleCount = 0;
+                    for (const auto& e : entities) {
+                        if (static_cast<network::EntityType>(e.entityType) == network::EntityType::OBSTACLE) {
+                            obstacleCount++;
+                        }
+                    }
+                    std::cout << "[CLIENT RECV STATE] Received " << obstacleCount << " OBSTACLE entities in this snapshot" << std::endl;
+                    loggedObstacleTypes = true;
+                }
             }
 
             if (m_context.networkClient) {
                 m_serverScrollOffset = m_context.networkClient->GetLastScrollOffset();
+            }
+
+            for (const auto& ack : inputAcks) {
+                if (ack.playerHash == m_context.playerHash) {
+                    ReconcileWithServer(ack);
+                    break;
+                }
             }
 
             std::unordered_set<uint32_t> receivedIds;
@@ -86,8 +105,9 @@ namespace RType {
 
                         m_registry.AddComponent<Controllable>(newEntity, Controllable{200.0f});
                         m_registry.AddComponent<Shooter>(newEntity, Shooter{0.2f, 50.0f, 20.0f});
-                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{50.0f, 50.0f});
-                        m_registry.AddComponent<CircleCollider>(newEntity, CircleCollider{25.0f});
+                        // Match server collider sizes from PlayerFactory (25x25 box, 12.5 circle)
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{25.0f, 25.0f});
+                        m_registry.AddComponent<CircleCollider>(newEntity, CircleCollider{12.5f});
                         m_registry.AddComponent<CollisionLayer>(newEntity, CollisionLayer(CollisionLayers::PLAYER, CollisionLayers::ENEMY | CollisionLayers::ENEMY_BULLET | CollisionLayers::OBSTACLE));
 
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(playerSprite, 10));
@@ -95,6 +115,8 @@ namespace RType {
                         drawable.origin = Math::Vector2(128.0f, 128.0f);
 
                         auto [playerName, playerNum] = FindPlayerNameAndNumber(entityState.ownerHash, m_assignedPlayerNumbers);
+                        uint8_t pNum = (playerNum > 0 && playerNum <= MAX_PLAYERS) ? playerNum : 1;
+                        m_registry.AddComponent<Player>(newEntity, Player{pNum, entityState.ownerHash, false});
                         if (playerNum > 0 && playerNum <= MAX_PLAYERS) {
                             m_assignedPlayerNumbers.insert(playerNum);
                         }
@@ -106,6 +128,10 @@ namespace RType {
 
                         if (entityState.ownerHash == m_context.playerHash) {
                             m_localPlayerEntity = newEntity;
+                            if (m_registry.HasComponent<Player>(newEntity)) {
+                                auto& playerComp = m_registry.GetComponent<Player>(newEntity);
+                                playerComp.isLocalPlayer = true;
+                            }
                             if (!m_registry.HasComponent<ShootCommand>(newEntity)) {
                                 m_registry.AddComponent<ShootCommand>(newEntity, ShootCommand{});
                             }
@@ -259,42 +285,6 @@ namespace RType {
                         }
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         m_bulletFlagsMap[entityState.entityId] = entityState.flags;
-                        uint64_t obstacleId = entityState.ownerHash;
-                        auto colliderIt = m_obstacleIdToCollider.find(obstacleId);
-                        if (colliderIt == m_obstacleIdToCollider.end()) {
-                            continue;
-                        }
-
-                        ECS::Entity colliderEntity = colliderIt->second;
-                        if (!m_registry.IsEntityAlive(colliderEntity) ||
-                            !m_registry.HasComponent<Position>(colliderEntity)) {
-                            continue;
-                        }
-
-                        auto& colliderPos = m_registry.GetComponent<Position>(colliderEntity);
-                        colliderPos.x = entityState.x;
-                        colliderPos.y = entityState.y;
-
-                        if (m_registry.HasComponent<Scrollable>(colliderEntity)) {
-                            m_registry.RemoveComponent<Scrollable>(colliderEntity);
-                        }
-
-                        if (m_registry.HasComponent<ECS::ObstacleMetadata>(colliderEntity)) {
-                            const auto& metadata = m_registry.GetComponent<ECS::ObstacleMetadata>(colliderEntity);
-                            if (metadata.visualEntity != ECS::NULL_ENTITY &&
-                                m_registry.IsEntityAlive(metadata.visualEntity) &&
-                                m_registry.HasComponent<Position>(metadata.visualEntity)) {
-                                auto& visualPos = m_registry.GetComponent<Position>(metadata.visualEntity);
-                                visualPos.x = entityState.x - metadata.offsetX;
-                                visualPos.y = entityState.y - metadata.offsetY;
-
-                                if (m_registry.HasComponent<Scrollable>(metadata.visualEntity)) {
-                                    m_registry.RemoveComponent<Scrollable>(metadata.visualEntity);
-                                }
-                            }
-                        }
-
-                        m_networkEntityMap[entityState.entityId] = colliderEntity;
                     } else if (type == network::EntityType::POWERUP) {
                         uint8_t powerupType = entityState.flags;
                         ECS::PowerUpType puType = static_cast<ECS::PowerUpType>(powerupType);
@@ -340,6 +330,30 @@ namespace RType {
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         std::cout << "[GameState] Created POWERUP entity " << entityState.entityId << " type " << static_cast<int>(powerupType) << std::endl;
+                    } else if (type == network::EntityType::OBSTACLE) {
+                        // NEW obstacle entity received from server
+                        // Map server entity ID to client obstacle collider entity
+                        uint64_t obstacleId = entityState.ownerHash;
+                        auto colliderIt = m_obstacleIdToCollider.find(obstacleId);
+
+                        static int obstacleNotFoundLog = 0;
+                        if (colliderIt == m_obstacleIdToCollider.end()) {
+                            if (obstacleNotFoundLog < 5) {
+                                std::cout << "[CLIENT OBSTACLE MISSING] Received NEW obstacle uniqueId=" << obstacleId
+                                          << " but not found in m_obstacleIdToCollider map (size="
+                                          << m_obstacleIdToCollider.size() << ")" << std::endl;
+                                obstacleNotFoundLog++;
+                            }
+                            continue;
+                        }
+
+                        ECS::Entity colliderEntity = colliderIt->second;
+                        if (!m_registry.IsEntityAlive(colliderEntity)) {
+                            continue;
+                        }
+
+                        // Map network entity ID to local collider entity
+                        m_networkEntityMap[entityState.entityId] = colliderEntity;
                     }
                 } else {
                     auto ecsEntity = it->second;
@@ -367,21 +381,69 @@ namespace RType {
                     if (type == network::EntityType::OBSTACLE) {
                         uint64_t obstacleId = entityState.ownerHash;
                         auto colliderIt = m_obstacleIdToCollider.find(obstacleId);
+
+                        static int obstacleNotFoundLog = 0;
                         if (colliderIt == m_obstacleIdToCollider.end()) {
+                            if (obstacleNotFoundLog < 5) {
+                                std::cout << "[CLIENT OBSTACLE MISSING] Received obstacle uniqueId=" << obstacleId
+                                          << " but not found in m_obstacleIdToCollider map (size="
+                                          << m_obstacleIdToCollider.size() << ")" << std::endl;
+                                obstacleNotFoundLog++;
+                            }
                             continue;
                         }
 
                         ECS::Entity colliderEntity = colliderIt->second;
-                        if (!m_registry.IsEntityAlive(colliderEntity) ||
-                            !m_registry.HasComponent<Position>(colliderEntity)) {
+
+                        static int entityReuseLog = 0;
+                        if (!m_registry.IsEntityAlive(colliderEntity)) {
+                            if (entityReuseLog < 10) {
+                                std::cout << "[CLIENT ENTITY REUSE] Obstacle network ID " << entityState.entityId
+                                          << " maps to DEAD entity " << colliderEntity << std::endl;
+                                entityReuseLog++;
+                            }
+                            m_networkEntityMap.erase(it);
                             continue;
+                        }
+
+                        if (!m_registry.HasComponent<ECS::Obstacle>(colliderEntity)) {
+                            if (entityReuseLog < 10) {
+                                std::cout << "[CLIENT ENTITY REUSE] Obstacle network ID " << entityState.entityId
+                                          << " maps to entity " << colliderEntity << " which is NO LONGER AN OBSTACLE"
+                                          << " (now has: "
+                                          << (m_registry.HasComponent<ECS::Bullet>(colliderEntity) ? "Bullet " : "")
+                                          << (m_registry.HasComponent<ECS::Enemy>(colliderEntity) ? "Enemy " : "")
+                                          << (m_registry.HasComponent<ECS::Player>(colliderEntity) ? "Player " : "")
+                                          << ")" << std::endl;
+                                entityReuseLog++;
+                            }
+                            m_networkEntityMap.erase(it);
+                            continue;
+                        }
+
+                        if (!m_registry.HasComponent<Position>(colliderEntity)) {
+                            m_networkEntityMap.erase(it);
+                            continue;
+                        }
+
+                        static int clientObstacleLog = 0;
+                        if (clientObstacleLog < 5) {
+                            std::cout << "[CLIENT RECV] Obstacle uniqueId=" << obstacleId
+                                      << " entity=" << colliderEntity
+                                      << " received pos=(" << entityState.x << "," << entityState.y << ")" << std::endl;
+                            clientObstacleLog++;
                         }
 
                         auto& colliderPos = m_registry.GetComponent<Position>(colliderEntity);
                         colliderPos.x = entityState.x;
                         colliderPos.y = entityState.y;
 
+                        static int scrollableRemovalLog = 0;
                         if (m_registry.HasComponent<Scrollable>(colliderEntity)) {
+                            if (scrollableRemovalLog < 10) {
+                                std::cout << "[CLIENT] Removing Scrollable from obstacle entity " << colliderEntity << std::endl;
+                                scrollableRemovalLog++;
+                            }
                             m_registry.RemoveComponent<Scrollable>(colliderEntity);
                         }
 
@@ -390,10 +452,12 @@ namespace RType {
                             if (metadata.visualEntity != ECS::NULL_ENTITY &&
                                 m_registry.IsEntityAlive(metadata.visualEntity) &&
                                 m_registry.HasComponent<Position>(metadata.visualEntity)) {
+                                // Always update visual position to match collider position
                                 auto& visualPos = m_registry.GetComponent<Position>(metadata.visualEntity);
                                 visualPos.x = entityState.x - metadata.offsetX;
                                 visualPos.y = entityState.y - metadata.offsetY;
 
+                                // Remove Scrollable component on first update to prevent client-side scrolling
                                 if (m_registry.HasComponent<Scrollable>(metadata.visualEntity)) {
                                     m_registry.RemoveComponent<Scrollable>(metadata.visualEntity);
                                 }
@@ -404,12 +468,40 @@ namespace RType {
                     }
 
                     if (m_registry.HasComponent<Position>(ecsEntity)) {
-                        auto& pos = m_registry.GetComponent<Position>(ecsEntity);
-                        pos.x = entityState.x;
-                        pos.y = entityState.y;
+                        if (type == network::EntityType::PLAYER && ecsEntity == m_localPlayerEntity) {
+
+                        } else {
+                            auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                            bool useInterpolation = (type == network::EntityType::PLAYER ||
+                                                     type == network::EntityType::ENEMY ||
+                                                     type == network::EntityType::BOSS);
+                            if (useInterpolation && m_isNetworkSession) {
+                                auto interpIt = m_interpolationStates.find(entityState.entityId);
+                                if (interpIt == m_interpolationStates.end()) {
+                                    InterpolationState state;
+                                    state.prevX = pos.x;
+                                    state.prevY = pos.y;
+                                    state.targetX = entityState.x;
+                                    state.targetY = entityState.y;
+                                    state.interpTime = 0.0f;
+                                    state.interpDuration = 1.0f / 60.0f;
+                                    m_interpolationStates[entityState.entityId] = state;
+                                } else {
+                                    interpIt->second.prevX = pos.x;
+                                    interpIt->second.prevY = pos.y;
+                                    interpIt->second.targetX = entityState.x;
+                                    interpIt->second.targetY = entityState.y;
+                                    interpIt->second.interpTime = 0.0f;
+                                }
+                            } else {
+                                pos.x = entityState.x;
+                                pos.y = entityState.y;
+                            }
+                        }
 
                         if (type == network::EntityType::PLAYER) {
-                            UpdatePlayerNameLabelPosition(ecsEntity, entityState.x, entityState.y);
+                            auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                            UpdatePlayerNameLabelPosition(ecsEntity, pos.x, pos.y);
                         }
                     }
 
@@ -545,6 +637,21 @@ namespace RType {
                 }
             }
 
+            static bool loggedObstacleMapping = false;
+            if (!loggedObstacleMapping) {
+                int obstaclesInNetworkMap = 0;
+                for (const auto& pair : m_networkEntityMap) {
+                    // Check if this entity has Obstacle component
+                    if (m_registry.IsEntityAlive(pair.second) &&
+                        m_registry.HasComponent<ECS::Obstacle>(pair.second)) {
+                        obstaclesInNetworkMap++;
+                    }
+                }
+                std::cout << "[CLIENT NETWORK MAP] m_networkEntityMap has " << obstaclesInNetworkMap
+                          << " obstacle entities mapped (total map size: " << m_networkEntityMap.size() << ")" << std::endl;
+                loggedObstacleMapping = true;
+            }
+
             for (uint32_t entityId : entitiesToRemove) {
                 auto it = m_networkEntityMap.find(entityId);
                 if (it != m_networkEntityMap.end()) {
@@ -597,6 +704,83 @@ namespace RType {
                     ++it;
                 }
             }
+        }
+
+        void InGameState::ReconcileWithServer(const network::InputAck& ack) {
+            if (m_localPlayerEntity == ECS::NULL_ENTITY ||
+                !m_registry.IsEntityAlive(m_localPlayerEntity) ||
+                !m_registry.HasComponent<Position>(m_localPlayerEntity)) {
+                return;
+            }
+
+            if (ack.lastProcessedSeq > m_lastAckedSequence) {
+                m_lastAckedSequence = ack.lastProcessedSeq;
+            }
+
+            while (!m_inputHistory.empty() && m_inputHistory.front().sequence <= ack.lastProcessedSeq) {
+                m_inputHistory.pop_front();
+            }
+
+            auto& pos = m_registry.GetComponent<Position>(m_localPlayerEntity);
+
+            float serverX = ack.serverPosX;
+            float serverY = ack.serverPosY;
+
+            constexpr float RECONCILE_THRESHOLD = 1.0f;
+            float dx = serverX - m_predictedX;
+            float dy = serverY - m_predictedY;
+            float errorSq = dx * dx + dy * dy;
+
+            if (m_inputHistory.empty()) {
+                if (errorSq > RECONCILE_THRESHOLD * RECONCILE_THRESHOLD) {
+                    pos.x = serverX;
+                    pos.y = serverY;
+                    m_predictedX = serverX;
+                    m_predictedY = serverY;
+                }
+                return;
+            }
+
+            constexpr float SNAP_THRESHOLD = 100.0f;
+            if (errorSq > SNAP_THRESHOLD * SNAP_THRESHOLD) {
+                pos.x = serverX;
+                pos.y = serverY;
+                m_predictedX = serverX;
+                m_predictedY = serverY;
+
+                m_inputHistory.clear();
+                return;
+            }
+
+            if (errorSq > RECONCILE_THRESHOLD * RECONCILE_THRESHOLD) {
+                float replayX = serverX;
+                float replayY = serverY;
+
+                for (const auto& input : m_inputHistory) {
+                    if (input.inputs & network::InputFlags::UP) {
+                        replayY -= PREDICTION_SPEED * input.deltaTime;
+                    }
+                    if (input.inputs & network::InputFlags::DOWN) {
+                        replayY += PREDICTION_SPEED * input.deltaTime;
+                    }
+                    if (input.inputs & network::InputFlags::LEFT) {
+                        replayX -= PREDICTION_SPEED * input.deltaTime;
+                    }
+                    if (input.inputs & network::InputFlags::RIGHT) {
+                        replayX += PREDICTION_SPEED * input.deltaTime;
+                    }
+
+                    replayX = std::max(0.0f, std::min(replayX, 1280.0f - 66.0f));
+                    replayY = std::max(0.0f, std::min(replayY, 720.0f - 32.0f));
+                }
+
+                pos.x = replayX;
+                pos.y = replayY;
+                m_predictedX = replayX;
+                m_predictedY = replayY;
+            }
+
+            UpdatePlayerNameLabelPosition(m_localPlayerEntity, pos.x, pos.y);
         }
 
     }
