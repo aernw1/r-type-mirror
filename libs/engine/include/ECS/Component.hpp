@@ -227,6 +227,10 @@ namespace RType {
                 : enemyId(id), killedBy(killer) {}
         };
 
+        struct BossKilled : public IComponent {
+            BossKilled() = default;
+        };
+
         struct Bullet : public IComponent {
             Entity owner = NULL_ENTITY;
 

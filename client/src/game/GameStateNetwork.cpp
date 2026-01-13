@@ -168,7 +168,6 @@ namespace RType {
                         }
 
                         if (bossSprite == Renderer::INVALID_SPRITE_ID) {
-                            Core::Logger::Warning("[GameState] Missing boss sprite (entity {})", entityState.entityId);
                             continue;
                         }
 
@@ -182,7 +181,6 @@ namespace RType {
                         drawable.origin = Math::Vector2(0.0f, 0.0f);
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
-                        std::cout << "[GameState] Created BOSS entity " << entityState.entityId << std::endl;
 
                         m_bossHealthBar.currentHealth = static_cast<int>(entityState.health);
                         m_bossHealthBar.maxHealth = 1000;
