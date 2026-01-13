@@ -67,6 +67,7 @@ target_link_libraries(r-type_client PRIVATE
     rtype_ecs
     rtype_core
     rtype_sfml_renderer
+    rtype_sfml_audio
 )
 
 add_executable(test_lobby tests/test_lobby.cpp)
