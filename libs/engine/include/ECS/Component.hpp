@@ -114,6 +114,16 @@ namespace RType {
             Boss() = default;
         };
 
+        struct BossKilled : public IComponent {
+            Entity bossEntity;
+            int levelNumber;
+            float timeSinceDeath = 0.0f;
+
+            BossKilled() = default;
+            BossKilled(Entity boss, int level)
+                : bossEntity(boss), levelNumber(level) {}
+        };
+
         enum class BossAttackPattern {
             IDLE = 0,
             FAN_SPRAY = 1,
@@ -225,10 +235,6 @@ namespace RType {
             EnemyKilled() = default;
             EnemyKilled(uint32_t id, Entity killer = NULL_ENTITY)
                 : enemyId(id), killedBy(killer) {}
-        };
-
-        struct BossKilled : public IComponent {
-            BossKilled() = default;
         };
 
         struct Bullet : public IComponent {
