@@ -603,6 +603,11 @@ namespace RType {
                 m_context.audio->UnloadMusic(m_shootMusic);
             }
 
+            if (m_context.audio && m_powerUpMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_powerUpMusic);
+                m_context.audio->UnloadMusic(m_powerUpMusic);
+            }
+
             if (m_context.audio && m_gameMusic != Audio::INVALID_MUSIC_ID) {
                 m_context.audio->StopMusic(m_gameMusic);
                 m_context.audio->UnloadMusic(m_gameMusic);
