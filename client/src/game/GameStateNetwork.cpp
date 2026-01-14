@@ -6,6 +6,7 @@
 */
 
 #include "../../include/GameState.hpp"
+#include "../../include/LevelTransitionState.hpp"
 
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
@@ -605,11 +606,24 @@ namespace RType {
             m_levelProgress.levelComplete = true;
             m_levelProgress.bossDefeated = true;
 
-            if (nextLevel == 0) {
-                Core::Logger::Info("[InGameState] All levels complete - Victory!");
-            } else {
-                Core::Logger::Info("[InGameState] Preparing to load level {}", static_cast<int>(nextLevel));
+            if (m_context.networkClient) {
+                Core::Logger::Info("[InGameState] Stopping network client for transition");
+                m_context.networkClient->Stop();
             }
+
+            std::string nextLevelPath = "";
+            if (nextLevel > 0) {
+                nextLevelPath = "assets/levels/level" + std::to_string(nextLevel) + ".json";
+            }
+
+            Core::Logger::Info("[InGameState] Transitioning to level transition screen");
+            m_machine.ChangeState(std::make_unique<LevelTransitionState>(
+                m_machine,
+                m_context,
+                static_cast<int>(completedLevel),
+                m_playerScore,
+                nextLevelPath
+            ));
         }
 
     }
