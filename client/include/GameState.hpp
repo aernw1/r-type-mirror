@@ -25,6 +25,7 @@
 #include "ECS/ForcePodSystem.hpp"
 #include "ECS/PowerUpSpawnSystem.hpp"
 #include "ECS/PowerUpCollisionSystem.hpp"
+#include "ECS/AudioSystem.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/PowerUpFactory.hpp"
 #include "ECS/LevelLoader.hpp"
@@ -136,6 +137,7 @@ namespace RType {
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
+            std::unique_ptr<RType::ECS::AudioSystem> m_audioSystem;
             std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
             std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
             std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
@@ -144,6 +146,14 @@ namespace RType {
             // Bullet textures and sprites
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
             Renderer::SpriteId m_bulletSprite = Renderer::INVALID_SPRITE_ID;
+
+            Audio::SoundId m_playerShootSound = Audio::INVALID_SOUND_ID;
+            Audio::MusicId m_shootMusic = Audio::INVALID_MUSIC_ID;
+            float m_shootSfxCooldown = 0.0f;
+            Audio::MusicId m_gameMusic = Audio::INVALID_MUSIC_ID;
+            bool m_gameMusicPlaying = false;
+            Audio::MusicId m_gameOverMusic = Audio::INVALID_MUSIC_ID;
+            bool m_gameOverMusicPlaying = false;
 
             // Enemy bullet textures and sprites
             Renderer::TextureId m_enemyBulletGreenTexture = Renderer::INVALID_TEXTURE_ID;
