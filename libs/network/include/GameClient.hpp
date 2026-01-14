@@ -38,6 +38,7 @@ namespace network {
         float GetLastScrollOffset() const { return m_lastScrollOffset; }
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
+        bool IsConnected() const { return m_connected; }
 
         // Network communication (called by game loop)
         void SendInput(uint8_t inputs);

@@ -101,7 +101,20 @@ namespace network {
     }
 
     void GameClient::Stop() {
+        if (m_running && m_connected) {
+            std::cout << "[GameClient] Sending DISCONNECT to server..." << std::endl;
+            std::vector<uint8_t> disconnectData(1);
+            disconnectData[0] = static_cast<uint8_t>(GamePacket::DISCONNECT);
+
+            try {
+                m_socket.send_to(asio::buffer(disconnectData), m_serverEndpoint.raw());
+            } catch (const std::exception& e) {
+                std::cerr << "[GameClient] Failed to send DISCONNECT: " << e.what() << std::endl;
+            }
+        }
+
         m_running = false;
+        m_connected = false;
     }
 
     void GameClient::SendInput(uint8_t inputs) {
