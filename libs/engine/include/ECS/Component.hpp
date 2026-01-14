@@ -9,6 +9,7 @@
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
 #include "Entity.hpp"
+#include "Audio/IAudio.hpp"
 
 namespace RType {
 
@@ -112,6 +113,16 @@ namespace RType {
 
         struct Boss : public IComponent {
             Boss() = default;
+        };
+
+        struct BossKilled : public IComponent {
+            Entity bossEntity;
+            int levelNumber;
+            float timeSinceDeath = 0.0f;
+
+            BossKilled() = default;
+            BossKilled(Entity boss, int level)
+                : bossEntity(boss), levelNumber(level) {}
         };
 
         enum class BossAttackPattern {
@@ -402,6 +413,36 @@ namespace RType {
 
             Shield() = default;
             Shield(float dur = 0.0f) : duration(dur), timeRemaining(dur) {}
+        };
+
+        // One-shot sound effect component processed by AudioSystem.
+        // Systems add this component to request that a sound be played.
+        struct SoundEffect : public IComponent {
+            Audio::SoundId soundId = Audio::INVALID_SOUND_ID;
+            float volume = 1.0f;
+            float pitch = 1.0f;
+            float pan = 0.0f;   // -1.0 (gauche) à 1.0 (droite)
+            bool loop = false;  // true pour un son en boucle (par ex. moteur)
+
+            // Si true et si l'entité a un Position, AudioSystem peut faire du “positional audio”
+            bool positional = false;
+
+            SoundEffect() = default;
+            SoundEffect(Audio::SoundId id, float vol = 1.0f)
+                : soundId(id), volume(vol) {}
+        };
+
+        struct MusicEffect : public IComponent {
+            Audio::MusicId musicId = Audio::INVALID_MUSIC_ID;
+            bool play = true;
+            bool stop = false;
+            float volume = 1.0f;
+            float pitch = 1.0f;
+            bool loop = true;
+
+            MusicEffect() = default;
+            explicit MusicEffect(Audio::MusicId id)
+                : musicId(id) {}
         };
     }
 

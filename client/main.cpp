@@ -9,6 +9,7 @@
 #include "MenuState.hpp"
 #include "Renderer/SFMLRenderer.hpp"
 #include "AsioNetworkModule.hpp"
+#include "Audio/SFMLAudio.hpp"
 #include <iostream>
 #include <memory>
 
@@ -36,6 +37,7 @@ int main(int argc, char* argv[]) {
     auto renderer = std::make_shared<Renderer::SFMLRenderer>();
     auto networkModule = std::make_shared<Network::AsioNetworkModule>();
     networkModule->Initialize(nullptr);
+    auto audio = std::make_shared<Audio::SFMLAudio>();
 
     Renderer::WindowConfig config;
     config.title = "R-Type - " + playerName;
@@ -53,9 +55,13 @@ int main(int argc, char* argv[]) {
     RType::Client::GameContext context;
     context.renderer = renderer;
     context.networkModule = networkModule;
+    context.audio = audio;
     context.serverIp = serverIp;
     context.serverPort = serverPort;
     context.playerName = playerName;
+
+    // Configure audio (master volume default 1.0)
+    audio->ConfigureDevice(Audio::AudioConfig{});
 
     RType::Client::GameStateMachine machine;
 
@@ -65,6 +71,9 @@ int main(int argc, char* argv[]) {
         float dt = renderer->GetDeltaTime();
 
         renderer->Update(dt);
+        if (audio) {
+            audio->Update(dt);
+        }
         renderer->BeginFrame();
 
         machine.HandleInput();

@@ -55,16 +55,41 @@ namespace RType {
             if (m_renderer->IsKeyPressed(Renderer::Key::Right)) {
                 m_currentInputs |= network::InputFlags::RIGHT;
             }
-            if (m_renderer->IsKeyPressed(Renderer::Key::Space)) {
-                if (!m_isCharging) {
-                    m_isCharging = true;
-                    m_chargeTime = 0.0f;
+            static bool spacePressedLastFrame = false;
+            bool spacePressed = m_renderer->IsKeyPressed(Renderer::Key::Space);
+
+            if (spacePressed) {
+                m_isCharging = true;
+                m_chargeTime += 0.016f; 
+                if (m_chargeTime > 2.0f) {
+                    m_chargeTime = 2.0f;
                 }
-            } else if (m_isCharging) {
-                m_currentInputs |= network::InputFlags::SHOOT;
+                
+            } else {
+                if (spacePressedLastFrame) {
+                    m_currentInputs |= network::InputFlags::SHOOT;
+                    if (m_isNetworkSession) {
+                        if (m_shootMusic != Audio::INVALID_MUSIC_ID) {
+                             std::cout << "[DEBUG] Direct PlayMusic Call (Shoot ID: " << m_shootMusic << ")" << std::endl;
+                             Audio::PlaybackOptions opts;
+                             opts.volume = 1.0f;
+                             opts.loop = false;
+                             m_context.audio->StopMusic(m_shootMusic); 
+                             m_context.audio->PlayMusic(m_shootMusic, opts);
+                        } else if (m_playerShootSound != Audio::INVALID_SOUND_ID) {
+                            std::cout << "[DEBUG] Direct PlaySound Call (ID: " << m_playerShootSound << ")" << std::endl;
+                            Audio::PlaybackOptions opts;
+                            opts.volume = 1.0f;
+                            m_context.audio->PlaySound(m_playerShootSound, opts);
+                        }
+                    }
+                }
                 m_isCharging = false;
                 m_chargeTime = 0.0f;
             }
+            spacePressedLastFrame = spacePressed;
+            
+            
 
             if (!m_isNetworkSession &&
                 m_localPlayerEntity != ECS::NULL_ENTITY &&
@@ -110,11 +135,8 @@ namespace RType {
                 }
             }
 
-            if (m_isCharging) {
-                m_chargeTime += dt;
-                if (m_chargeTime > MAX_CHARGE_TIME) {
-                    m_chargeTime = MAX_CHARGE_TIME;
-                }
+            if (m_shootSfxCooldown > 0.0f) {
+                m_shootSfxCooldown -= dt;
             }
 
             triggerGameOverIfNeeded();
@@ -419,6 +441,20 @@ namespace RType {
                 m_shootingSystem->Update(m_registry, dt);
             }
 
+            if (m_audioSystem) {
+                if (!m_isGameOver && m_gameMusic != Audio::INVALID_MUSIC_ID && !m_gameMusicPlaying) {
+                    auto cmd = m_registry.CreateEntity();
+                    auto& me = m_registry.AddComponent<MusicEffect>(cmd, MusicEffect(m_gameMusic));
+                    me.play = true;
+                    me.stop = false;
+                    me.loop = true;
+                    me.volume = 0.35f;
+                    me.pitch = 1.0f;
+                    m_gameMusicPlaying = true;
+                }
+                m_audioSystem->Update(m_registry, dt);
+            }
+
             for (auto& bg : m_backgroundEntities) {
                 if (!m_registry.HasComponent<Position>(bg))
                     continue;
@@ -510,6 +546,22 @@ namespace RType {
             m_isCharging = false;
             m_chargeTime = 0.0f;
 
+            if (m_context.audio) {
+                std::cout << "[DEBUG] Game Over " << std::endl;
+                if (m_gameMusic != Audio::INVALID_MUSIC_ID && m_gameMusicPlaying) {
+                    m_context.audio->StopMusic(m_gameMusic);
+                    m_gameMusicPlaying = false;
+                }
+                
+                if (m_gameOverMusic != Audio::INVALID_MUSIC_ID && !m_gameOverMusicPlaying) {
+                    Audio::PlaybackOptions opts;
+                    opts.loop = true;
+                    opts.volume = 0.5f;
+                    m_context.audio->PlayMusic(m_gameOverMusic, opts);
+                    m_gameOverMusicPlaying = true;
+                }
+            }
+
             if (m_gameOverTitleEntity == NULL_ENTITY && m_gameOverFontLarge != Renderer::INVALID_FONT_ID) {
                 m_gameOverTitleEntity = m_registry.CreateEntity();
                 m_registry.AddComponent<Position>(m_gameOverTitleEntity, Position{640.0f, 260.0f});
@@ -545,6 +597,25 @@ namespace RType {
 
         void InGameState::Cleanup() {
             std::cout << "[GameState] Cleaning up game state..." << std::endl;
+
+            if (m_context.audio && m_shootMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_shootMusic);
+                m_context.audio->UnloadMusic(m_shootMusic);
+            }
+
+            if (m_context.audio && m_gameMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_gameMusic);
+                m_context.audio->UnloadMusic(m_gameMusic);
+                m_gameMusic = Audio::INVALID_MUSIC_ID;
+                m_gameMusicPlaying = false;
+            }
+
+            if (m_context.audio && m_gameOverMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_gameOverMusic);
+                m_context.audio->UnloadMusic(m_gameOverMusic);
+                m_gameOverMusic = Audio::INVALID_MUSIC_ID;
+                m_gameOverMusicPlaying = false;
+            }
 
             for (auto& bg : m_backgroundEntities) {
                 if (m_registry.IsEntityAlive(bg)) {

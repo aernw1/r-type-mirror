@@ -17,15 +17,62 @@ using namespace RType::ECS;
 namespace RType {
     namespace Client {
 
-        InGameState::InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed) : m_machine(machine), m_context(context), m_gameSeed(seed) {
+        InGameState::InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed, const std::string& levelPath)
+            : m_machine(machine), m_context(context), m_gameSeed(seed), m_currentLevelPath(levelPath) {
             m_renderer = context.renderer;
         }
 
         void InGameState::Init() {
             Core::Logger::Info("[GameState] Initializing game");
 
+            if (m_context.audio) {
+                m_audioSystem = std::make_unique<RType::ECS::AudioSystem>(m_context.audio.get());
+                
+                m_shootMusic = m_context.audio->LoadMusic("assets/sounds/players_shoot.flac");
+                if (m_shootMusic == Audio::INVALID_MUSIC_ID) {
+                     m_shootMusic = m_context.audio->LoadMusic("../assets/sounds/players_shoot.flac");
+                }
+                std::cout << "[DEBUG] Shoot Music ID: " << m_shootMusic << std::endl;
+                std::cout << "[DEBUG] Shoot Sound ID: " << m_playerShootSound << std::endl;
+
+                std::cout << "[DEBUG] Loading stage1.flac..." << std::endl;
+                m_gameMusic = m_context.audio->LoadMusic("assets/sounds/stage1.flac");
+                if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
+                    m_gameMusic = m_context.audio->LoadMusic("../assets/sounds/stage1.flac");
+                }
+                std::cout << "[DEBUG] Game Music ID: " << m_gameMusic << std::endl;
+
+                std::cout << "[DEBUG] Loading gameover.flac..." << std::endl;
+                m_gameOverMusic = m_context.audio->LoadMusic("assets/sounds/gameover.flac");
+                if (m_gameOverMusic == Audio::INVALID_MUSIC_ID) {
+                    m_gameOverMusic = m_context.audio->LoadMusic("../assets/sounds/gameover.flac");
+                }
+                std::cout << "[DEBUG] GameOver Music ID: " << m_gameOverMusic << std::endl;
+
+                if (m_gameMusic != Audio::INVALID_MUSIC_ID) {
+                    auto cmd = m_registry.CreateEntity();
+                    auto& me = m_registry.AddComponent<MusicEffect>(cmd, MusicEffect(m_gameMusic));
+                    me.play = true;
+                    me.stop = false;
+                    me.loop = true;
+                    me.volume = 0.35f;
+                    me.pitch = 1.0f;
+                    m_gameMusicPlaying = true;
+                }
+            }
+
             if (m_context.networkClient) {
                 m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks) { this->OnServerStateUpdate(tick, entities, inputAcks); });
+                m_context.networkClient->SetLevelCompleteCallback([this](uint8_t completedLevel, uint8_t nextLevel) { this->OnLevelComplete(completedLevel, nextLevel); });
+
+                if (!m_context.networkClient->IsConnected()) {
+                    Core::Logger::Info("[GameState] Reconnecting to server after level transition...");
+                    if (!m_context.networkClient->ConnectToServer()) {
+                        Core::Logger::Error("[GameState] Failed to reconnect to server!");
+                    } else {
+                        Core::Logger::Info("[GameState] Reconnected to server successfully");
+                    }
+                }
             } else {
                 Core::Logger::Warning("[GameState] No network client available");
             }
@@ -41,6 +88,11 @@ namespace RType {
 
             loadLevel(m_currentLevelPath);
             createSystems();
+
+            if (m_shootingSystem && m_playerShootSound != Audio::INVALID_SOUND_ID) {
+                m_shootingSystem->SetShootSound(m_playerShootSound);
+            }
+
             initializeFromLevel();
             if (!m_isNetworkSession) {
                 initializePlayers();

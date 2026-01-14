@@ -112,9 +112,14 @@ namespace RType {
                 registry.AddComponent<CollisionLayer>(bulletEntity,
                                                       CollisionLayer(CollisionLayers::PLAYER_BULLET,
                                                                      CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+
+                if (m_shootSound != Audio::INVALID_SOUND_ID) {
+                    auto sfx = registry.CreateEntity();
+                    auto& se = registry.AddComponent<SoundEffect>(sfx, SoundEffect(m_shootSound, 1.0f));
+                    se.pitch = 1.0f;
+                }
             }
 
-            // Handle WeaponSlot components (spread shot, laser, etc.)
             auto weaponSlots = registry.GetEntitiesWithComponent<WeaponSlot>();
 
             for (auto entity : weaponSlots) {
@@ -167,7 +172,6 @@ namespace RType {
         }
 
         void ShootingSystem::CreateSpreadShot(Registry& registry, Entity shooter, const Position& pos, int damage) {
-            // Create 3 bullets at different angles
             float angles[] = {-15.0f, 0.0f, 15.0f}; // degrees
 
             for (float angle : angles) {

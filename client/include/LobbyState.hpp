@@ -13,8 +13,10 @@
 #include "ECS/Registry.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
+#include "ECS/AudioSystem.hpp"
 #include "Renderer/IRenderer.hpp"
 #include "GameState.hpp"
+#include "Audio/IAudio.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -54,6 +56,10 @@ namespace RType {
             std::shared_ptr<Renderer::IRenderer> m_renderer;
             std::unique_ptr<RType::ECS::RenderingSystem> m_renderingSystem;
             std::unique_ptr<RType::ECS::TextRenderingSystem> m_textSystem;
+            std::unique_ptr<RType::ECS::AudioSystem> m_audioSystem;
+
+            Audio::MusicId m_lobbyMusic = Audio::INVALID_MUSIC_ID;
+            bool m_lobbyMusicPlaying = false;
 
             Renderer::FontId m_fontLarge = Renderer::INVALID_FONT_ID;
             Renderer::FontId m_fontMedium = Renderer::INVALID_FONT_ID;

@@ -26,6 +26,10 @@ namespace RType {
                     continue;
                 }
 
+                if (registry.HasComponent<BossKilled>(bossEntity)) {
+                    continue;
+                }
+
                 if (registry.HasComponent<Scrollable>(bossEntity)) {
                     continue;
                 }

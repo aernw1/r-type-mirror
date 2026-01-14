@@ -7,10 +7,11 @@
 
 #include "../../include/LobbyState.hpp"
 #include "../../include/RoomListState.hpp"
+#include "ECS/Components/TextLabel.hpp"
+#include "ECS/Component.hpp"
 #include <chrono>
 #include <thread>
 #include <iostream>
-#include "ECS/Components/TextLabel.hpp"
 
 using namespace RType::ECS;
 
@@ -66,6 +67,21 @@ namespace RType {
                 m_client->update();
             }
             updateLobbyState();
+
+            if (m_audioSystem && m_lobbyMusic != Audio::INVALID_MUSIC_ID && !m_lobbyMusicPlaying) {
+                auto cmd = m_registry.CreateEntity();
+                auto& me = m_registry.AddComponent<MusicEffect>(cmd, MusicEffect(m_lobbyMusic));
+                me.play = true;
+                me.stop = false;
+                me.loop = true;
+                me.volume = 0.35f;
+                me.pitch = 1.0f;
+                m_lobbyMusicPlaying = true;
+            }
+
+            if (m_audioSystem) {
+                m_audioSystem->Update(m_registry, dt);
+            }
 
             if (m_countdownSeconds > 0) {
                 if (m_countdownEntity == NULL_ENTITY && m_fontLarge != Renderer::INVALID_FONT_ID) {

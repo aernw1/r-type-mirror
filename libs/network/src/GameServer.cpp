@@ -206,7 +206,10 @@ namespace network {
 
             ProcessIncomingPackets();
 
-            if (AllPlayersDisconnected()) {
+            // Check if we need to load next level when all players disconnect after boss defeat
+            LoadNextLevelIfNeeded();
+
+            if (AllPlayersDisconnected() && !m_levelComplete) {
                 std::cout << "All players disconnected. Stopping game server..." << std::endl;
                 Stop();
                 break;
@@ -290,6 +293,9 @@ namespace network {
             break;
         case GamePacket::PING:
             HandlePing(data, from);
+            break;
+        case GamePacket::DISCONNECT:
+            HandleDisconnect(data, from);
             break;
         default:
             break;
@@ -401,6 +407,18 @@ namespace network {
         std::memcpy(response.data(), &pong, sizeof(PongPacket));
 
         SendTo(response, from);
+    }
+
+    void GameServer::HandleDisconnect(const std::vector<uint8_t>& data, const Network::Endpoint& from) {
+        for (auto it = m_connectedPlayers.begin(); it != m_connectedPlayers.end(); ++it) {
+            if (it->second.endpoint == from) {
+                std::cout << "[GameServer] Player " << it->second.info.name
+                          << " (hash: " << it->first << ") disconnected gracefully" << std::endl;
+                m_connectedPlayers.erase(it);
+                std::cout << "[GameServer] Remaining players: " << m_connectedPlayers.size() << std::endl;
+                return;
+            }
+        }
     }
 
     void GameServer::SendStateSnapshots() {
@@ -525,6 +543,9 @@ namespace network {
         m_obstacleResponseSystem->Update(m_registry, dt);
         m_scoreSystem->Update(m_registry, dt);
         m_healthSystem->Update(m_registry, dt);
+
+        // Check if boss is defeated for level progression
+        CheckBossDefeated();
 
         UpdateLegacyEntitiesFromRegistry();
         CleanupDeadEntities();
@@ -1186,6 +1207,72 @@ namespace network {
         }
 
         return currentState;
+    }
+
+    void GameServer::CheckBossDefeated() {
+        if (m_bossDefeated) {
+            return;
+        }
+
+        auto killedBosses = m_registry.GetEntitiesWithComponent<RType::ECS::BossKilled>();
+
+        if (!killedBosses.empty()) {
+            m_bossDefeated = true;
+            m_levelComplete = true;
+
+            std::cout << "[GameServer] Boss defeated! Level complete - broadcasting to clients" << std::endl;
+
+            LevelCompletePacket levelComplete;
+            levelComplete.completedLevel = m_currentLevel;
+            levelComplete.nextLevel = m_currentLevel + 1;
+
+            std::vector<uint8_t> data(sizeof(LevelCompletePacket));
+            std::memcpy(data.data(), &levelComplete, sizeof(LevelCompletePacket));
+            Broadcast(data);
+        }
+    }
+
+    void GameServer::LoadNextLevelIfNeeded() {
+        if (m_levelComplete && m_connectedPlayers.empty()) {
+            m_currentLevel++;
+            std::string nextLevelPath = "assets/levels/level" + std::to_string(m_currentLevel) + ".json";
+
+            std::cout << "[GameServer] All players disconnected after level complete. Loading next level: " << nextLevelPath << std::endl;
+
+            auto positionEntities = m_registry.GetEntitiesWithComponent<RType::ECS::Position>();
+            std::vector<RType::ECS::Entity> toDestroy(positionEntities.begin(), positionEntities.end());
+
+            for (RType::ECS::Entity entity : toDestroy) {
+                m_registry.DestroyEntity(entity);
+            }
+
+            m_entities.clear();
+            m_nextEntityId = 1;
+
+            // Reset level state
+            m_bossDefeated = false;
+            m_levelComplete = false;
+            m_scrollOffset = 0.0f;
+            m_enemyShootCooldowns.clear();
+            m_enemyBulletTypes.clear();
+
+            // Load new level
+            m_levelPath = nextLevelPath;
+            try {
+                auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
+                std::cout << "[GameServer] Level " << m_currentLevel << " loaded" << std::endl;
+
+                auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
+                std::cout << "[GameServer] Level entities created: "
+                          << createdEntities.obstacleColliders.size() << " obstacles, "
+                          << createdEntities.enemies.size() << " enemies, "
+                          << "boss: " << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "YES" : "NO")
+                          << std::endl;
+
+            } catch (const std::exception& e) {
+                std::cerr << "[GameServer] Failed to load level " << m_currentLevel << ": " << e.what() << std::endl;
+            }
+        }
     }
 
 }

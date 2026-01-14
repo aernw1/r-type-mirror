@@ -25,6 +25,7 @@
 #include "ECS/ForcePodSystem.hpp"
 #include "ECS/PowerUpSpawnSystem.hpp"
 #include "ECS/PowerUpCollisionSystem.hpp"
+#include "ECS/AudioSystem.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/PowerUpFactory.hpp"
 #include "ECS/LevelLoader.hpp"
@@ -74,7 +75,7 @@ namespace RType {
 
         class InGameState : public IState {
         public:
-            InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed);
+            InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed, const std::string& levelPath = "assets/levels/level1.json");
             ~InGameState() override = default;
 
             void Init() override;
@@ -106,12 +107,16 @@ namespace RType {
             void triggerGameOverIfNeeded();
             void enterResultsScreen();
 
+            // Level progression
+            void checkBossDefeated();
+
             // ECS systems
             void createSystems();
 
             // Server state update handler
             void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks);
             void ReconcileWithServer(const network::InputAck& ack);
+            void OnLevelComplete(uint8_t completedLevel, uint8_t nextLevel);
             void ApplyPowerUpStateToPlayer(ECS::Entity playerEntity, const network::EntityState& entityState);
 
             // Component cleanup helper for entity type validation
@@ -156,6 +161,7 @@ namespace RType {
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
+            std::unique_ptr<RType::ECS::AudioSystem> m_audioSystem;
             std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
             std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
             std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
@@ -164,6 +170,14 @@ namespace RType {
             // Bullet textures and sprites
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
             Renderer::SpriteId m_bulletSprite = Renderer::INVALID_SPRITE_ID;
+
+            Audio::SoundId m_playerShootSound = Audio::INVALID_SOUND_ID;
+            Audio::MusicId m_shootMusic = Audio::INVALID_MUSIC_ID;
+            float m_shootSfxCooldown = 0.0f;
+            Audio::MusicId m_gameMusic = Audio::INVALID_MUSIC_ID;
+            bool m_gameMusicPlaying = false;
+            Audio::MusicId m_gameOverMusic = Audio::INVALID_MUSIC_ID;
+            bool m_gameOverMusicPlaying = false;
 
             // Enemy bullet textures and sprites
             Renderer::TextureId m_enemyBulletGreenTexture = Renderer::INVALID_TEXTURE_ID;
@@ -203,6 +217,17 @@ namespace RType {
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
             std::unordered_map<uint32_t, uint8_t> m_bulletFlagsMap; // Track bullet flags to detect type changes
             RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player entity mirrored from server
+
+            // Level progression tracking
+            struct LevelProgressionState {
+                bool bossSpawned = false;
+                bool bossDefeated = false;
+                bool levelComplete = false;
+                float transitionTimer = 0.0f;
+                int currentLevelNumber = 1;
+                int totalLevels = 3;
+            };
+            LevelProgressionState m_levelProgress;
 
             // Individual player ship sprites
             Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;

@@ -6,8 +6,10 @@
 */
 
 #include "../../include/LobbyState.hpp"
-#include <iostream>
 #include "ECS/Components/TextLabel.hpp"
+#include "ECS/Component.hpp"
+#include "ECS/AudioSystem.hpp"
+#include <iostream>
 
 using namespace RType::ECS;
 
@@ -31,6 +33,25 @@ namespace RType {
 
         void LobbyState::Init() {
             std::cout << "[LobbyState] Connecting to " << m_context.serverIp << ":" << m_context.serverPort << " as " << m_playerName << std::endl;
+
+            if (m_context.audio) {
+                m_audioSystem = std::make_unique<RType::ECS::AudioSystem>(m_context.audio.get());
+                m_lobbyMusic = m_context.audio->LoadMusic("assets/sounds/lobby.flac");
+                if (m_lobbyMusic == Audio::INVALID_MUSIC_ID) {
+                    m_lobbyMusic = m_context.audio->LoadMusic("../assets/sounds/lobby.flac");
+                }
+
+                if (m_lobbyMusic != Audio::INVALID_MUSIC_ID) {
+                    auto cmd = m_registry.CreateEntity();
+                    auto& me = m_registry.AddComponent<MusicEffect>(cmd, MusicEffect(m_lobbyMusic));
+                    me.play = true;
+                    me.stop = false;
+                    me.loop = true;
+                    me.volume = 0.35f;
+                    me.pitch = 1.0f;
+                    m_lobbyMusicPlaying = true;
+                }
+            }
 
             if (!m_client) {
                 if (!m_context.networkModule) {
@@ -102,6 +123,13 @@ namespace RType {
 
         void LobbyState::Cleanup() {
             std::cout << "[LobbyState] Cleaning up..." << std::endl;
+
+            if (m_context.audio && m_lobbyMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_lobbyMusic);
+                m_context.audio->UnloadMusic(m_lobbyMusic);
+                m_lobbyMusic = Audio::INVALID_MUSIC_ID;
+                m_lobbyMusicPlaying = false;
+            }
 
             if (m_client) {
                 m_client->disconnect();

@@ -27,6 +27,14 @@ namespace RType {
                 const auto& health = registry.GetComponent<Health>(entity);
 
                 if (health.current <= 0) {
+                    if (registry.HasComponent<Boss>(entity)) {
+                        if (!registry.HasComponent<BossKilled>(entity)) {
+                            registry.AddComponent<BossKilled>(entity, BossKilled{entity, 1});
+                            Core::Logger::Info("[HealthSystem] Boss defeated! Marked for level transition");
+                        }
+                        continue;
+                    }
+
                     registry.DestroyEntity(entity);
                 }
             }

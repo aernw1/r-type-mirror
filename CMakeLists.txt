@@ -48,6 +48,7 @@ add_executable(r-type_client
     client/src/GameState.cpp
     client/src/ResultsState.cpp
     client/src/EditorState.cpp
+    client/src/level_transition/LevelTransitionState.cpp
     client/src/editor/EditorCanvasManager.cpp
     client/src/editor/EditorAssetLibrary.cpp
     client/src/editor/EditorUIManager.cpp
@@ -68,6 +69,7 @@ target_link_libraries(r-type_client PRIVATE
     rtype_ecs
     rtype_core
     rtype_sfml_renderer
+    rtype_sfml_audio
 )
 
 add_executable(test_lobby tests/test_lobby.cpp)

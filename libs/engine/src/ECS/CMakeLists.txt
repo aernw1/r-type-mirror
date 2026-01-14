@@ -1,5 +1,6 @@
 set(ECS_SOURCES
     Registry.cpp
+    AudioSystem.cpp
     MovementSystem.cpp
     InputSystem.cpp
     RenderingSystem.cpp
@@ -31,6 +32,7 @@ set(ECS_SOURCES
 
 set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Component.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/AudioSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Components/TextLabel.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Components/Clickable.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Entity.hpp
