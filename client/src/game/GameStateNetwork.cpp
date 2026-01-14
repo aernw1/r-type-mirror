@@ -609,6 +609,7 @@ namespace RType {
                         if (type == network::EntityType::PLAYER) {
                             auto& pos = m_registry.GetComponent<Position>(ecsEntity);
                             UpdatePlayerNameLabelPosition(ecsEntity, pos.x, pos.y);
+                            ApplyPowerUpStateToPlayer(ecsEntity, entityState);
                         }
                     }
 
