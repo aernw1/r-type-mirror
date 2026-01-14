@@ -17,7 +17,8 @@ using namespace RType::ECS;
 namespace RType {
     namespace Client {
 
-        InGameState::InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed) : m_machine(machine), m_context(context), m_gameSeed(seed) {
+        InGameState::InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed, const std::string& levelPath)
+            : m_machine(machine), m_context(context), m_gameSeed(seed), m_currentLevelPath(levelPath) {
             m_renderer = context.renderer;
         }
 
@@ -27,6 +28,15 @@ namespace RType {
             if (m_context.networkClient) {
                 m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities) { this->OnServerStateUpdate(tick, entities); });
                 m_context.networkClient->SetLevelCompleteCallback([this](uint8_t completedLevel, uint8_t nextLevel) { this->OnLevelComplete(completedLevel, nextLevel); });
+
+                if (!m_context.networkClient->IsConnected()) {
+                    Core::Logger::Info("[GameState] Reconnecting to server after level transition...");
+                    if (!m_context.networkClient->ConnectToServer()) {
+                        Core::Logger::Error("[GameState] Failed to reconnect to server!");
+                    } else {
+                        Core::Logger::Info("[GameState] Reconnected to server successfully");
+                    }
+                }
             } else {
                 Core::Logger::Warning("[GameState] No network client available");
             }
