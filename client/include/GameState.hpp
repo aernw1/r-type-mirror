@@ -55,7 +55,7 @@ namespace RType {
 
         class InGameState : public IState {
         public:
-            InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed);
+            InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed, const std::string& levelPath = "assets/levels/level1.json");
             ~InGameState() override = default;
 
             void Init() override;
