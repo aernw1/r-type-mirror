@@ -24,8 +24,8 @@ namespace network {
         }
     }
 
-    RoomClient::RoomClient(const std::string& serverAddr, uint16_t port)
-        : _socket(serverAddr, port) {
+    RoomClient::RoomClient(Network::INetworkModule* network, const std::string& serverAddr, uint16_t port)
+        : _socket(network, serverAddr, port) {
         if (_socket.isConnected()) {
             std::cout << "[RoomClient] Connected to server" << std::endl;
         } else {

@@ -74,5 +74,16 @@ target_link_libraries(rtype_sfml_audio
         fmt::fmt
 )
 
+# Apple platforms need explicit framework linking for OpenAL
+if(APPLE)
+    target_link_libraries(rtype_sfml_audio
+        PUBLIC
+            "-framework AudioToolbox"
+            "-framework AudioUnit"
+            "-framework CoreAudio"
+            "-framework ApplicationServices"
+    )
+endif()
+
 target_compile_features(rtype_sfml_audio PUBLIC cxx_std_17)
 

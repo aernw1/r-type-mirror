@@ -8,6 +8,7 @@
 #include "ECS/PlayerCollisionResponseSystem.hpp"
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 namespace RType {
     namespace ECS {
@@ -63,6 +64,18 @@ namespace RType {
                     const auto& obstacle = registry.GetComponent<Obstacle>(other);
 
                     if (obstacle.blocking) {
+                        static int serverCollisionLog = 0;
+                        if (serverCollisionLog < 5) {
+                            if (registry.HasComponent<Position>(other) && registry.HasComponent<BoxCollider>(other)) {
+                                const auto& obstPos = registry.GetComponent<Position>(other);
+                                const auto& obstBox = registry.GetComponent<BoxCollider>(other);
+                                std::cout << "[SERVER PLAYER-OBSTACLE COLLISION] Player entity=" << player
+                                          << " vs Obstacle entity=" << other
+                                          << " at (" << obstPos.x << "," << obstPos.y << ")"
+                                          << " size=(" << obstBox.width << "," << obstBox.height << ")" << std::endl;
+                                serverCollisionLog++;
+                            }
+                        }
                         bool hasShield = registry.HasComponent<Shield>(player);
 
                         bool isInvincible = false;

@@ -38,6 +38,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <array>
+#include <deque>
 
 namespace RType {
     namespace Client {
@@ -52,6 +53,24 @@ namespace RType {
             bool isDead = false;
             RType::ECS::Entity scoreEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity playerEntity = RType::ECS::NULL_ENTITY;
+        };
+
+        struct PredictedInput {
+            uint32_t sequence = 0;
+            uint8_t inputs = 0;
+            float predictedX = 0.0f;
+            float predictedY = 0.0f;
+            float deltaTime = 0.0f;
+        };
+
+        // Entity interpolation state for smooth rendering of remote entities
+        struct InterpolationState {
+            float prevX = 0.0f;
+            float prevY = 0.0f;
+            float targetX = 0.0f;
+            float targetY = 0.0f;
+            float interpTime = 0.0f;
+            float interpDuration = 1.0f / 60.0f;
         };
 
         class InGameState : public IState {
@@ -84,6 +103,7 @@ namespace RType {
             void initializeBossHealthBar();
             void destroyBossHealthBar();
             void renderGameOverOverlay();
+            void renderDebugColliders();
             void triggerGameOverIfNeeded();
             void enterResultsScreen();
 
@@ -94,9 +114,13 @@ namespace RType {
             void createSystems();
 
             // Server state update handler
-            void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
+            void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks);
+            void ReconcileWithServer(const network::InputAck& ack);
             void OnLevelComplete(uint8_t completedLevel, uint8_t nextLevel);
             void ApplyPowerUpStateToPlayer(ECS::Entity playerEntity, const network::EntityState& entityState);
+
+            // Component cleanup helper for entity type validation
+            void CleanupInvalidComponents(ECS::Entity entity, network::EntityType expectedType);
 
             struct EnemySpriteConfig {
                 Renderer::SpriteId sprite = Renderer::INVALID_SPRITE_ID;
@@ -177,6 +201,17 @@ namespace RType {
             std::chrono::steady_clock::time_point m_lastInputTime;
             uint8_t m_currentInputs = 0;
             uint8_t m_previousInputs = 0;
+
+            std::deque<PredictedInput> m_inputHistory;
+            uint32_t m_inputSequence = 0;
+            uint32_t m_lastAckedSequence = 0;
+            float m_predictedX = 0.0f;
+            float m_predictedY = 0.0f;
+            static constexpr size_t MAX_INPUT_HISTORY = 120;
+            static constexpr float PREDICTION_SPEED = 200.0f;
+
+            // Entity interpolation for remote entities
+            std::unordered_map<uint32_t, InterpolationState> m_interpolationStates;
 
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;

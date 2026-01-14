@@ -2,6 +2,7 @@
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include <cmath>
+#include <iostream>
 
 namespace RType {
     namespace ECS {
@@ -40,6 +41,16 @@ namespace RType {
 
             for (int i = 0; i < 3; i++) {
                 Entity smallBullet = registry.CreateEntity();
+
+                // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+                if (registry.HasComponent<Obstacle>(smallBullet)) {
+                    std::cerr << "[THIRDBULLET CLEANUP] Removing Obstacle from bullet entity " << smallBullet << std::endl;
+                    registry.RemoveComponent<Obstacle>(smallBullet);
+                }
+                if (registry.HasComponent<ObstacleMetadata>(smallBullet)) {
+                    std::cerr << "[THIRDBULLET CLEANUP] Removing ObstacleMetadata from bullet entity " << smallBullet << std::endl;
+                    registry.RemoveComponent<ObstacleMetadata>(smallBullet);
+                }
 
                 registry.AddComponent<Position>(smallBullet, Position{x, y});
 

@@ -21,8 +21,8 @@ namespace RType {
         void LobbyState::HandleInput() {
             if (m_renderer->IsKeyPressed(Renderer::Key::R) && !m_rKeyPressed) {
                 m_rKeyPressed = true;
-                if (m_client.isConnected()) {
-                    m_client.ready();
+                if (m_client && m_client->isConnected()) {
+                    m_client->ready();
                     std::cout << "[LobbyState] Toggled ready!" << std::endl;
                 }
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::R)) {
@@ -63,7 +63,9 @@ namespace RType {
                 return;
             }
 
-            m_client.update();
+            if (m_client) {
+                m_client->update();
+            }
             updateLobbyState();
 
             if (m_audioSystem && m_lobbyMusic != Audio::INVALID_MUSIC_ID && !m_lobbyMusicPlaying) {
@@ -102,10 +104,10 @@ namespace RType {
                 }
             }
 
-            if (m_client.isGameStarted()) {
+            if (m_client && m_client->isGameStarted()) {
                 m_countdownSeconds = 0;
 
-                uint32_t seed = m_client.getGameSeed();
+                uint32_t seed = m_client->getGameSeed();
                 std::string serverIp = m_context.serverIp;
                 uint16_t udpPort = m_context.serverPort;
 
@@ -115,13 +117,14 @@ namespace RType {
 
                 std::cout << "[LobbyState] Transitioning to GameState..." << std::endl;
 
-                network::PlayerInfo localPlayer = m_client.getMyInfo();
+                network::PlayerInfo localPlayer = m_client->getMyInfo();
 
                 m_context.playerHash = localPlayer.hash;
                 m_context.playerNumber = localPlayer.number;
-                m_context.allPlayers = m_client.getPlayers();
+                m_context.allPlayers = m_client->getPlayers();
 
-                auto gameClient = std::make_shared<network::GameClient>(serverIp, udpPort, localPlayer);
+                auto gameClient = std::make_shared<network::GameClient>(
+                    m_context.networkModule.get(), serverIp, udpPort, localPlayer);
                 if (gameClient->ConnectToServer()) {
                     m_context.networkClient = gameClient;
                     m_machine.ChangeState(std::make_unique<InGameState>(m_machine, m_context, seed));
@@ -138,11 +141,11 @@ namespace RType {
         }
 
         void LobbyState::updateLobbyState() {
-            if (!m_client.isConnected()) {
+            if (!m_client || !m_client->isConnected()) {
                 return;
             }
 
-            const auto& players = m_client.getPlayers();
+            const auto& players = m_client->getPlayers();
             for (const auto& player : players) {
                 updateOrCreatePlayerEntity(player);
             }

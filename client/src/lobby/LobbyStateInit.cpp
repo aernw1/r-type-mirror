@@ -16,16 +16,19 @@ using namespace RType::ECS;
 namespace RType {
     namespace Client {
 
-        LobbyState::LobbyState(GameStateMachine& machine, GameContext& context) : m_machine(machine), m_context(context), m_client(context.serverIp, context.serverPort), m_playerName(context.playerName) {
+        LobbyState::LobbyState(GameStateMachine& machine, GameContext& context)
+            : m_machine(machine), m_context(context), m_playerName(context.playerName) {
             m_renderer = context.renderer;
             m_renderingSystem = std::make_unique<RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<TextRenderingSystem>(m_renderer.get());
         }
 
-        LobbyState::LobbyState(GameStateMachine& machine, GameContext& context, network::TcpSocket&& socket) : m_machine(machine), m_context(context), m_client(std::move(socket)), m_playerName(context.playerName) {
+        LobbyState::LobbyState(GameStateMachine& machine, GameContext& context, network::NetworkTcpSocket&& socket)
+            : m_machine(machine), m_context(context), m_playerName(context.playerName) {
             m_renderer = context.renderer;
             m_renderingSystem = std::make_unique<RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<TextRenderingSystem>(m_renderer.get());
+            m_client = std::make_unique<network::LobbyClient>(std::move(socket));
         }
 
         void LobbyState::Init() {
@@ -37,7 +40,7 @@ namespace RType {
                 if (m_lobbyMusic == Audio::INVALID_MUSIC_ID) {
                     m_lobbyMusic = m_context.audio->LoadMusic("../assets/sounds/lobby.flac");
                 }
-                
+
                 if (m_lobbyMusic != Audio::INVALID_MUSIC_ID) {
                     auto cmd = m_registry.CreateEntity();
                     auto& me = m_registry.AddComponent<MusicEffect>(cmd, MusicEffect(m_lobbyMusic));
@@ -48,6 +51,17 @@ namespace RType {
                     me.pitch = 1.0f;
                     m_lobbyMusicPlaying = true;
                 }
+            }
+
+            if (!m_client) {
+                if (!m_context.networkModule) {
+                    std::cout << "[LobbyState] ERROR: networkModule is null (cannot create LobbyClient)" << std::endl;
+                    m_errorMessage = "Internal error: network module missing";
+                    m_hasError = true;
+                    return;
+                }
+                m_client = std::make_unique<network::LobbyClient>(
+                    m_context.networkModule.get(), m_context.serverIp, m_context.serverPort);
             }
 
             m_fontLarge = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 32);
@@ -90,21 +104,21 @@ namespace RType {
                 m_bgTexture = m_renderer->LoadTexture("../assets/backgrounds/1.jpg");
             }
 
-            m_client.onPlayerLeft([this](uint8_t playerNum) {
+            m_client->onPlayerLeft([this](uint8_t playerNum) {
                 removePlayer(playerNum);
             });
 
-            m_client.onConnectionError([this](const std::string& error) {
+            m_client->onConnectionError([this](const std::string& error) {
                 m_errorMessage = error;
                 m_hasError = true;
             });
 
-            m_client.onCountdown([this](uint8_t seconds) {
+            m_client->onCountdown([this](uint8_t seconds) {
                 m_countdownSeconds = seconds;
             });
 
             createUI();
-            m_client.connect(m_playerName);
+            m_client->connect(m_playerName);
         }
 
         void LobbyState::Cleanup() {
@@ -117,7 +131,10 @@ namespace RType {
                 m_lobbyMusicPlaying = false;
             }
 
-            m_client.disconnect();
+            if (m_client) {
+                m_client->disconnect();
+                m_client.reset();
+            }
 
             for (auto& [playerNum, entity] : m_playerEntities) {
                 if (m_registry.IsEntityAlive(entity)) {
