@@ -30,11 +30,15 @@ namespace network {
         void SetStateCallback(std::function<void(uint32_t, const std::vector<EntityState>&)> callback) {
             m_stateCallback = callback;
         }
+        void SetLevelCompleteCallback(std::function<void(uint8_t, uint8_t)> callback) {
+            m_levelCompleteCallback = callback;
+        }
 
         uint32_t GetLastServerTick() const { return m_lastServerTick; }
         float GetLastScrollOffset() const { return m_lastScrollOffset; }
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
+        bool IsConnected() const { return m_connected; }
 
         // Network communication (called by game loop)
         void SendInput(uint8_t inputs);
@@ -44,6 +48,7 @@ namespace network {
         void HandleWelcome(const std::vector<uint8_t>& data);
         void HandleState(const std::vector<uint8_t>& data);
         void HandlePong(const std::vector<uint8_t>& data);
+        void HandleLevelComplete(const std::vector<uint8_t>& data);
 
         uint8_t GenerateRandomInputs();
 
@@ -61,6 +66,7 @@ namespace network {
 
         std::function<uint8_t()> m_inputGenerator;
         std::function<void(uint32_t, const std::vector<EntityState>&)> m_stateCallback;
+        std::function<void(uint8_t, uint8_t)> m_levelCompleteCallback; // (completedLevel, nextLevel)
 
         std::atomic<uint64_t> m_packetsSent{0};
         std::atomic<uint64_t> m_packetsReceived{0};

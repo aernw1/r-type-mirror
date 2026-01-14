@@ -41,7 +41,7 @@
     },
     "background": {
         "texture": "background",
-        "scrollSpeed": -75.0,
+        "scrollSpeed": -70.0,
         "copies": 3,
         "layer": -100
     },
@@ -51,7 +51,7 @@
             "position": { "x": 1000.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 1000.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -62,7 +62,7 @@
             "position": { "x": 1441.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 1441.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -73,7 +73,7 @@
             "position": { "x": 2091.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 2091.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -84,7 +84,7 @@
             "position": { "x": 2532.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 2532.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -95,7 +95,7 @@
             "position": { "x": 3182.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 3182.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -106,7 +106,7 @@
             "position": { "x": 3623.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 3623.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -117,7 +117,7 @@
             "position": { "x": 4273.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 4273.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -128,7 +128,7 @@
             "position": { "x": 4714.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 4714.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -139,7 +139,7 @@
             "position": { "x": 5364.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 5364.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -150,7 +150,7 @@
             "position": { "x": 5805.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 5805.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -161,7 +161,7 @@
             "position": { "x": 6455.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 6455.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -172,7 +172,7 @@
             "position": { "x": 6896.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 6896.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -183,7 +183,7 @@
             "position": { "x": 7546.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7546.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -194,7 +194,7 @@
             "position": { "x": 7987.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7987.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -205,7 +205,7 @@
             "position": { "x": 8637.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 8637.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -216,7 +216,7 @@
             "position": { "x": 9078.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 9078.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -227,7 +227,7 @@
             "position": { "x": 1000.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 1040.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -242,7 +242,7 @@
             "position": { "x": 1400.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 1400.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -253,7 +253,7 @@
             "position": { "x": 2100.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 2140.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -268,7 +268,7 @@
             "position": { "x": 2500.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 2500.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -279,7 +279,7 @@
             "position": { "x": 3200.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 3240.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -294,7 +294,7 @@
             "position": { "x": 3600.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 3600.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -305,7 +305,7 @@
             "position": { "x": 4300.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 4340.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -320,7 +320,7 @@
             "position": { "x": 4700.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 4700.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -331,7 +331,7 @@
             "position": { "x": 5400.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 5440.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -346,7 +346,7 @@
             "position": { "x": 5800.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 5800.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -357,7 +357,7 @@
             "position": { "x": 6500.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 6540.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -372,7 +372,7 @@
             "position": { "x": 1300.0, "y": 250.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 1300.0, "y": 250.0, "width": 100.0, "height": 100.0 }
@@ -383,7 +383,7 @@
             "position": { "x": 1300.0, "y": 350.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 1300.0, "y": 350.0, "width": 100.0, "height": 100.0 }
@@ -394,7 +394,7 @@
             "position": { "x": 1900.0, "y": 450.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 1900.0, "y": 450.0, "width": 100.0, "height": 100.0 }
@@ -405,7 +405,7 @@
             "position": { "x": 2200.0, "y": 300.0 },
             "scaleWidth": 500.0,
             "scaleHeight": 150.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 2200.0, "y": 320.0, "width": 380.0, "height": 110.0 },
@@ -418,7 +418,7 @@
             "position": { "x": 2800.0, "y": 150.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 2800.0, "y": 150.0, "width": 100.0, "height": 100.0 }
@@ -429,7 +429,7 @@
             "position": { "x": 2900.0, "y": 150.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 2900.0, "y": 150.0, "width": 100.0, "height": 100.0 }
@@ -440,7 +440,7 @@
             "position": { "x": 3000.0, "y": 150.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 3000.0, "y": 150.0, "width": 100.0, "height": 100.0 }
@@ -451,7 +451,7 @@
             "position": { "x": 3600.0, "y": 200.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 3600.0, "y": 200.0, "width": 100.0, "height": 100.0 }
@@ -462,7 +462,7 @@
             "position": { "x": 3700.0, "y": 200.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 3700.0, "y": 200.0, "width": 100.0, "height": 100.0 }
@@ -473,7 +473,7 @@
             "position": { "x": 3800.0, "y": 200.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 3800.0, "y": 200.0, "width": 100.0, "height": 100.0 }
@@ -484,7 +484,7 @@
             "position": { "x": 3900.0, "y": 200.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 3900.0, "y": 200.0, "width": 100.0, "height": 100.0 }
@@ -495,7 +495,7 @@
             "position": { "x": 4200.0, "y": 350.0 },
             "scaleWidth": 500.0,
             "scaleHeight": 150.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 4200.0, "y": 370.0, "width": 380.0, "height": 110.0 },
@@ -508,7 +508,7 @@
             "position": { "x": 4900.0, "y": 150.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 4900.0, "y": 150.0, "width": 100.0, "height": 100.0 }
@@ -519,7 +519,7 @@
             "position": { "x": 4900.0, "y": 250.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 4900.0, "y": 250.0, "width": 100.0, "height": 100.0 }
@@ -530,7 +530,7 @@
             "position": { "x": 5500.0, "y": 450.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 5500.0, "y": 450.0, "width": 100.0, "height": 100.0 }
@@ -541,7 +541,7 @@
             "position": { "x": 5600.0, "y": 450.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 5600.0, "y": 450.0, "width": 100.0, "height": 100.0 }
@@ -552,7 +552,7 @@
             "position": { "x": 5900.0, "y": 250.0 },
             "scaleWidth": 500.0,
             "scaleHeight": 150.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 5900.0, "y": 270.0, "width": 380.0, "height": 110.0 },
@@ -565,7 +565,7 @@
             "position": { "x": 6600.0, "y": 400.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 6600.0, "y": 400.0, "width": 100.0, "height": 100.0 }
@@ -576,7 +576,7 @@
             "position": { "x": 6900.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 6900.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -587,7 +587,7 @@
             "position": { "x": 7600.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7640.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -602,7 +602,7 @@
             "position": { "x": 8000.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 8000.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -613,7 +613,7 @@
             "position": { "x": 8700.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 8740.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -628,7 +628,7 @@
             "position": { "x": 7200.0, "y": 150.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7200.0, "y": 150.0, "width": 60.0, "height": 50.0 }
@@ -639,7 +639,7 @@
             "position": { "x": 7200.0, "y": 200.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7200.0, "y": 200.0, "width": 60.0, "height": 50.0 }
@@ -650,7 +650,7 @@
             "position": { "x": 7200.0, "y": 250.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7200.0, "y": 250.0, "width": 60.0, "height": 50.0 }
@@ -661,7 +661,7 @@
             "position": { "x": 7200.0, "y": 300.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7200.0, "y": 300.0, "width": 60.0, "height": 50.0 }
@@ -672,7 +672,7 @@
             "position": { "x": 7200.0, "y": 350.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7200.0, "y": 350.0, "width": 60.0, "height": 50.0 }
@@ -683,7 +683,7 @@
             "position": { "x": 7200.0, "y": 400.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7200.0, "y": 400.0, "width": 60.0, "height": 50.0 }
@@ -694,7 +694,7 @@
             "position": { "x": 7200.0, "y": 450.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7200.0, "y": 450.0, "width": 60.0, "height": 50.0 }
@@ -705,7 +705,7 @@
             "position": { "x": 7200.0, "y": 500.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7200.0, "y": 500.0, "width": 60.0, "height": 50.0 }
@@ -716,7 +716,7 @@
             "position": { "x": 7500.0, "y": 150.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7500.0, "y": 150.0, "width": 60.0, "height": 50.0 }
@@ -727,7 +727,7 @@
             "position": { "x": 7500.0, "y": 200.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7500.0, "y": 200.0, "width": 60.0, "height": 50.0 }
@@ -738,7 +738,7 @@
             "position": { "x": 7500.0, "y": 250.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7500.0, "y": 250.0, "width": 60.0, "height": 50.0 }
@@ -749,7 +749,7 @@
             "position": { "x": 7500.0, "y": 300.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7500.0, "y": 300.0, "width": 60.0, "height": 50.0 }
@@ -760,7 +760,7 @@
             "position": { "x": 7500.0, "y": 350.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7500.0, "y": 350.0, "width": 60.0, "height": 50.0 }
@@ -771,7 +771,7 @@
             "position": { "x": 7500.0, "y": 400.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7500.0, "y": 400.0, "width": 60.0, "height": 50.0 }
@@ -782,7 +782,7 @@
             "position": { "x": 7500.0, "y": 450.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7500.0, "y": 450.0, "width": 60.0, "height": 50.0 }
@@ -793,7 +793,7 @@
             "position": { "x": 7500.0, "y": 500.0 },
             "scaleWidth": 60.0,
             "scaleHeight": 50.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 7500.0, "y": 500.0, "width": 60.0, "height": 50.0 }
@@ -804,7 +804,7 @@
             "position": { "x": 8200.0, "y": 200.0 },
             "scaleWidth": 500.0,
             "scaleHeight": 150.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 8200.0, "y": 220.0, "width": 380.0, "height": 110.0 },
@@ -817,7 +817,7 @@
             "position": { "x": 8900.0, "y": 400.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 8900.0, "y": 400.0, "width": 100.0, "height": 100.0 }
@@ -828,7 +828,7 @@
             "position": { "x": 9000.0, "y": 400.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 9000.0, "y": 400.0, "width": 100.0, "height": 100.0 }
@@ -839,7 +839,7 @@
             "position": { "x": 9100.0, "y": 400.0 },
             "scaleWidth": 100.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 9100.0, "y": 400.0, "width": 100.0, "height": 100.0 }
@@ -850,7 +850,7 @@
             "position": { "x": 9100.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 9100.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -861,7 +861,7 @@
             "position": { "x": 9800.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 9840.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -876,7 +876,7 @@
             "position": { "x": 9500.0, "y": 360.0 },
             "scaleWidth": 1600.0,
             "scaleHeight": 40.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 9500.0, "y": 360.0, "width": 1600.0, "height": 40.0 }
@@ -887,7 +887,7 @@
             "position": { "x": 9728.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 9728.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -898,7 +898,7 @@
             "position": { "x": 10169.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 10169.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -909,7 +909,7 @@
             "position": { "x": 10819.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 10819.0, "y": 0.0, "width": 441.0, "height": 100.0 }
@@ -920,7 +920,7 @@
             "position": { "x": 11260.0, "y": 0.0 },
             "scaleWidth": 650.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 11260.0, "y": 0.0, "width": 650.0, "height": 20.0 }
@@ -931,7 +931,7 @@
             "position": { "x": 10200.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 10200.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -942,7 +942,7 @@
             "position": { "x": 10900.0, "y": 620.0 },
             "scaleWidth": 400.0,
             "scaleHeight": 110.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 10940.0, "y": 660.0, "width": 320.0, "height": 60.0 },
@@ -957,7 +957,7 @@
             "position": { "x": 11300.0, "y": 700.0 },
             "scaleWidth": 700.0,
             "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
+            "scrollSpeed": -70.0,
             "layer": 1,
             "colliders": [
                 { "x": 11300.0, "y": 700.0, "width": 700.0, "height": 20.0 }
@@ -969,8 +969,8 @@
         "position": { "x": 14000.0, "y": 200.0 },
         "width": 384.0,
         "height": 564.0,
-        "health": 50000,
-        "scrollSpeed": -75.0,
+        "health": 1000,
+        "scrollSpeed": -70.0,
         "attackPattern": 1
     },
     "enemies": [],

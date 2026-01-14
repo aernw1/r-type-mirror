@@ -114,6 +114,16 @@ namespace RType {
             Boss() = default;
         };
 
+        struct BossKilled : public IComponent {
+            Entity bossEntity;
+            int levelNumber;
+            float timeSinceDeath = 0.0f;
+
+            BossKilled() = default;
+            BossKilled(Entity boss, int level)
+                : bossEntity(boss), levelNumber(level) {}
+        };
+
         enum class BossAttackPattern {
             IDLE = 0,
             FAN_SPRAY = 1,

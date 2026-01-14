@@ -55,7 +55,7 @@ namespace RType {
 
         class InGameState : public IState {
         public:
-            InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed);
+            InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed, const std::string& levelPath = "assets/levels/level1.json");
             ~InGameState() override = default;
 
             void Init() override;
@@ -86,11 +86,15 @@ namespace RType {
             void triggerGameOverIfNeeded();
             void enterResultsScreen();
 
+            // Level progression
+            void checkBossDefeated();
+
             // ECS systems
             void createSystems();
 
             // Server state update handler
             void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
+            void OnLevelComplete(uint8_t completedLevel, uint8_t nextLevel);
             void ApplyPowerUpStateToPlayer(ECS::Entity playerEntity, const network::EntityState& entityState);
 
             struct EnemySpriteConfig {
@@ -168,6 +172,17 @@ namespace RType {
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
             std::unordered_map<uint32_t, uint8_t> m_bulletFlagsMap; // Track bullet flags to detect type changes
             RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player entity mirrored from server
+
+            // Level progression tracking
+            struct LevelProgressionState {
+                bool bossSpawned = false;
+                bool bossDefeated = false;
+                bool levelComplete = false;
+                float transitionTimer = 0.0f;
+                int currentLevelNumber = 1;
+                int totalLevels = 3;
+            };
+            LevelProgressionState m_levelProgress;
 
             // Individual player ship sprites
             Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;
