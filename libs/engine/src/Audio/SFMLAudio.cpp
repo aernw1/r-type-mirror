@@ -6,7 +6,6 @@
 namespace Audio {
 
     bool SFMLAudio::ConfigureDevice(const AudioConfig& config) {
-        // SFML handles device configuration internally; we mainly honor master volume.
         SetMasterVolume(config.masterVolume);
         return true;
     }
@@ -70,17 +69,13 @@ namespace Audio {
         s.setPitch(std::max(0.01f, options.pitch));
         s.setLoop(options.loop);
 
-        // SIMPLIFIED AUDIO LOGIC: Force 2D "flat" sound to ensure playback
-        // We disable the specific mono/stereo branching that tried to use 3D positioning for pan.
-        // This ensures sound is played directly without OpenAL spatialization quirks.
+        
         s.setRelativeToListener(true);
         s.setPosition(0.0f, 0.0f, 0.0f);
         s.setMinDistance(1.0f);
         s.setAttenuation(0.0f); // No attenuation
         
-        // If we really need pan later, we can re-enable it carefully, but let's fix playback first.
-        // float pan = std::clamp(options.pan, -1.0f, 1.0f);
-        // if (pan != 0.0f) s.setPosition(pan, 0.0f, 0.0f); // Simple pan if needed
+        
 
         s.play();
         m_activeSounds.push_back(std::move(s));
@@ -175,7 +170,6 @@ namespace Audio {
     void SFMLAudio::SetListener(const ListenerProperties& listener) {
         sf::Listener::setPosition(listener.position.x, listener.position.y, 0.0f);
         sf::Listener::setDirection(listener.forward.x, listener.forward.y, 0.0f);
-        // SFML 2.6 no longer exposes listener velocity in the public API.
     }
 
     void SFMLAudio::CleanupStoppedSounds() {

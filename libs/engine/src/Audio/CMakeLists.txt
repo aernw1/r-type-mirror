@@ -2,7 +2,6 @@
 
 set(SFML_AUDIO_FOUND FALSE)
 
-# Tier 1: vcpkg (root CMakeLists includes vcpkg toolchain when available)
 if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
     message(STATUS "Searching for SFML Audio via vcpkg...")
     find_package(SFML 2.6 COMPONENTS audio system QUIET)
@@ -12,7 +11,6 @@ if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
     endif()
 endif()
 
-# Tier 2: system SFML
 if(NOT SFML_AUDIO_FOUND)
     message(STATUS "Searching for system-installed SFML Audio 2.6+...")
     find_package(SFML 2.6 COMPONENTS audio system QUIET)
@@ -22,7 +20,6 @@ if(NOT SFML_AUDIO_FOUND)
     endif()
 endif()
 
-# Tier 3: FetchContent SFML if needed (enable audio)
 if(NOT SFML_AUDIO_FOUND)
     message(STATUS "SFML Audio not found, fetching SFML 2.6.2 from source...")
     include(FetchContent)
@@ -68,7 +65,6 @@ target_include_directories(rtype_sfml_audio PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-# OpenAL (via SFML audio) may require fmt at link time in some configs.
 find_package(fmt CONFIG REQUIRED)
 
 target_link_libraries(rtype_sfml_audio
