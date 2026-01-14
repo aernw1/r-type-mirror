@@ -155,21 +155,35 @@ namespace RType {
                     const auto& scrollable = m_registry.GetComponent<Scrollable>(bg);
                     pos.x += scrollable.speed * dt;
                 }
-                // Scroll obstacle visuals
-                for (auto& visual : m_obstacleSpriteEntities) {
-                    if (!m_registry.IsEntityAlive(visual))
+                // Scroll obstacle visuals - ARCHITECTURAL FIX
+                // Instead of maintaining static list, query obstacle colliders and scroll their visuals
+                // This fixes entity ID recycling bug where bullets reused obstacle IDs
+                auto obstacleColliders = m_registry.GetEntitiesWithComponent<ECS::ObstacleMetadata>();
+                for (auto collider : obstacleColliders) {
+                    if (!m_registry.HasComponent<ECS::ObstacleMetadata>(collider)) {
                         continue;
-                    if (!m_registry.HasComponent<Position>(visual) ||
-                        !m_registry.HasComponent<Scrollable>(visual))
+                    }
+                    const auto& metadata = m_registry.GetComponent<ECS::ObstacleMetadata>(collider);
+                    auto visual = metadata.visualEntity;
+
+                    // Only scroll if visual entity exists and has required components
+                    if (visual == ECS::NULL_ENTITY ||
+                        !m_registry.IsEntityAlive(visual) ||
+                        !m_registry.HasComponent<Position>(visual) ||
+                        !m_registry.HasComponent<Scrollable>(visual)) {
                         continue;
+                    }
+
                     auto& pos = m_registry.GetComponent<Position>(visual);
                     const auto& scrollable = m_registry.GetComponent<Scrollable>(visual);
                     pos.x += scrollable.speed * dt;
                 }
                 // Synchronize collider positions to visual entities using ObstacleMetadata
                 // ONLY for obstacles that still have Scrollable (not yet synced via network)
+                // Use component query instead of static list
                 static int syncDebugCounter = 0;
-                for (auto& collider : m_obstacleColliderEntities) {
+                auto obstacleCollidersForSync = m_registry.GetEntitiesWithComponent<ECS::ObstacleMetadata>();
+                for (auto collider : obstacleCollidersForSync) {
                     if (!m_registry.IsEntityAlive(collider) ||
                         !m_registry.HasComponent<ObstacleMetadata>(collider) ||
                         !m_registry.HasComponent<Position>(collider))

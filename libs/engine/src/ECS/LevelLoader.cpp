@@ -343,6 +343,7 @@ namespace RType {
                     drawable.origin = {0.0f, 0.0f};
 
                     registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
+                    registry.AddComponent<ObstacleVisual>(obsEntity, ObstacleVisual{});
                     entities.obstacleVisuals.push_back(obsEntity);
                 } else {
                     Core::Logger::Warning("Obstacle texture '{}' not found in loaded assets", obs.texture);
@@ -388,6 +389,7 @@ namespace RType {
 
                 registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
                 registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
+                registry.AddComponent<ObstacleVisual>(obsEntity, ObstacleVisual{});
                 entities.obstacleVisuals.push_back(obsEntity);
 
                 for (const auto& col : obs.colliders) {

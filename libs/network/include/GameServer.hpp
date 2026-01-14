@@ -108,6 +108,8 @@ namespace network {
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
         const std::string& GetLevelPath() const { return m_levelPath; }
     private:
+        uint32_t GetOrAssignNetworkId(RType::ECS::Entity entity);
+
         void WaitForAllPlayers();
         void ProcessIncomingPackets();
         void SendStateSnapshots();
@@ -132,6 +134,8 @@ namespace network {
 
         EnemyType GetRandomEnemyType();
         const EnemyStats& GetEnemyStats(EnemyType type) const;
+
+        void RegisterNetworkType(uint32_t netId, EntityType type);
 
         uint32_t GetNextEntityId() { return m_nextEntityId++; }
 
@@ -162,6 +166,12 @@ namespace network {
 
         std::vector<GameEntity> m_entities;
         uint32_t m_currentTick = 0;
+
+        // Stable network IDs for entities (stored as ECS component NetworkId).
+        uint32_t m_nextNetworkId = 1;
+        // Debug: track last known type per network ID to detect collisions/reuse.
+        std::unordered_map<uint32_t, EntityType> m_networkIdTypes;
+
         uint32_t m_nextEntityId = 1;
         std::atomic<bool> m_running{false};
 

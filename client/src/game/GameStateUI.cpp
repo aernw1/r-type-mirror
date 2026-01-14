@@ -245,8 +245,8 @@ namespace RType {
             renderBossHealthBar();
             renderGameOverOverlay();
 
-            // DEBUG: Visualize obstacle colliders
-            renderDebugColliders();
+            // DEBUG: Visualize obstacle colliders (DISABLED - causes visual confusion with ID reuse)
+            // renderDebugColliders();
         }
 
         void InGameState::renderDebugColliders() {
@@ -255,11 +255,11 @@ namespace RType {
             frameCount++;
 
             if (!loggedVisualization) {
-                std::cout << "[DEBUG VIZ] m_obstacleSpriteEntities.size()=" << m_obstacleSpriteEntities.size() << std::endl;
-                std::cout << "[DEBUG VIZ] m_obstacleColliderEntities.size()=" << m_obstacleColliderEntities.size() << std::endl;
-
-                // Log all obstacle entities found in registry
+                // Query obstacle entities dynamically instead of using static lists
+                auto obstacleMetadata = m_registry.GetEntitiesWithComponent<ObstacleMetadata>();
                 auto allObstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
+
+                std::cout << "[DEBUG VIZ] Obstacle colliders (ObstacleMetadata): " << obstacleMetadata.size() << std::endl;
                 std::cout << "[DEBUG VIZ] Total Obstacle entities in registry: " << allObstacles.size() << std::endl;
 
                 int logged = 0;
@@ -289,8 +289,16 @@ namespace RType {
             }
 
             // Draw obstacle visual sprite positions (green dots)
-            for (auto& visual : m_obstacleSpriteEntities) {
-                if (!m_registry.IsEntityAlive(visual))
+            // Query obstacle colliders and draw their visual entities
+            auto obstacleMetadataEntities = m_registry.GetEntitiesWithComponent<ObstacleMetadata>();
+            for (auto collider : obstacleMetadataEntities) {
+                if (!m_registry.HasComponent<ObstacleMetadata>(collider))
+                    continue;
+
+                const auto& metadata = m_registry.GetComponent<ObstacleMetadata>(collider);
+                auto visual = metadata.visualEntity;
+
+                if (visual == ECS::NULL_ENTITY || !m_registry.IsEntityAlive(visual))
                     continue;
                 if (!m_registry.HasComponent<Position>(visual))
                     continue;

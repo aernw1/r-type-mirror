@@ -114,6 +114,9 @@ namespace RType {
             void ReconcileWithServer(const network::InputAck& ack);
             void ApplyPowerUpStateToPlayer(ECS::Entity playerEntity, const network::EntityState& entityState);
 
+            // Component cleanup helper for entity type validation
+            void CleanupInvalidComponents(ECS::Entity entity, network::EntityType expectedType);
+
             struct EnemySpriteConfig {
                 Renderer::SpriteId sprite = Renderer::INVALID_SPRITE_ID;
                 Math::Color tint{1.0f, 1.0f, 1.0f, 1.0f};

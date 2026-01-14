@@ -19,6 +19,35 @@ using json = nlohmann::json;
 
 namespace network {
 
+    uint32_t GameServer::GetOrAssignNetworkId(RType::ECS::Entity entity)
+    {
+        // CRITICAL: ECS entity IDs are recycled, sometimes within the same tick.
+        // Therefore, network IDs must be stored on the entity itself (as a component),
+        // not in a map keyed only by the raw ECS entity ID.
+        if (m_registry.HasComponent<RType::ECS::NetworkId>(entity)) {
+            return m_registry.GetComponent<RType::ECS::NetworkId>(entity).id;
+        }
+        const uint32_t id = m_nextNetworkId++;
+        m_registry.AddComponent<RType::ECS::NetworkId>(entity, RType::ECS::NetworkId{id});
+        return id;
+    }
+
+    void GameServer::RegisterNetworkType(uint32_t netId, EntityType type)
+    {
+        auto it = m_networkIdTypes.find(netId);
+        if (it == m_networkIdTypes.end()) {
+            m_networkIdTypes.emplace(netId, type);
+            return;
+        }
+        if (it->second != type) {
+            std::cerr << "[NETID COLLISION] NetworkId " << netId
+                      << " was " << static_cast<int>(it->second)
+                      << " now " << static_cast<int>(type)
+                      << " -- this indicates ID reuse/type confusion" << std::endl;
+            it->second = type;
+        }
+    }
+
     namespace {
         void BasicMovementPattern(GameEntity& enemy, float /*dt*/) {
             enemy.vx = -220.0f;
@@ -173,7 +202,6 @@ namespace network {
 
         while (m_running) {
             auto now = std::chrono::steady_clock::now();
-            float dt = std::chrono::duration<float>(now - lastTick).count();
             lastTick = now;
 
             ProcessIncomingPackets();
@@ -513,7 +541,7 @@ namespace network {
 
     void GameServer::SpawnPlayer(uint64_t hash, float x, float y) {
         uint8_t playerNumber = static_cast<uint8_t>(m_connectedPlayers.size());
-        RType::ECS::Entity playerEntity = RType::ECS::PlayerFactory::CreatePlayer(m_registry, playerNumber, hash, x, y, nullptr); // No renderer on server
+        RType::ECS::PlayerFactory::CreatePlayer(m_registry, playerNumber, hash, x, y, nullptr);
         std::cout << "[Server] Spawned ECS player entity for playerHash=" << hash << " at (" << x << "," << y << ")" << std::endl;
     }
 
@@ -523,7 +551,6 @@ namespace network {
         std::uniform_real_distribution<float> yDist(50.0f, 550.0f);
 
         EnemyType enemyType = GetRandomEnemyType();
-        const EnemyStats& stats = GetEnemyStats(enemyType);
         float spawnX = 1920.0f;
         float spawnY = yDist(gen);
 
@@ -540,6 +567,17 @@ namespace network {
     void GameServer::SpawnBullet(uint64_t ownerHash, float x, float y) {
         using namespace RType::ECS;
         Entity bulletEntity = m_registry.CreateEntity();
+
+        // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+        if (m_registry.HasComponent<Obstacle>(bulletEntity)) {
+            std::cerr << "[SERVER CLEANUP] Removing Obstacle from bullet entity " << bulletEntity << std::endl;
+            m_registry.RemoveComponent<Obstacle>(bulletEntity);
+        }
+        if (m_registry.HasComponent<ObstacleMetadata>(bulletEntity)) {
+            std::cerr << "[SERVER CLEANUP] Removing ObstacleMetadata from bullet entity " << bulletEntity << std::endl;
+            m_registry.RemoveComponent<ObstacleMetadata>(bulletEntity);
+        }
+
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(500.0f, 0.0f));
 
@@ -577,6 +615,17 @@ namespace network {
         }
 
         Entity bulletEntity = m_registry.CreateEntity();
+
+        // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+        if (m_registry.HasComponent<Obstacle>(bulletEntity)) {
+            std::cerr << "[SERVER CLEANUP] Removing Obstacle from bullet entity " << bulletEntity << std::endl;
+            m_registry.RemoveComponent<Obstacle>(bulletEntity);
+        }
+        if (m_registry.HasComponent<ObstacleMetadata>(bulletEntity)) {
+            std::cerr << "[SERVER CLEANUP] Removing ObstacleMetadata from bullet entity " << bulletEntity << std::endl;
+            m_registry.RemoveComponent<ObstacleMetadata>(bulletEntity);
+        }
+
         uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(-400.0f, 0.0f));
@@ -668,7 +717,14 @@ namespace network {
     }
 
     void GameServer::CleanupDeadEntities() {
-        m_entities.erase(std::remove_if(m_entities.begin(), m_entities.end(), [this](const GameEntity& e) { if (e.health == 0 && e.type == EntityType::ENEMY) { m_enemyShootCooldowns.erase(e.id); } return e.health == 0; }), m_entities.end());
+        // NOTE: `GameEntity::id` is a stable *network* ID (not the ECS entity ID).
+        // Never use it to index ECS-side maps like `m_enemyShootCooldowns`.
+        m_entities.erase(
+            std::remove_if(
+                m_entities.begin(),
+                m_entities.end(),
+                [](const GameEntity& e) { return e.health == 0; }),
+            m_entities.end());
     }
 
     void GameServer::UpdateLegacyEntitiesFromRegistry() {
@@ -691,8 +747,9 @@ namespace network {
             const auto& player = m_registry.GetComponent<Player>(playerEntity);
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(playerEntity);
+            entity.id = GetOrAssignNetworkId(playerEntity);
             entity.type = EntityType::PLAYER;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
@@ -779,8 +836,9 @@ namespace network {
             const auto& enemy = m_registry.GetComponent<Enemy>(enemyEntity);
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(enemyEntity);
+            entity.id = GetOrAssignNetworkId(enemyEntity);
             entity.type = EntityType::ENEMY;
+            RegisterNetworkType(entity.id, entity.type);
             entity.flags = static_cast<uint8_t>(enemy.type);
             entity.x = pos.x;
             entity.y = pos.y;
@@ -817,8 +875,9 @@ namespace network {
             uint8_t healthValue = static_cast<uint8_t>(std::min(100.0f, std::max(0.0f, healthPercent)));
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(bossEntity);
+            entity.id = GetOrAssignNetworkId(bossEntity);
             entity.type = EntityType::BOSS;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
@@ -831,6 +890,21 @@ namespace network {
         }
 
         auto bullets = m_registry.GetEntitiesWithComponent<Bullet>();
+        // SAFETY NET: Clean up any contaminated bullets that accidentally carry obstacle data.
+        for (auto bulletEntity : bullets) {
+            if (m_registry.HasComponent<RType::ECS::Obstacle>(bulletEntity) ||
+                m_registry.HasComponent<RType::ECS::ObstacleMetadata>(bulletEntity)) {
+                std::cerr << "[SERVER CLEANUP] Bullet entity " << bulletEntity
+                          << " had Obstacle components; removing to prevent obstacle desync." << std::endl;
+                if (m_registry.HasComponent<RType::ECS::Obstacle>(bulletEntity)) {
+                    m_registry.RemoveComponent<RType::ECS::Obstacle>(bulletEntity);
+                }
+                if (m_registry.HasComponent<RType::ECS::ObstacleMetadata>(bulletEntity)) {
+                    m_registry.RemoveComponent<RType::ECS::ObstacleMetadata>(bulletEntity);
+                }
+            }
+        }
+
         for (auto bulletEntity : bullets) {
             if (!m_registry.IsEntityAlive(bulletEntity) ||
                 !m_registry.HasComponent<Position>(bulletEntity) ||
@@ -841,6 +915,7 @@ namespace network {
             const auto& pos = m_registry.GetComponent<Position>(bulletEntity);
             const auto& vel = m_registry.GetComponent<Velocity>(bulletEntity);
             const auto& bullet = m_registry.GetComponent<Bullet>(bulletEntity);
+            (void)bullet;
 
             uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
             uint8_t flags = 0;
@@ -866,8 +941,9 @@ namespace network {
             }
 
             GameEntity entity;
-            entity.id = bulletId;
+            entity.id = GetOrAssignNetworkId(bulletEntity);
             entity.type = EntityType::BULLET;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
@@ -896,7 +972,60 @@ namespace network {
                 continue;
             }
 
+            // Hard scrub: obstacles must be static colliders only.
+            // If they carry Velocity/Bullet/Shooter/WeaponSlot, strip obstacle data and skip broadcast.
+            bool contaminated = false;
+            if (m_registry.HasComponent<Velocity>(obstacleEntity) ||
+                m_registry.HasComponent<Bullet>(obstacleEntity) ||
+                m_registry.HasComponent<Shooter>(obstacleEntity) ||
+                m_registry.HasComponent<WeaponSlot>(obstacleEntity)) {
+                contaminated = true;
+            }
+            if (contaminated) {
+                std::cerr << "[SERVER OBSTACLE SCRUB] Entity " << obstacleEntity
+                          << " had invalid components (Velocity/Bullet/Shooter/WeaponSlot); "
+                          << "removing Obstacle/ObstacleMetadata to prevent desync." << std::endl;
+                if (m_registry.HasComponent<Obstacle>(obstacleEntity)) {
+                    m_registry.RemoveComponent<Obstacle>(obstacleEntity);
+                }
+                if (m_registry.HasComponent<ObstacleMetadata>(obstacleEntity)) {
+                    m_registry.RemoveComponent<ObstacleMetadata>(obstacleEntity);
+                }
+                // Also remove velocity if present so it stops moving.
+                if (m_registry.HasComponent<Velocity>(obstacleEntity)) {
+                    m_registry.RemoveComponent<Velocity>(obstacleEntity);
+                }
+                continue;
+            }
+
+            // CRITICAL FIX: If an obstacle somehow has Bullet or Shooter components, strip obstacle data
+            // so it can't be broadcast as an obstacle. This prevents “obstacle bullets” even if
+            // contamination occurs elsewhere.
+            if (m_registry.HasComponent<Bullet>(obstacleEntity) ||
+                m_registry.HasComponent<Shooter>(obstacleEntity) ||
+                m_registry.HasComponent<WeaponSlot>(obstacleEntity)) {
+                std::cerr << "[SERVER BUG] Entity " << obstacleEntity
+                          << " has Obstacle + Bullet/Shooter; removing Obstacle to avoid desync." << std::endl;
+                if (m_registry.HasComponent<Obstacle>(obstacleEntity)) {
+                    m_registry.RemoveComponent<Obstacle>(obstacleEntity);
+                }
+                if (m_registry.HasComponent<ObstacleMetadata>(obstacleEntity)) {
+                    m_registry.RemoveComponent<ObstacleMetadata>(obstacleEntity);
+                }
+                continue;
+            }
+
             const auto& pos = m_registry.GetComponent<Position>(obstacleEntity);
+
+            // DEBUG: Log all obstacles being broadcast to help identify the bug
+            static int broadcastLog = 0;
+            if (broadcastLog < 10 || (broadcastLog % 100 == 0)) {
+                std::cerr << "[OBSTACLE BROADCAST] Entity " << obstacleEntity
+                          << " pos=(" << pos.x << "," << pos.y << ")"
+                          << " hasVelocity=" << m_registry.HasComponent<Velocity>(obstacleEntity)
+                          << " hasBullet=" << m_registry.HasComponent<Bullet>(obstacleEntity) << std::endl;
+                broadcastLog++;
+            }
 
             // Debug: Log first few obstacle positions sent to clients
             if (serverObstacleLog < 5) {
@@ -913,8 +1042,9 @@ namespace network {
             }
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(obstacleEntity);
+            entity.id = GetOrAssignNetworkId(obstacleEntity);
             entity.type = EntityType::OBSTACLE;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = 0.0f;
@@ -927,6 +1057,7 @@ namespace network {
             }
             entity.ownerHash = obstacleIndex;
             entity.score = 0;
+
             m_entities.push_back(entity);
             obstacleCount++;
             if (obstacleCount >= maxObstaclesPerSnapshot) {
@@ -954,8 +1085,9 @@ namespace network {
             const auto& powerup = m_registry.GetComponent<PowerUp>(powerupEntity);
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(powerupEntity);
+            entity.id = GetOrAssignNetworkId(powerupEntity);
             entity.type = EntityType::POWERUP;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
@@ -994,8 +1126,9 @@ namespace network {
             }
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(podEntity);
+            entity.id = GetOrAssignNetworkId(podEntity);
             entity.type = EntityType::PLAYER; // Treat as player entity for rendering
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vx;

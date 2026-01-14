@@ -217,5 +217,136 @@ namespace RType {
             m_playerNameLabels.erase(labelIt);
         }
 
+        void InGameState::CleanupInvalidComponents(ECS::Entity entity, network::EntityType expectedType) {
+            if (!m_registry.IsEntityAlive(entity)) {
+                return;
+            }
+
+            // Remove components that are incompatible with the expected entity type
+            if (expectedType == network::EntityType::OBSTACLE) {
+                // Obstacles should NEVER have shooting or enemy/player components
+                if (m_registry.HasComponent<Shooter>(entity)) {
+                    m_registry.RemoveComponent<Shooter>(entity);
+                }
+                if (m_registry.HasComponent<ShootCommand>(entity)) {
+                    m_registry.RemoveComponent<ShootCommand>(entity);
+                }
+                if (m_registry.HasComponent<WeaponSlot>(entity)) {
+                    m_registry.RemoveComponent<WeaponSlot>(entity);
+                }
+                if (m_registry.HasComponent<Bullet>(entity)) {
+                    m_registry.RemoveComponent<Bullet>(entity);
+                }
+                if (m_registry.HasComponent<Enemy>(entity)) {
+                    m_registry.RemoveComponent<Enemy>(entity);
+                }
+                if (m_registry.HasComponent<Player>(entity)) {
+                    m_registry.RemoveComponent<Player>(entity);
+                }
+            } else if (expectedType == network::EntityType::BULLET) {
+                // Bullets should not have obstacle or player/enemy components
+                // CRITICAL: Remove old Drawable to prevent obstacle sprites on bullets
+                if (m_registry.HasComponent<Drawable>(entity)) {
+                    std::cerr << "[CLEANUP] Removing Drawable from bullet entity " << entity << std::endl;
+                    m_registry.RemoveComponent<Drawable>(entity);
+                }
+                if (m_registry.HasComponent<Obstacle>(entity)) {
+                    std::cerr << "[CLEANUP] Removing Obstacle from bullet entity " << entity << std::endl;
+                    m_registry.RemoveComponent<Obstacle>(entity);
+                }
+                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
+                    std::cerr << "[CLEANUP] Removing ObstacleMetadata from bullet entity " << entity << std::endl;
+                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
+                }
+                if (m_registry.HasComponent<Player>(entity)) {
+                    m_registry.RemoveComponent<Player>(entity);
+                }
+                if (m_registry.HasComponent<Enemy>(entity)) {
+                    m_registry.RemoveComponent<Enemy>(entity);
+                }
+                // Remove collision components from previous life
+                if (m_registry.HasComponent<BoxCollider>(entity)) {
+                    m_registry.RemoveComponent<BoxCollider>(entity);
+                }
+                if (m_registry.HasComponent<CircleCollider>(entity)) {
+                    m_registry.RemoveComponent<CircleCollider>(entity);
+                }
+                if (m_registry.HasComponent<CollisionLayer>(entity)) {
+                    m_registry.RemoveComponent<CollisionLayer>(entity);
+                }
+            } else if (expectedType == network::EntityType::PLAYER) {
+                // Players should not have obstacle or bullet or enemy components
+                if (m_registry.HasComponent<Drawable>(entity)) {
+                    m_registry.RemoveComponent<Drawable>(entity);
+                }
+                if (m_registry.HasComponent<Obstacle>(entity)) {
+                    m_registry.RemoveComponent<Obstacle>(entity);
+                }
+                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
+                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
+                }
+                if (m_registry.HasComponent<Bullet>(entity)) {
+                    m_registry.RemoveComponent<Bullet>(entity);
+                }
+                if (m_registry.HasComponent<Enemy>(entity)) {
+                    m_registry.RemoveComponent<Enemy>(entity);
+                }
+            } else if (expectedType == network::EntityType::ENEMY) {
+                // Enemies should not have obstacle or bullet or player components
+                if (m_registry.HasComponent<Drawable>(entity)) {
+                    m_registry.RemoveComponent<Drawable>(entity);
+                }
+                if (m_registry.HasComponent<Obstacle>(entity)) {
+                    m_registry.RemoveComponent<Obstacle>(entity);
+                }
+                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
+                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
+                }
+                if (m_registry.HasComponent<Bullet>(entity)) {
+                    m_registry.RemoveComponent<Bullet>(entity);
+                }
+                if (m_registry.HasComponent<Player>(entity)) {
+                    m_registry.RemoveComponent<Player>(entity);
+                }
+            } else if (expectedType == network::EntityType::POWERUP) {
+                // Powerups should not have any gameplay components
+                if (m_registry.HasComponent<Drawable>(entity)) {
+                    m_registry.RemoveComponent<Drawable>(entity);
+                }
+                if (m_registry.HasComponent<Obstacle>(entity)) {
+                    m_registry.RemoveComponent<Obstacle>(entity);
+                }
+                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
+                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
+                }
+                if (m_registry.HasComponent<Bullet>(entity)) {
+                    m_registry.RemoveComponent<Bullet>(entity);
+                }
+                if (m_registry.HasComponent<Player>(entity)) {
+                    m_registry.RemoveComponent<Player>(entity);
+                }
+                if (m_registry.HasComponent<Enemy>(entity)) {
+                    m_registry.RemoveComponent<Enemy>(entity);
+                }
+            } else if (expectedType == network::EntityType::BOSS) {
+                // Boss should not have obstacle or bullet or player components
+                if (m_registry.HasComponent<Drawable>(entity)) {
+                    m_registry.RemoveComponent<Drawable>(entity);
+                }
+                if (m_registry.HasComponent<Obstacle>(entity)) {
+                    m_registry.RemoveComponent<Obstacle>(entity);
+                }
+                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
+                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
+                }
+                if (m_registry.HasComponent<Bullet>(entity)) {
+                    m_registry.RemoveComponent<Bullet>(entity);
+                }
+                if (m_registry.HasComponent<Player>(entity)) {
+                    m_registry.RemoveComponent<Player>(entity);
+                }
+            }
+        }
+
     }
 }

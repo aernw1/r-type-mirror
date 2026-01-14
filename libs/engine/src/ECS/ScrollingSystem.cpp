@@ -72,10 +72,10 @@ namespace RType {
                 const auto& metadata = registry.GetComponent<ObstacleMetadata>(entity);
                 auto& colliderPos = registry.GetComponent<Position>(entity);
 
-                // If visual entity exists, sync collider to visual position + offset
                 if (metadata.visualEntity != NULL_ENTITY &&
                     registry.IsEntityAlive(metadata.visualEntity) &&
-                    registry.HasComponent<Position>(metadata.visualEntity)) {
+                    registry.HasComponent<Position>(metadata.visualEntity) &&
+                    registry.HasComponent<ObstacleVisual>(metadata.visualEntity)) {
 
                     const auto& visualPos = registry.GetComponent<Position>(metadata.visualEntity);
 
@@ -93,7 +93,12 @@ namespace RType {
                     colliderPos.x = visualPos.x + metadata.offsetX;
                     colliderPos.y = visualPos.y + metadata.offsetY;
                 }
-                // Fallback: if no visual (missing texture), scroll collider independently
+                else if (metadata.visualEntity != NULL_ENTITY &&
+                         registry.IsEntityAlive(metadata.visualEntity) &&
+                         !registry.HasComponent<ObstacleVisual>(metadata.visualEntity)) {
+                    registry.DestroyEntity(entity);
+                    continue;
+                }
                 else if (registry.HasComponent<Scrollable>(entity)) {
                     const auto& scrollable = registry.GetComponent<Scrollable>(entity);
                     colliderPos.x = colliderPos.x + scrollable.speed * deltaTime;

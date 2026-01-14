@@ -266,6 +266,20 @@ namespace RType {
             Obstacle(bool isBlocking) : blocking(isBlocking) {}
         };
 
+        struct ObstacleVisual : public IComponent {
+        };
+
+        // Stable network identifier for server->client entity mirroring.
+        // IMPORTANT: This must live on the entity as a component, because raw ECS entity IDs are recycled.
+        // If we instead map "ECS entity id -> network id" in a hash map, then destroying and reusing an
+        // ECS id in the same tick can cause a new entity to inherit the old network id (type confusion).
+        struct NetworkId : public IComponent {
+            uint32_t id = 0;
+
+            NetworkId() = default;
+            explicit NetworkId(uint32_t networkId) : id(networkId) {}
+        };
+
         struct ObstacleMetadata : public IComponent {
             uint32_t uniqueId = 0;
             Entity visualEntity = NULL_ENTITY;
