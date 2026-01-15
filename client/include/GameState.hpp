@@ -125,6 +125,8 @@ namespace RType {
             // Component cleanup helper for entity type validation
             void CleanupInvalidComponents(ECS::Entity entity, network::EntityType expectedType);
 
+            void cleanupForLevelTransition();
+
             struct EnemySpriteConfig {
                 Renderer::SpriteId sprite = Renderer::INVALID_SPRITE_ID;
                 Math::Color tint{1.0f, 1.0f, 1.0f, 1.0f};

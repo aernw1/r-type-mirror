@@ -348,5 +348,48 @@ namespace RType {
             }
         }
 
+        void InGameState::cleanupForLevelTransition() {
+            Core::Logger::Info("[GameState] Cleaning up for level transition...");
+
+            auto positionEntities = m_registry.GetEntitiesWithComponent<Position>();
+            std::vector<Entity> entitiesToDestroy(positionEntities.begin(), positionEntities.end());
+
+            auto drawableEntities = m_registry.GetEntitiesWithComponent<Drawable>();
+            for (auto e : drawableEntities) {
+                if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), e) == entitiesToDestroy.end()) {
+                    entitiesToDestroy.push_back(e);
+                }
+            }
+
+            Core::Logger::Info("[GameState] Destroying {} entities from previous level", entitiesToDestroy.size());
+            for (Entity entity : entitiesToDestroy) {
+                if (m_registry.IsEntityAlive(entity)) {
+                    m_registry.DestroyEntity(entity);
+                }
+            }
+
+            m_networkEntityMap.clear();
+            m_obstacleColliderEntities.clear();
+            m_obstacleIdToCollider.clear();
+            m_playerNameLabels.clear();
+
+            for (auto& hud : m_playersHUD) {
+                hud = PlayerHUDData{};
+            }
+
+            m_bossHealthBar.active = false;
+            m_bossHealthBar.currentHealth = 0;
+            m_bossHealthBar.maxHealth = 1000;
+            m_bossHealthBar.bossNetworkId = 0;
+            m_bossHealthBar.titleEntity = NULL_ENTITY;
+            m_bossHealthBar.barBackgroundEntity = NULL_ENTITY;
+            m_bossHealthBar.barForegroundEntity = NULL_ENTITY;
+
+            m_isGameOver = false;
+            m_localScrollOffset = 0.0f;
+
+            Core::Logger::Info("[GameState] Level transition cleanup complete");
+        }
+
     }
 }

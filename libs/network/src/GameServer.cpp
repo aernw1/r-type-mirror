@@ -1222,6 +1222,12 @@ namespace network {
 
             std::cout << "[GameServer] Boss defeated! Level complete - broadcasting to clients" << std::endl;
 
+            // CRITICAL: Destroy the boss entity immediately to prevent score farming
+            for (auto bossEntity : killedBosses) {
+                std::cout << "[GameServer] Destroying boss entity " << bossEntity << std::endl;
+                m_registry.DestroyEntity(bossEntity);
+            }
+
             LevelCompletePacket levelComplete;
             levelComplete.completedLevel = m_currentLevel;
             levelComplete.nextLevel = m_currentLevel + 1;

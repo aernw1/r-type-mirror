@@ -27,6 +27,11 @@ namespace RType {
         void InGameState::Init() {
             Core::Logger::Info("[GameState] Initializing game");
 
+            if (!m_networkEntityMap.empty() || !m_obstacleColliderEntities.empty()) {
+                Core::Logger::Info("[GameState] Detected level transition, cleaning up previous level...");
+                cleanupForLevelTransition();
+            }
+
             if (m_context.audio) {
                 m_audioSystem = std::make_unique<RType::ECS::AudioSystem>(m_context.audio.get());
                 
