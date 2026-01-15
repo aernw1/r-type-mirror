@@ -224,20 +224,23 @@ namespace RType {
                 m_enterKeyPressed = true;
                 playSelectSound();
 
-                if (m_context.audio && m_menuMusic != Audio::INVALID_MUSIC_ID) {
-                    m_context.audio->StopMusic(m_menuMusic);
-                    m_menuMusicPlaying = false;
-                }
-
                 switch (static_cast<MenuItem>(m_selectedIndex)) {
                     case MenuItem::PLAY:
                         std::cout << "[MenuState] Starting game... Transitioning to Room Selection" << std::endl;
                         std::cout << "[MenuState] Connecting to " << m_context.serverIp << ":" << m_context.serverPort << " as '" << m_context.playerName << "'" << std::endl;
+                        if (m_context.audio && m_menuMusic != Audio::INVALID_MUSIC_ID) {
+                            m_context.audio->StopMusic(m_menuMusic);
+                            m_menuMusicPlaying = false;
+                        }
                         m_machine.PushState(std::make_unique<RoomListState>(m_machine, m_context));
                         break;
 
                     case MenuItem::EDITOR:
                         std::cout << "[MenuState] Opening Level Editor..." << std::endl;
+                        if (m_context.audio && m_menuMusic != Audio::INVALID_MUSIC_ID) {
+                            m_context.audio->StopMusic(m_menuMusic);
+                            m_menuMusicPlaying = false;
+                        }
                         m_machine.PushState(std::make_unique<EditorState>(m_machine, m_context));
                         break;
 
