@@ -28,6 +28,8 @@ set(ECS_SOURCES
     BossAttackSystem.cpp
     BlackOrbSystem.cpp
     ThirdBulletSystem.cpp
+    AnimationSystem.cpp
+    EffectFactory.cpp
 )
 
 set(ECS_HEADERS
@@ -66,6 +68,8 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossAttackSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BlackOrbSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ThirdBulletSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/AnimationSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EffectFactory.hpp
 )
 
 add_library(rtype_ecs STATIC
@@ -78,7 +82,7 @@ target_include_directories(rtype_ecs PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(rtype_ecs PUBLIC nlohmann_json::nlohmann_json)
+target_link_libraries(rtype_ecs PUBLIC nlohmann_json::nlohmann_json rtype_animation)
 
 set_target_properties(rtype_ecs PROPERTIES
     POSITION_INDEPENDENT_CODE ON

@@ -26,9 +26,12 @@
 #include "ECS/PowerUpSpawnSystem.hpp"
 #include "ECS/PowerUpCollisionSystem.hpp"
 #include "ECS/AudioSystem.hpp"
+#include "ECS/AnimationSystem.hpp"
+#include "ECS/EffectFactory.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/PowerUpFactory.hpp"
 #include "ECS/LevelLoader.hpp"
+#include "Animation/AnimationModule.hpp"
 #include "Renderer/IRenderer.hpp"
 
 #include <memory>
@@ -166,6 +169,9 @@ namespace RType {
             std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
             std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
             std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
+            std::unique_ptr<RType::ECS::AnimationSystem> m_animationSystem;
+            std::unique_ptr<Animation::AnimationModule> m_animationModule;
+            std::unique_ptr<RType::ECS::EffectFactory> m_effectFactory;
 
             // Bullet textures and sprites
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
@@ -255,6 +261,11 @@ namespace RType {
             Renderer::SpriteId m_powerupForcePodSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_powerupSpeedSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_powerupShieldSprite = Renderer::INVALID_SPRITE_ID;
+
+            // Explosion animation
+            Renderer::TextureId m_explosionTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_explosionSprite = Renderer::INVALID_SPRITE_ID;
+            Animation::AnimationClipId m_explosionClipId = Animation::INVALID_CLIP_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;

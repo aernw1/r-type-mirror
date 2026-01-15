@@ -479,6 +479,11 @@ namespace RType {
                 m_audioSystem->Update(m_registry, dt);
             }
 
+            // Update animation system (explosions, effects, floating text)
+            if (m_animationSystem) {
+                m_animationSystem->Update(m_registry, dt);
+            }
+
             for (auto& bg : m_backgroundEntities) {
                 if (!m_registry.HasComponent<Position>(bg))
                     continue;

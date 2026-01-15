@@ -11,8 +11,10 @@
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include "ECS/PlayerFactory.hpp"
+#include "Animation/AnimationTypes.hpp"
 
 using namespace RType::ECS;
+using namespace Animation;
 
 namespace RType {
     namespace Client {
@@ -126,6 +128,18 @@ namespace RType {
             m_levelData = ECS::LevelLoader::LoadFromFile(levelPath);
             m_levelAssets = ECS::LevelLoader::LoadAssets(m_levelData, m_renderer.get());
             Core::Logger::Info("[GameState] Loaded level '{}' with {} textures, {} obstacle definitions", m_levelData.name, m_levelAssets.textures.size(), m_levelData.obstacles.size());
+
+            // Load explosion spritesheet for death animations
+            m_explosionTexture = m_renderer->LoadTexture("assets/SFX/explosion.png");
+            if (m_explosionTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_explosionTexture = m_renderer->LoadTexture("../assets/SFX/explosion.png");
+            }
+            if (m_explosionTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_explosionSprite = m_renderer->CreateSprite(m_explosionTexture, {});
+                Core::Logger::Info("[GameState] Explosion spritesheet loaded");
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load explosion spritesheet");
+            }
 
             m_enemyBulletGreenTexture = m_renderer->LoadTexture("assets/projectiles/bullet-green.png");
             if (m_enemyBulletGreenTexture == Renderer::INVALID_TEXTURE_ID) {
@@ -306,6 +320,36 @@ namespace RType {
             m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
             m_renderingSystem = std::make_unique<RType::ECS::RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<RType::ECS::TextRenderingSystem>(m_renderer.get());
+
+            // Initialize animation module and system
+            m_animationModule = std::make_unique<Animation::AnimationModule>();
+
+            // Create explosion animation clip (11 frames, 32x32 each, horizontal strip)
+            if (m_explosionTexture != Renderer::INVALID_TEXTURE_ID) {
+                Animation::GridLayout layout;
+                layout.columns = 11;
+                layout.rows = 1;
+                layout.frameCount = 11;
+                layout.frameWidth = 32.0f;
+                layout.frameHeight = 32.0f;
+                layout.defaultDuration = 0.05f;  // 50ms per frame
+
+                m_explosionClipId = m_animationModule->CreateClipFromGrid(
+                    "explosion_small",
+                    "assets/SFX/explosion.png",
+                    layout,
+                    false);
+                Core::Logger::Info("[GameState] Created explosion animation clip with {} frames", 11);
+            }
+
+            m_animationSystem = std::make_unique<RType::ECS::AnimationSystem>(m_animationModule.get());
+
+            // Initialize effect factory with explosion clip
+            ECS::EffectConfig effectConfig;
+            effectConfig.explosionSmall = m_explosionClipId;
+            effectConfig.effectsTexture = m_explosionTexture;
+            effectConfig.effectsSprite = m_explosionSprite;
+            m_effectFactory = std::make_unique<RType::ECS::EffectFactory>(effectConfig);
 
             m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
             m_shieldSystem = std::make_unique<RType::ECS::ShieldSystem>();

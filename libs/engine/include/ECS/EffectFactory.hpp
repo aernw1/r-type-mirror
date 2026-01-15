@@ -21,6 +21,7 @@ namespace ECS {
 
         Renderer::FontId damageFont = Renderer::INVALID_FONT_ID;
         Renderer::TextureId effectsTexture = Renderer::INVALID_TEXTURE_ID;
+        Renderer::SpriteId effectsSprite = Renderer::INVALID_SPRITE_ID;
 
         EffectConfig() = default;
     };
