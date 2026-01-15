@@ -2,6 +2,7 @@
 #include "ECS/Component.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Registry.hpp"
+#include "Core/Logger.hpp"
 #include <cstdio>
 #include <cstring>
 
@@ -14,11 +15,14 @@ namespace ECS {
     Entity EffectFactory::CreateBaseEffect(Registry& registry,
                                            float x, float y,
                                            Animation::EffectType type,
-                                           float duration) {
+                                           float duration,
+                                           Entity owner,
+                                           float offsetX,
+                                           float offsetY) {
         Entity entity = registry.CreateEntity();
 
         registry.AddComponent<Position>(entity, Position(x, y));
-        registry.AddComponent<VisualEffect>(entity, VisualEffect(type, duration));
+        registry.AddComponent<VisualEffect>(entity, VisualEffect(type, duration, owner, offsetX, offsetY));
 
         return entity;
     }
@@ -217,6 +221,55 @@ namespace ECS {
         if (scoreValue > 0) {
             CreateScorePopup(registry, x, y, scoreValue);
         }
+    }
+
+    Entity EffectFactory::CreateShootingEffect(Registry& registry, float x, float y, Entity owner) {
+        if (m_config.shootingAnimation == Animation::INVALID_CLIP_ID) {
+            return registry.CreateEntity();
+        }
+
+        constexpr float SHOOTING_EFFECT_OFFSET_X = 27.0f;
+        constexpr float SHOOTING_EFFECT_OFFSET_Y = -10.0f;
+
+        float offsetX = SHOOTING_EFFECT_OFFSET_X;
+        float offsetY = SHOOTING_EFFECT_OFFSET_Y;
+        
+        if (owner != NULL_ENTITY && registry.IsEntityAlive(owner) &&
+            registry.HasComponent<Shooter>(owner)) {
+            const auto& shooterComp = registry.GetComponent<Shooter>(owner);
+            offsetX = shooterComp.offsetX + SHOOTING_EFFECT_OFFSET_X;
+            offsetY = shooterComp.offsetY + SHOOTING_EFFECT_OFFSET_Y;
+        }
+        
+        Entity entity = CreateBaseEffect(registry, x + offsetX, y + offsetY,
+                                         Animation::EffectType::CUSTOM, 0.4f, owner, offsetX, offsetY);
+
+        Renderer::SpriteId spriteId = Renderer::INVALID_SPRITE_ID;
+        if (m_config.shootingSprite != Renderer::INVALID_SPRITE_ID) {
+            spriteId = m_config.shootingSprite;
+        } else if (m_config.effectsSprite != Renderer::INVALID_SPRITE_ID) {
+            spriteId = m_config.effectsSprite;
+        }
+
+        if (spriteId == Renderer::INVALID_SPRITE_ID) {
+            return entity;
+        }
+
+        auto& drawable = registry.AddComponent<Drawable>(entity, Drawable());
+        drawable.layer = 11;
+        drawable.scale = Math::Vector2(2.0f, 2.0f);
+        drawable.origin = Math::Vector2(12.5f, 12.5f);
+        drawable.spriteId = spriteId;
+
+        if (m_config.shootingAnimation != Animation::INVALID_CLIP_ID) {
+            auto& anim = registry.AddComponent<SpriteAnimation>(entity,
+                SpriteAnimation(m_config.shootingAnimation, false, 1.5f));
+            anim.destroyOnComplete = true;
+            anim.playbackSpeed = 1.5f;
+            registry.AddComponent<AnimatedSprite>(entity);
+        }
+
+        return entity;
     }
 
 }

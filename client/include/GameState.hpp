@@ -273,6 +273,9 @@ namespace RType {
             Renderer::TextureId m_explosionTexture = Renderer::INVALID_TEXTURE_ID;
             Renderer::SpriteId m_explosionSprite = Renderer::INVALID_SPRITE_ID;
             Animation::AnimationClipId m_explosionClipId = Animation::INVALID_CLIP_ID;
+            Renderer::TextureId m_shootingTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_shootingSprite = Renderer::INVALID_SPRITE_ID;
+            Animation::AnimationClipId m_shootingClipId = Animation::INVALID_CLIP_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;

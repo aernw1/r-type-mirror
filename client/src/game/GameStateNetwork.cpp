@@ -287,6 +287,27 @@ namespace RType {
                             }
                         }
 
+                        bool isPlayerBullet = (entityState.flags < 10);
+                        
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                           CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+
+                        if (isPlayerBullet && m_localPlayerEntity != ECS::NULL_ENTITY && 
+                            m_registry.IsEntityAlive(m_localPlayerEntity) && m_effectFactory &&
+                            m_registry.HasComponent<Position>(m_localPlayerEntity)) {
+                            const auto& playerPos = m_registry.GetComponent<Position>(m_localPlayerEntity);
+                            float bulletX = entityState.x;
+                            float bulletY = entityState.y;
+                            float dx = bulletX - playerPos.x;
+                            float dy = bulletY - playerPos.y;
+                            float distance = std::sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 80.0f && dx > 0 && std::abs(dy) < 40.0f && entityState.vx > 400.0f) {
+                                m_effectFactory->CreateShootingEffect(m_registry, playerPos.x, playerPos.y, m_localPlayerEntity);
+                            }
+                        }
+
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         m_bulletFlagsMap[entityState.entityId] = entityState.flags;
                     } else if (type == network::EntityType::POWERUP) {
