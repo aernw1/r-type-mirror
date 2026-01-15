@@ -25,6 +25,7 @@
 #include "ECS/ForcePodSystem.hpp"
 #include "ECS/PowerUpSpawnSystem.hpp"
 #include "ECS/PowerUpCollisionSystem.hpp"
+#include "ECS/AudioSystem.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/PowerUpFactory.hpp"
 #include "ECS/LevelLoader.hpp"
@@ -37,6 +38,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <array>
+#include <deque>
 
 namespace RType {
     namespace Client {
@@ -53,9 +55,27 @@ namespace RType {
             RType::ECS::Entity playerEntity = RType::ECS::NULL_ENTITY;
         };
 
+        struct PredictedInput {
+            uint32_t sequence = 0;
+            uint8_t inputs = 0;
+            float predictedX = 0.0f;
+            float predictedY = 0.0f;
+            float deltaTime = 0.0f;
+        };
+
+        // Entity interpolation state for smooth rendering of remote entities
+        struct InterpolationState {
+            float prevX = 0.0f;
+            float prevY = 0.0f;
+            float targetX = 0.0f;
+            float targetY = 0.0f;
+            float interpTime = 0.0f;
+            float interpDuration = 1.0f / 60.0f;
+        };
+
         class InGameState : public IState {
         public:
-            InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed);
+            InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed, const std::string& levelPath = "assets/levels/level1.json");
             ~InGameState() override = default;
 
             void Init() override;
@@ -83,15 +103,24 @@ namespace RType {
             void initializeBossHealthBar();
             void destroyBossHealthBar();
             void renderGameOverOverlay();
+            void renderDebugColliders();
             void triggerGameOverIfNeeded();
             void enterResultsScreen();
+
+            // Level progression
+            void checkBossDefeated();
 
             // ECS systems
             void createSystems();
 
             // Server state update handler
-            void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities);
+            void OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks);
+            void ReconcileWithServer(const network::InputAck& ack);
+            void OnLevelComplete(uint8_t completedLevel, uint8_t nextLevel);
             void ApplyPowerUpStateToPlayer(ECS::Entity playerEntity, const network::EntityState& entityState);
+
+            // Component cleanup helper for entity type validation
+            void CleanupInvalidComponents(ECS::Entity entity, network::EntityType expectedType);
 
             struct EnemySpriteConfig {
                 Renderer::SpriteId sprite = Renderer::INVALID_SPRITE_ID;
@@ -132,6 +161,7 @@ namespace RType {
             std::unique_ptr<RType::ECS::HealthSystem> m_healthSystem;
             std::unique_ptr<RType::ECS::ScoreSystem> m_scoreSystem;
             std::unique_ptr<RType::ECS::ShootingSystem> m_shootingSystem;
+            std::unique_ptr<RType::ECS::AudioSystem> m_audioSystem;
             std::unique_ptr<RType::ECS::ShieldSystem> m_shieldSystem;
             std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
             std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
@@ -140,6 +170,14 @@ namespace RType {
             // Bullet textures and sprites
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
             Renderer::SpriteId m_bulletSprite = Renderer::INVALID_SPRITE_ID;
+
+            Audio::SoundId m_playerShootSound = Audio::INVALID_SOUND_ID;
+            Audio::MusicId m_shootMusic = Audio::INVALID_MUSIC_ID;
+            float m_shootSfxCooldown = 0.0f;
+            Audio::MusicId m_gameMusic = Audio::INVALID_MUSIC_ID;
+            bool m_gameMusicPlaying = false;
+            Audio::MusicId m_gameOverMusic = Audio::INVALID_MUSIC_ID;
+            bool m_gameOverMusicPlaying = false;
 
             // Enemy bullet textures and sprites
             Renderer::TextureId m_enemyBulletGreenTexture = Renderer::INVALID_TEXTURE_ID;
@@ -164,9 +202,32 @@ namespace RType {
             uint8_t m_currentInputs = 0;
             uint8_t m_previousInputs = 0;
 
+            std::deque<PredictedInput> m_inputHistory;
+            uint32_t m_inputSequence = 0;
+            uint32_t m_lastAckedSequence = 0;
+            float m_predictedX = 0.0f;
+            float m_predictedY = 0.0f;
+            static constexpr size_t MAX_INPUT_HISTORY = 120;
+            static constexpr float PREDICTION_SPEED = 200.0f;
+
+            // Entity interpolation for remote entities
+            std::unordered_map<uint32_t, InterpolationState> m_interpolationStates;
+
             // Player ships tracking (network entities → ECS entities)
             std::unordered_map<uint32_t, RType::ECS::Entity> m_networkEntityMap;
+            std::unordered_map<uint32_t, uint8_t> m_bulletFlagsMap; // Track bullet flags to detect type changes
             RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player entity mirrored from server
+
+            // Level progression tracking
+            struct LevelProgressionState {
+                bool bossSpawned = false;
+                bool bossDefeated = false;
+                bool levelComplete = false;
+                float transitionTimer = 0.0f;
+                int currentLevelNumber = 1;
+                int totalLevels = 3;
+            };
+            LevelProgressionState m_levelProgress;
 
             // Individual player ship sprites
             Renderer::TextureId m_playerGreenTexture = Renderer::INVALID_TEXTURE_ID;

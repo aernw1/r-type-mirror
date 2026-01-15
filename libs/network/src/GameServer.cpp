@@ -19,6 +19,35 @@ using json = nlohmann::json;
 
 namespace network {
 
+    uint32_t GameServer::GetOrAssignNetworkId(RType::ECS::Entity entity)
+    {
+        // CRITICAL: ECS entity IDs are recycled, sometimes within the same tick.
+        // Therefore, network IDs must be stored on the entity itself (as a component),
+        // not in a map keyed only by the raw ECS entity ID.
+        if (m_registry.HasComponent<RType::ECS::NetworkId>(entity)) {
+            return m_registry.GetComponent<RType::ECS::NetworkId>(entity).id;
+        }
+        const uint32_t id = m_nextNetworkId++;
+        m_registry.AddComponent<RType::ECS::NetworkId>(entity, RType::ECS::NetworkId{id});
+        return id;
+    }
+
+    void GameServer::RegisterNetworkType(uint32_t netId, EntityType type)
+    {
+        auto it = m_networkIdTypes.find(netId);
+        if (it == m_networkIdTypes.end()) {
+            m_networkIdTypes.emplace(netId, type);
+            return;
+        }
+        if (it->second != type) {
+            std::cerr << "[NETID COLLISION] NetworkId " << netId
+                      << " was " << static_cast<int>(it->second)
+                      << " now " << static_cast<int>(type)
+                      << " -- this indicates ID reuse/type confusion" << std::endl;
+            it->second = type;
+        }
+    }
+
     namespace {
         void BasicMovementPattern(GameEntity& enemy, float /*dt*/) {
             enemy.vx = -220.0f;
@@ -48,10 +77,13 @@ namespace network {
 
     const std::array<EnemyStats, 5> GameServer::s_enemyStats = {{{220.0f, 100, 8, 1.0f, -50.0f, 25.0f, 25, BasicMovementPattern}, {200.0f, 50, 3, 0.5f, -50.0f, 20.0f, 20, FastMovementPattern}, {220.0f, 200, 18, 1.8f, -30.0f, -20.0f, 30, TankMovementPattern}, {75.0f, 255, 50, 0.5f, -30.0f, 45.0f, 50, BossMovementPattern}, {100.0f, 100, 10, 1.5f, -30.0f, 45.0f, 25, FormationMovementPattern}}};
 
-    GameServer::GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath) : m_socket(m_ioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)), m_expectedPlayers(expectedPlayers), m_lastSpawnTime(std::chrono::steady_clock::now()), m_levelPath(levelPath) {
+    GameServer::GameServer(Network::INetworkModule* network, uint16_t port,
+        const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath)
+        : m_network(network), m_expectedPlayers(expectedPlayers),
+          m_lastSpawnTime(std::chrono::steady_clock::now()), m_levelPath(levelPath) {
 
-        asio::socket_base::send_buffer_size sendOption(1024 * 1024);
-        m_socket.set_option(sendOption);
+        m_udpSocket = m_network->CreateUdpSocket();
+        m_network->BindUdp(m_udpSocket, port);
 
         m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
         m_bossSystem = std::make_unique<RType::ECS::BossSystem>();
@@ -88,6 +120,10 @@ namespace network {
 
     GameServer::~GameServer() {
         Stop();
+        if (m_network && m_udpSocket != Network::INVALID_SOCKET_ID) {
+            m_network->CloseSocket(m_udpSocket);
+            m_udpSocket = Network::INVALID_SOCKET_ID;
+        }
     }
 
     void GameServer::Run() {
@@ -108,6 +144,33 @@ namespace network {
             std::cout << "Level loaded: " << createdEntities.obstacleColliders.size() << " obstacle colliders, "
                       << createdEntities.enemies.size() << " enemy entities, boss: "
                       << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "CREATED" : "NOT CREATED") << std::endl;
+
+            // Initialize collider positions based on their visual entities
+            for (auto collider : createdEntities.obstacleColliders) {
+                if (!m_registry.IsEntityAlive(collider) ||
+                    !m_registry.HasComponent<RType::ECS::ObstacleMetadata>(collider)) {
+                    continue;
+                }
+                const auto& metadata = m_registry.GetComponent<RType::ECS::ObstacleMetadata>(collider);
+
+                // Sync collider to visual entity position on initialization
+                if (metadata.visualEntity != RType::ECS::NULL_ENTITY &&
+                    m_registry.IsEntityAlive(metadata.visualEntity) &&
+                    m_registry.HasComponent<RType::ECS::Position>(metadata.visualEntity) &&
+                    m_registry.HasComponent<RType::ECS::Position>(collider)) {
+
+                    const auto& visualPos = m_registry.GetComponent<RType::ECS::Position>(metadata.visualEntity);
+                    auto& colliderPos = m_registry.GetComponent<RType::ECS::Position>(collider);
+
+                    // Set absolute position = visual position + offset
+                    colliderPos.x = visualPos.x + metadata.offsetX;
+                    colliderPos.y = visualPos.y + metadata.offsetY;
+
+                    std::cout << "[SERVER INIT] Collider synced: visual=(" << visualPos.x << "," << visualPos.y
+                              << ") offset=(" << metadata.offsetX << "," << metadata.offsetY
+                              << ") -> collider=(" << colliderPos.x << "," << colliderPos.y << ")" << std::endl;
+                }
+            }
 
             size_t obstaclesWithColliders = 0;
             for (auto obsEntity : createdEntities.obstacleColliders) {
@@ -139,12 +202,14 @@ namespace network {
 
         while (m_running) {
             auto now = std::chrono::steady_clock::now();
-            float dt = std::chrono::duration<float>(now - lastTick).count();
             lastTick = now;
 
             ProcessIncomingPackets();
 
-            if (AllPlayersDisconnected()) {
+            // Check if we need to load next level when all players disconnect after boss defeat
+            LoadNextLevelIfNeeded();
+
+            if (AllPlayersDisconnected() && !m_levelComplete) {
                 std::cout << "All players disconnected. Stopping game server..." << std::endl;
                 Stop();
                 break;
@@ -186,23 +251,10 @@ namespace network {
     }
 
     void GameServer::WaitForAllPlayers() {
-        m_socket.non_blocking(true);
-
         while (m_connectedPlayers.size() < m_expectedPlayers.size()) {
-            std::vector<uint8_t> buffer(1024);
-            asio::ip::udp::endpoint rawEndpoint;
-
-            try {
-                size_t bytes = m_socket.receive_from(asio::buffer(buffer), rawEndpoint);
-                if (bytes > 0) {
-                    buffer.resize(bytes);
-                    Endpoint clientEndpoint(rawEndpoint);
-                    HandleHello(buffer, clientEndpoint);
-                }
-            } catch (const asio::system_error& e) {
-                if (e.code() != asio::error::would_block) {
-                    std::cerr << "Error receiving: " << e.what() << std::endl;
-                }
+            auto packet = m_network->ReceiveUdp(m_udpSocket, 1024);
+            if (packet && !packet->data.empty()) {
+                HandleHello(packet->data, packet->from);
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -212,25 +264,21 @@ namespace network {
     }
 
     void GameServer::ProcessIncomingPackets() {
-        std::vector<uint8_t> buffer(1024);
-        asio::ip::udp::endpoint rawEndpoint;
-
-        try {
-            size_t bytes = m_socket.receive_from(asio::buffer(buffer), rawEndpoint);
-            if (bytes > 0) {
-                buffer.resize(bytes);
-                Endpoint clientEndpoint(rawEndpoint);
-                HandlePacket(buffer, clientEndpoint);
-                m_packetsReceived++;
+        int packetsRead = 0;
+        while (packetsRead < 100) {
+            auto packet = m_network->ReceiveUdp(m_udpSocket, 1024);
+            if (!packet) {
+                break;
             }
-        } catch (const asio::system_error& e) {
-            if (e.code() != asio::error::would_block) {
-                std::cerr << "Error receiving: " << e.what() << std::endl;
+            if (!packet->data.empty()) {
+                HandlePacket(packet->data, packet->from);
+                m_packetsReceived++;
+                packetsRead++;
             }
         }
     }
 
-    void GameServer::HandlePacket(const std::vector<uint8_t>& data, const Endpoint& from) {
+    void GameServer::HandlePacket(const std::vector<uint8_t>& data, const Network::Endpoint& from) {
         if (data.empty())
             return;
 
@@ -246,12 +294,15 @@ namespace network {
         case GamePacket::PING:
             HandlePing(data, from);
             break;
+        case GamePacket::DISCONNECT:
+            HandleDisconnect(data, from);
+            break;
         default:
             break;
         }
     }
 
-    void GameServer::HandleHello(const std::vector<uint8_t>& data, const Endpoint& from) {
+    void GameServer::HandleHello(const std::vector<uint8_t>& data, const Network::Endpoint& from) {
         if (data.size() < sizeof(HelloPacket))
             return;
 
@@ -285,7 +336,7 @@ namespace network {
         }
     }
 
-    void GameServer::HandleInput(const std::vector<uint8_t>& data, const Endpoint& /*from*/) {
+    void GameServer::HandleInput(const std::vector<uint8_t>& data, const Network::Endpoint& /*from*/) {
         if (data.size() < sizeof(InputPacket))
             return;
 
@@ -343,7 +394,7 @@ namespace network {
         }
     }
 
-    void GameServer::HandlePing(const std::vector<uint8_t>& data, const Endpoint& from) {
+    void GameServer::HandlePing(const std::vector<uint8_t>& data, const Network::Endpoint& from) {
         if (data.size() < sizeof(PingPacket))
             return;
 
@@ -358,17 +409,62 @@ namespace network {
         SendTo(response, from);
     }
 
+    void GameServer::HandleDisconnect(const std::vector<uint8_t>& data, const Network::Endpoint& from) {
+        for (auto it = m_connectedPlayers.begin(); it != m_connectedPlayers.end(); ++it) {
+            if (it->second.endpoint == from) {
+                std::cout << "[GameServer] Player " << it->second.info.name
+                          << " (hash: " << it->first << ") disconnected gracefully" << std::endl;
+                m_connectedPlayers.erase(it);
+                std::cout << "[GameServer] Remaining players: " << m_connectedPlayers.size() << std::endl;
+                return;
+            }
+        }
+    }
+
     void GameServer::SendStateSnapshots() {
+        std::vector<InputAck> inputAcks;
+        auto players = m_registry.GetEntitiesWithComponent<RType::ECS::Player>();
+        for (const auto& [hash, connPlayer] : m_connectedPlayers) {
+            InputAck ack;
+            ack.playerHash = hash;
+            ack.lastProcessedSeq = connPlayer.lastInputSequence;
+            ack.serverPosX = 0.0f;
+            ack.serverPosY = 0.0f;
+
+            for (auto playerEntity : players) {
+                if (!m_registry.IsEntityAlive(playerEntity) ||
+                    !m_registry.HasComponent<RType::ECS::Player>(playerEntity))
+                    continue;
+                const auto& player = m_registry.GetComponent<RType::ECS::Player>(playerEntity);
+                if (player.playerHash == hash && m_registry.HasComponent<RType::ECS::Position>(playerEntity)) {
+                    const auto& pos = m_registry.GetComponent<RType::ECS::Position>(playerEntity);
+                    ack.serverPosX = pos.x;
+                    ack.serverPosY = pos.y;
+                    break;
+                }
+            }
+            inputAcks.push_back(ack);
+        }
+
         StatePacketHeader header;
         header.tick = m_currentTick;
         header.timestamp = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
         header.entityCount = static_cast<uint16_t>(m_entities.size());
         header.scrollOffset = m_scrollOffset;
+        header.inputAckCount = static_cast<uint8_t>(inputAcks.size());
 
-        std::vector<uint8_t> packet(sizeof(StatePacketHeader) + sizeof(EntityState) * m_entities.size());
+        size_t packetSize = sizeof(StatePacketHeader) +
+                           sizeof(InputAck) * inputAcks.size() +
+                           sizeof(EntityState) * m_entities.size();
+        std::vector<uint8_t> packet(packetSize);
         std::memcpy(packet.data(), &header, sizeof(StatePacketHeader));
 
         size_t offset = sizeof(StatePacketHeader);
+        for (const auto& ack : inputAcks) {
+            std::memcpy(packet.data() + offset, &ack, sizeof(InputAck));
+            offset += sizeof(InputAck);
+        }
+
         for (const auto& entity : m_entities) {
             EntityState state;
             state.entityId = entity.id;
@@ -399,12 +495,15 @@ namespace network {
         Broadcast(packet);
     }
 
-    void GameServer::SendTo(const std::vector<uint8_t>& data, const Endpoint& to) {
+    void GameServer::SendTo(const std::vector<uint8_t>& data, const Network::Endpoint& to) {
+        if (!m_network || m_udpSocket == Network::INVALID_SOCKET_ID) {
+            return;
+        }
         try {
-            m_socket.send_to(asio::buffer(data), to.raw());
+            m_network->SendUdp(m_udpSocket, data, to);
             m_packetsSent++;
         } catch (const std::exception& e) {
-            std::cerr << "Error sending to " << to.address() << ":" << to.port() << " - " << e.what() << std::endl;
+            std::cerr << "Error sending to " << to.address << ":" << to.port << " - " << e.what() << std::endl;
         }
     }
 
@@ -445,6 +544,9 @@ namespace network {
         m_scoreSystem->Update(m_registry, dt);
         m_healthSystem->Update(m_registry, dt);
 
+        // Check if boss is defeated for level progression
+        CheckBossDefeated();
+
         UpdateLegacyEntitiesFromRegistry();
         CleanupDeadEntities();
 
@@ -460,7 +562,7 @@ namespace network {
 
     void GameServer::SpawnPlayer(uint64_t hash, float x, float y) {
         uint8_t playerNumber = static_cast<uint8_t>(m_connectedPlayers.size());
-        RType::ECS::Entity playerEntity = RType::ECS::PlayerFactory::CreatePlayer(m_registry, playerNumber, hash, x, y, nullptr); // No renderer on server
+        RType::ECS::PlayerFactory::CreatePlayer(m_registry, playerNumber, hash, x, y, nullptr);
         std::cout << "[Server] Spawned ECS player entity for playerHash=" << hash << " at (" << x << "," << y << ")" << std::endl;
     }
 
@@ -470,7 +572,6 @@ namespace network {
         std::uniform_real_distribution<float> yDist(50.0f, 550.0f);
 
         EnemyType enemyType = GetRandomEnemyType();
-        const EnemyStats& stats = GetEnemyStats(enemyType);
         float spawnX = 1920.0f;
         float spawnY = yDist(gen);
 
@@ -487,6 +588,17 @@ namespace network {
     void GameServer::SpawnBullet(uint64_t ownerHash, float x, float y) {
         using namespace RType::ECS;
         Entity bulletEntity = m_registry.CreateEntity();
+
+        // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+        if (m_registry.HasComponent<Obstacle>(bulletEntity)) {
+            std::cerr << "[SERVER CLEANUP] Removing Obstacle from bullet entity " << bulletEntity << std::endl;
+            m_registry.RemoveComponent<Obstacle>(bulletEntity);
+        }
+        if (m_registry.HasComponent<ObstacleMetadata>(bulletEntity)) {
+            std::cerr << "[SERVER CLEANUP] Removing ObstacleMetadata from bullet entity " << bulletEntity << std::endl;
+            m_registry.RemoveComponent<ObstacleMetadata>(bulletEntity);
+        }
+
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(500.0f, 0.0f));
 
@@ -524,6 +636,17 @@ namespace network {
         }
 
         Entity bulletEntity = m_registry.CreateEntity();
+
+        // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+        if (m_registry.HasComponent<Obstacle>(bulletEntity)) {
+            std::cerr << "[SERVER CLEANUP] Removing Obstacle from bullet entity " << bulletEntity << std::endl;
+            m_registry.RemoveComponent<Obstacle>(bulletEntity);
+        }
+        if (m_registry.HasComponent<ObstacleMetadata>(bulletEntity)) {
+            std::cerr << "[SERVER CLEANUP] Removing ObstacleMetadata from bullet entity " << bulletEntity << std::endl;
+            m_registry.RemoveComponent<ObstacleMetadata>(bulletEntity);
+        }
+
         uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
         m_registry.AddComponent<Position>(bulletEntity, Position(x, y));
         m_registry.AddComponent<Velocity>(bulletEntity, Velocity(-400.0f, 0.0f));
@@ -615,7 +738,14 @@ namespace network {
     }
 
     void GameServer::CleanupDeadEntities() {
-        m_entities.erase(std::remove_if(m_entities.begin(), m_entities.end(), [this](const GameEntity& e) { if (e.health == 0 && e.type == EntityType::ENEMY) { m_enemyShootCooldowns.erase(e.id); } return e.health == 0; }), m_entities.end());
+        // NOTE: `GameEntity::id` is a stable *network* ID (not the ECS entity ID).
+        // Never use it to index ECS-side maps like `m_enemyShootCooldowns`.
+        m_entities.erase(
+            std::remove_if(
+                m_entities.begin(),
+                m_entities.end(),
+                [](const GameEntity& e) { return e.health == 0; }),
+            m_entities.end());
     }
 
     void GameServer::UpdateLegacyEntitiesFromRegistry() {
@@ -638,8 +768,9 @@ namespace network {
             const auto& player = m_registry.GetComponent<Player>(playerEntity);
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(playerEntity);
+            entity.id = GetOrAssignNetworkId(playerEntity);
             entity.type = EntityType::PLAYER;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
@@ -726,8 +857,9 @@ namespace network {
             const auto& enemy = m_registry.GetComponent<Enemy>(enemyEntity);
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(enemyEntity);
+            entity.id = GetOrAssignNetworkId(enemyEntity);
             entity.type = EntityType::ENEMY;
+            RegisterNetworkType(entity.id, entity.type);
             entity.flags = static_cast<uint8_t>(enemy.type);
             entity.x = pos.x;
             entity.y = pos.y;
@@ -764,8 +896,9 @@ namespace network {
             uint8_t healthValue = static_cast<uint8_t>(std::min(100.0f, std::max(0.0f, healthPercent)));
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(bossEntity);
+            entity.id = GetOrAssignNetworkId(bossEntity);
             entity.type = EntityType::BOSS;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
@@ -778,6 +911,21 @@ namespace network {
         }
 
         auto bullets = m_registry.GetEntitiesWithComponent<Bullet>();
+        // SAFETY NET: Clean up any contaminated bullets that accidentally carry obstacle data.
+        for (auto bulletEntity : bullets) {
+            if (m_registry.HasComponent<RType::ECS::Obstacle>(bulletEntity) ||
+                m_registry.HasComponent<RType::ECS::ObstacleMetadata>(bulletEntity)) {
+                std::cerr << "[SERVER CLEANUP] Bullet entity " << bulletEntity
+                          << " had Obstacle components; removing to prevent obstacle desync." << std::endl;
+                if (m_registry.HasComponent<RType::ECS::Obstacle>(bulletEntity)) {
+                    m_registry.RemoveComponent<RType::ECS::Obstacle>(bulletEntity);
+                }
+                if (m_registry.HasComponent<RType::ECS::ObstacleMetadata>(bulletEntity)) {
+                    m_registry.RemoveComponent<RType::ECS::ObstacleMetadata>(bulletEntity);
+                }
+            }
+        }
+
         for (auto bulletEntity : bullets) {
             if (!m_registry.IsEntityAlive(bulletEntity) ||
                 !m_registry.HasComponent<Position>(bulletEntity) ||
@@ -788,6 +936,7 @@ namespace network {
             const auto& pos = m_registry.GetComponent<Position>(bulletEntity);
             const auto& vel = m_registry.GetComponent<Velocity>(bulletEntity);
             const auto& bullet = m_registry.GetComponent<Bullet>(bulletEntity);
+            (void)bullet;
 
             uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
             uint8_t flags = 0;
@@ -813,8 +962,9 @@ namespace network {
             }
 
             GameEntity entity;
-            entity.id = bulletId;
+            entity.id = GetOrAssignNetworkId(bulletEntity);
             entity.type = EntityType::BULLET;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
@@ -827,19 +977,95 @@ namespace network {
         }
 
         auto obstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
-        const size_t maxObstaclesPerSnapshot = 64;
+        const size_t maxObstaclesPerSnapshot = 256;  // Increased from 64 to support larger levels
+
+        static bool loggedObstacleCount = false;
+        if (!loggedObstacleCount) {
+            std::cout << "[SERVER OBSTACLE SYNC] Total obstacles with Obstacle component: " << obstacles.size() << std::endl;
+            loggedObstacleCount = true;
+        }
+
         size_t obstacleCount = 0;
+        static int serverObstacleLog = 0;
         for (auto obstacleEntity : obstacles) {
             if (!m_registry.IsEntityAlive(obstacleEntity) ||
                 !m_registry.HasComponent<Position>(obstacleEntity)) {
                 continue;
             }
 
+            // Hard scrub: obstacles must be static colliders only.
+            // If they carry Velocity/Bullet/Shooter/WeaponSlot, strip obstacle data and skip broadcast.
+            bool contaminated = false;
+            if (m_registry.HasComponent<Velocity>(obstacleEntity) ||
+                m_registry.HasComponent<Bullet>(obstacleEntity) ||
+                m_registry.HasComponent<Shooter>(obstacleEntity) ||
+                m_registry.HasComponent<WeaponSlot>(obstacleEntity)) {
+                contaminated = true;
+            }
+            if (contaminated) {
+                std::cerr << "[SERVER OBSTACLE SCRUB] Entity " << obstacleEntity
+                          << " had invalid components (Velocity/Bullet/Shooter/WeaponSlot); "
+                          << "removing Obstacle/ObstacleMetadata to prevent desync." << std::endl;
+                if (m_registry.HasComponent<Obstacle>(obstacleEntity)) {
+                    m_registry.RemoveComponent<Obstacle>(obstacleEntity);
+                }
+                if (m_registry.HasComponent<ObstacleMetadata>(obstacleEntity)) {
+                    m_registry.RemoveComponent<ObstacleMetadata>(obstacleEntity);
+                }
+                // Also remove velocity if present so it stops moving.
+                if (m_registry.HasComponent<Velocity>(obstacleEntity)) {
+                    m_registry.RemoveComponent<Velocity>(obstacleEntity);
+                }
+                continue;
+            }
+
+            // CRITICAL FIX: If an obstacle somehow has Bullet or Shooter components, strip obstacle data
+            // so it can't be broadcast as an obstacle. This prevents “obstacle bullets” even if
+            // contamination occurs elsewhere.
+            if (m_registry.HasComponent<Bullet>(obstacleEntity) ||
+                m_registry.HasComponent<Shooter>(obstacleEntity) ||
+                m_registry.HasComponent<WeaponSlot>(obstacleEntity)) {
+                std::cerr << "[SERVER BUG] Entity " << obstacleEntity
+                          << " has Obstacle + Bullet/Shooter; removing Obstacle to avoid desync." << std::endl;
+                if (m_registry.HasComponent<Obstacle>(obstacleEntity)) {
+                    m_registry.RemoveComponent<Obstacle>(obstacleEntity);
+                }
+                if (m_registry.HasComponent<ObstacleMetadata>(obstacleEntity)) {
+                    m_registry.RemoveComponent<ObstacleMetadata>(obstacleEntity);
+                }
+                continue;
+            }
+
             const auto& pos = m_registry.GetComponent<Position>(obstacleEntity);
 
+            // DEBUG: Log all obstacles being broadcast to help identify the bug
+            static int broadcastLog = 0;
+            if (broadcastLog < 10 || (broadcastLog % 100 == 0)) {
+                std::cerr << "[OBSTACLE BROADCAST] Entity " << obstacleEntity
+                          << " pos=(" << pos.x << "," << pos.y << ")"
+                          << " hasVelocity=" << m_registry.HasComponent<Velocity>(obstacleEntity)
+                          << " hasBullet=" << m_registry.HasComponent<Bullet>(obstacleEntity) << std::endl;
+                broadcastLog++;
+            }
+
+            // Debug: Log first few obstacle positions sent to clients
+            if (serverObstacleLog < 5) {
+                std::cout << "[SERVER SEND] Obstacle " << obstacleEntity
+                          << " sending pos=(" << pos.x << "," << pos.y << ")";
+                if (m_registry.HasComponent<RType::ECS::ObstacleMetadata>(obstacleEntity)) {
+                    const auto& meta = m_registry.GetComponent<RType::ECS::ObstacleMetadata>(obstacleEntity);
+                    std::cout << " uniqueId=" << meta.uniqueId
+                              << " visualEntity=" << meta.visualEntity
+                              << " offset=(" << meta.offsetX << "," << meta.offsetY << ")";
+                }
+                std::cout << std::endl;
+                serverObstacleLog++;
+            }
+
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(obstacleEntity);
+            entity.id = GetOrAssignNetworkId(obstacleEntity);
             entity.type = EntityType::OBSTACLE;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = 0.0f;
@@ -852,11 +1078,18 @@ namespace network {
             }
             entity.ownerHash = obstacleIndex;
             entity.score = 0;
+
             m_entities.push_back(entity);
             obstacleCount++;
             if (obstacleCount >= maxObstaclesPerSnapshot) {
                 break;
             }
+        }
+
+        static bool loggedObstacleSend = false;
+        if (!loggedObstacleSend) {
+            std::cout << "[SERVER OBSTACLE SYNC] Added " << obstacleCount << " obstacles to network snapshot" << std::endl;
+            loggedObstacleSend = true;
         }
 
         // Sync powerups
@@ -873,8 +1106,9 @@ namespace network {
             const auto& powerup = m_registry.GetComponent<PowerUp>(powerupEntity);
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(powerupEntity);
+            entity.id = GetOrAssignNetworkId(powerupEntity);
             entity.type = EntityType::POWERUP;
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vel.dx;
@@ -913,8 +1147,9 @@ namespace network {
             }
 
             GameEntity entity;
-            entity.id = static_cast<uint32_t>(podEntity);
+            entity.id = GetOrAssignNetworkId(podEntity);
             entity.type = EntityType::PLAYER; // Treat as player entity for rendering
+            RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vx;
@@ -972,6 +1207,72 @@ namespace network {
         }
 
         return currentState;
+    }
+
+    void GameServer::CheckBossDefeated() {
+        if (m_bossDefeated) {
+            return;
+        }
+
+        auto killedBosses = m_registry.GetEntitiesWithComponent<RType::ECS::BossKilled>();
+
+        if (!killedBosses.empty()) {
+            m_bossDefeated = true;
+            m_levelComplete = true;
+
+            std::cout << "[GameServer] Boss defeated! Level complete - broadcasting to clients" << std::endl;
+
+            LevelCompletePacket levelComplete;
+            levelComplete.completedLevel = m_currentLevel;
+            levelComplete.nextLevel = m_currentLevel + 1;
+
+            std::vector<uint8_t> data(sizeof(LevelCompletePacket));
+            std::memcpy(data.data(), &levelComplete, sizeof(LevelCompletePacket));
+            Broadcast(data);
+        }
+    }
+
+    void GameServer::LoadNextLevelIfNeeded() {
+        if (m_levelComplete && m_connectedPlayers.empty()) {
+            m_currentLevel++;
+            std::string nextLevelPath = "assets/levels/level" + std::to_string(m_currentLevel) + ".json";
+
+            std::cout << "[GameServer] All players disconnected after level complete. Loading next level: " << nextLevelPath << std::endl;
+
+            auto positionEntities = m_registry.GetEntitiesWithComponent<RType::ECS::Position>();
+            std::vector<RType::ECS::Entity> toDestroy(positionEntities.begin(), positionEntities.end());
+
+            for (RType::ECS::Entity entity : toDestroy) {
+                m_registry.DestroyEntity(entity);
+            }
+
+            m_entities.clear();
+            m_nextEntityId = 1;
+
+            // Reset level state
+            m_bossDefeated = false;
+            m_levelComplete = false;
+            m_scrollOffset = 0.0f;
+            m_enemyShootCooldowns.clear();
+            m_enemyBulletTypes.clear();
+
+            // Load new level
+            m_levelPath = nextLevelPath;
+            try {
+                auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
+                std::cout << "[GameServer] Level " << m_currentLevel << " loaded" << std::endl;
+
+                auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
+                std::cout << "[GameServer] Level entities created: "
+                          << createdEntities.obstacleColliders.size() << " obstacles, "
+                          << createdEntities.enemies.size() << " enemies, "
+                          << "boss: " << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "YES" : "NO")
+                          << std::endl;
+
+            } catch (const std::exception& e) {
+                std::cerr << "[GameServer] Failed to load level " << m_currentLevel << ": " << e.what() << std::endl;
+            }
+        }
     }
 
 }

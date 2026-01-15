@@ -17,15 +17,62 @@ using namespace RType::ECS;
 namespace RType {
     namespace Client {
 
-        InGameState::InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed) : m_machine(machine), m_context(context), m_gameSeed(seed) {
+        InGameState::InGameState(GameStateMachine& machine, GameContext& context, uint32_t seed, const std::string& levelPath)
+            : m_machine(machine), m_context(context), m_gameSeed(seed), m_currentLevelPath(levelPath) {
             m_renderer = context.renderer;
         }
 
         void InGameState::Init() {
             Core::Logger::Info("[GameState] Initializing game");
 
+            if (m_context.audio) {
+                m_audioSystem = std::make_unique<RType::ECS::AudioSystem>(m_context.audio.get());
+                
+                m_shootMusic = m_context.audio->LoadMusic("assets/sounds/players_shoot.flac");
+                if (m_shootMusic == Audio::INVALID_MUSIC_ID) {
+                     m_shootMusic = m_context.audio->LoadMusic("../assets/sounds/players_shoot.flac");
+                }
+                std::cout << "[DEBUG] Shoot Music ID: " << m_shootMusic << std::endl;
+                std::cout << "[DEBUG] Shoot Sound ID: " << m_playerShootSound << std::endl;
+
+                std::cout << "[DEBUG] Loading stage1.flac..." << std::endl;
+                m_gameMusic = m_context.audio->LoadMusic("assets/sounds/stage1.flac");
+                if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
+                    m_gameMusic = m_context.audio->LoadMusic("../assets/sounds/stage1.flac");
+                }
+                std::cout << "[DEBUG] Game Music ID: " << m_gameMusic << std::endl;
+
+                std::cout << "[DEBUG] Loading gameover.flac..." << std::endl;
+                m_gameOverMusic = m_context.audio->LoadMusic("assets/sounds/gameover.flac");
+                if (m_gameOverMusic == Audio::INVALID_MUSIC_ID) {
+                    m_gameOverMusic = m_context.audio->LoadMusic("../assets/sounds/gameover.flac");
+                }
+                std::cout << "[DEBUG] GameOver Music ID: " << m_gameOverMusic << std::endl;
+
+                if (m_gameMusic != Audio::INVALID_MUSIC_ID) {
+                    auto cmd = m_registry.CreateEntity();
+                    auto& me = m_registry.AddComponent<MusicEffect>(cmd, MusicEffect(m_gameMusic));
+                    me.play = true;
+                    me.stop = false;
+                    me.loop = true;
+                    me.volume = 0.35f;
+                    me.pitch = 1.0f;
+                    m_gameMusicPlaying = true;
+                }
+            }
+
             if (m_context.networkClient) {
-                m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities) { this->OnServerStateUpdate(tick, entities); });
+                m_context.networkClient->SetStateCallback([this](uint32_t tick, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks) { this->OnServerStateUpdate(tick, entities, inputAcks); });
+                m_context.networkClient->SetLevelCompleteCallback([this](uint8_t completedLevel, uint8_t nextLevel) { this->OnLevelComplete(completedLevel, nextLevel); });
+
+                if (!m_context.networkClient->IsConnected()) {
+                    Core::Logger::Info("[GameState] Reconnecting to server after level transition...");
+                    if (!m_context.networkClient->ConnectToServer()) {
+                        Core::Logger::Error("[GameState] Failed to reconnect to server!");
+                    } else {
+                        Core::Logger::Info("[GameState] Reconnected to server successfully");
+                    }
+                }
             } else {
                 Core::Logger::Warning("[GameState] No network client available");
             }
@@ -41,6 +88,11 @@ namespace RType {
 
             loadLevel(m_currentLevelPath);
             createSystems();
+
+            if (m_shootingSystem && m_playerShootSound != Audio::INVALID_SOUND_ID) {
+                m_shootingSystem->SetShootSound(m_playerShootSound);
+            }
+
             initializeFromLevel();
             if (!m_isNetworkSession) {
                 initializePlayers();
@@ -193,6 +245,8 @@ namespace RType {
             m_obstacleSpriteEntities = m_levelEntities.obstacleVisuals;
             m_obstacleColliderEntities = m_levelEntities.obstacleColliders;
             m_obstacleIdToCollider.clear();
+
+            // Initialize collider positions based on their visual entities
             for (auto collider : m_obstacleColliderEntities) {
                 if (!m_registry.IsEntityAlive(collider) ||
                     !m_registry.HasComponent<ECS::ObstacleMetadata>(collider)) {
@@ -200,7 +254,25 @@ namespace RType {
                 }
                 const auto& metadata = m_registry.GetComponent<ECS::ObstacleMetadata>(collider);
                 m_obstacleIdToCollider[metadata.uniqueId] = collider;
+
+                // Sync collider to visual entity position on initialization
+                if (metadata.visualEntity != ECS::NULL_ENTITY &&
+                    m_registry.IsEntityAlive(metadata.visualEntity) &&
+                    m_registry.HasComponent<ECS::Position>(metadata.visualEntity) &&
+                    m_registry.HasComponent<ECS::Position>(collider)) {
+
+                    const auto& visualPos = m_registry.GetComponent<ECS::Position>(metadata.visualEntity);
+                    auto& colliderPos = m_registry.GetComponent<ECS::Position>(collider);
+
+                    // Set absolute position = visual position + offset
+                    colliderPos.x = visualPos.x + metadata.offsetX;
+                    colliderPos.y = visualPos.y + metadata.offsetY;
+
+                }
             }
+
+            std::cout << "[INIT] Built m_obstacleIdToCollider map with " << m_obstacleIdToCollider.size()
+                      << " entries from " << m_obstacleColliderEntities.size() << " collider entities" << std::endl;
         }
 
         void InGameState::createSystems() {
@@ -215,32 +287,34 @@ namespace RType {
             m_renderingSystem = std::make_unique<RType::ECS::RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<RType::ECS::TextRenderingSystem>(m_renderer.get());
 
-            m_powerUpSpawnSystem = std::make_unique<RType::ECS::PowerUpSpawnSystem>(
-                m_renderer.get(),
-                m_levelData.config.screenWidth,
-                m_levelData.config.screenHeight);
-            m_powerUpSpawnSystem->SetSpawnInterval(m_levelData.config.powerUpSpawnInterval);
-            m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(m_renderer.get());
             m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
             m_shieldSystem = std::make_unique<RType::ECS::ShieldSystem>();
 
             if (!m_isNetworkSession) {
+                m_powerUpSpawnSystem = std::make_unique<RType::ECS::PowerUpSpawnSystem>(
+                    m_renderer.get(),
+                    m_levelData.config.screenWidth,
+                    m_levelData.config.screenHeight);
+                m_powerUpSpawnSystem->SetSpawnInterval(m_levelData.config.powerUpSpawnInterval);
+                m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(m_renderer.get());
+                m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
+                m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
                 m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(bulletSprite);
                 m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
                 m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
-                m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
                 m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
-                m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
                 m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
                 m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
                 m_scoreSystem = std::make_unique<RType::ECS::ScoreSystem>();
             } else {
+                m_powerUpSpawnSystem.reset();
+                m_powerUpCollisionSystem.reset();
+                m_collisionDetectionSystem.reset();
+                m_playerResponseSystem.reset();
                 m_shootingSystem.reset();
                 m_movementSystem.reset();
                 m_inputSystem.reset();
-                m_collisionDetectionSystem.reset();
                 m_bulletResponseSystem.reset();
-                m_playerResponseSystem.reset();
                 m_obstacleResponseSystem.reset();
                 m_healthSystem.reset();
                 m_scoreSystem.reset();

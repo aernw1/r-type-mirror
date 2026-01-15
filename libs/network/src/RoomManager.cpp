@@ -36,8 +36,10 @@ namespace network {
         }
     }
 
-    RoomManager::RoomManager(uint16_t port, size_t maxRooms, size_t minPlayersPerRoom)
-        : _server(port), _maxRooms(maxRooms), _minPlayersPerRoom(minPlayersPerRoom), _rng(std::random_device{}()) {
+    RoomManager::RoomManager(Network::INetworkModule* network, uint16_t port, size_t maxRooms,
+        size_t minPlayersPerRoom)
+        : _server(network, port), _maxRooms(maxRooms), _minPlayersPerRoom(minPlayersPerRoom),
+          _rng(std::random_device{}()) {
         std::cout << "[RoomManager] Server started on port " << port << " (maxRooms=" << _maxRooms << ", minPlayers=" << _minPlayersPerRoom << ")" << std::endl;
     }
 
@@ -55,7 +57,7 @@ namespace network {
     void RoomManager::acceptNewClients() {
         while (auto newClient = _server.accept()) {
             std::cout << "[RoomManager] New connection accepted (pending room selection)" << std::endl;
-            _pendingClients.push_back(std::make_unique<TcpSocket>(std::move(*newClient)));
+            _pendingClients.push_back(std::make_unique<NetworkTcpSocket>(std::move(*newClient)));
         }
     }
 
@@ -72,7 +74,7 @@ namespace network {
             }
 
             size_t sizeBefore = _pendingClients.size();
-            TcpSocket* clientPtr = _pendingClients[i].get();
+            NetworkTcpSocket* clientPtr = _pendingClients[i].get();
 
             while (auto data = clientPtr->receive()) {
                 handlePacket(*clientPtr, *data);
@@ -126,7 +128,7 @@ namespace network {
         }
     }
 
-    void RoomManager::handlePacket(TcpSocket& client, const std::vector<uint8_t>& data) {
+    void RoomManager::handlePacket(NetworkTcpSocket& client, const std::vector<uint8_t>& data) {
         if (data.empty())
             return;
 
@@ -150,7 +152,7 @@ namespace network {
         }
     }
 
-    void RoomManager::handleListRooms(TcpSocket& client) {
+    void RoomManager::handleListRooms(NetworkTcpSocket& client) {
         Serializer s;
         s.writeU8(static_cast<uint8_t>(_rooms.size()));
 
@@ -167,7 +169,7 @@ namespace network {
         std::cout << "[RoomManager] Sent room list (" << _rooms.size() << " rooms)" << std::endl;
     }
 
-    void RoomManager::handleCreateRoom(TcpSocket& client, Deserializer& d) {
+    void RoomManager::handleCreateRoom(NetworkTcpSocket& client, Deserializer& d) {
         std::string roomName = d.readString(ROOM_NAME_SIZE);
 
         if (_rooms.size() >= _maxRooms) {
@@ -189,11 +191,11 @@ namespace network {
         std::cout << "[RoomManager] Room '" << roomName << "' created with ID " << roomId << std::endl;
     }
 
-    void RoomManager::handleJoinRoom(TcpSocket& client, Deserializer& d) {
+    void RoomManager::handleJoinRoom(NetworkTcpSocket& client, Deserializer& d) {
         uint32_t roomId = d.readU32();
 
         auto it = std::find_if(_pendingClients.begin(), _pendingClients.end(),
-            [&client](const std::unique_ptr<TcpSocket>& ptr) {
+            [&client](const std::unique_ptr<NetworkTcpSocket>& ptr) {
                 return ptr.get() == &client;
             });
 
@@ -436,7 +438,7 @@ namespace network {
         return count;
     }
 
-    void RoomManager::sendTo(TcpSocket& client, LobbyPacket type, const std::vector<uint8_t>& payload) {
+    void RoomManager::sendTo(NetworkTcpSocket& client, LobbyPacket type, const std::vector<uint8_t>& payload) {
         std::cout << "[RoomManager] >> SEND " << lobbyPacketName(type) << " to client" << std::endl;
         Serializer s;
         s.writeU8(static_cast<uint8_t>(type));

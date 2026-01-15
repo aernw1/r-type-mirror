@@ -1,5 +1,6 @@
 #include "ECS/MovementSystem.hpp"
 #include "ECS/Component.hpp"
+#include <iostream>
 
 namespace RType {
 
@@ -10,6 +11,18 @@ namespace RType {
 
             for (Entity entity : entities) {
                 if (!registry.HasComponent<Position>(entity)) {
+                    continue;
+                }
+
+                // CRITICAL FIX: Skip obstacles - they should NEVER move!
+                if (registry.HasComponent<Obstacle>(entity)) {
+                    static int obstacleVelocityLog = 0;
+                    if (obstacleVelocityLog < 10) {
+                        std::cerr << "[MOVEMENT BUG] Obstacle entity " << entity
+                                  << " has Velocity component! Removing it." << std::endl;
+                        obstacleVelocityLog++;
+                    }
+                    registry.RemoveComponent<Velocity>(entity);
                     continue;
                 }
 

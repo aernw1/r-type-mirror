@@ -53,6 +53,7 @@ namespace network {
         PING = 0x04,       // Bidirectional: Keepalive
         PONG = 0x05,       // Bidirectional: Keepalive response
         DISCONNECT = 0x06, // Client → Server: Graceful disconnect
+        LEVEL_COMPLETE = 0x07, // Server → Client: Level completed (boss defeated)
     };
 
     // Input flags bitfield
@@ -164,6 +165,14 @@ namespace network {
         uint8_t fireRate = 20;
     };
 
+    // Input acknowledgment per player (sent with STATE packet)
+    struct InputAck {
+        uint64_t playerHash = 0;
+        uint32_t lastProcessedSeq = 0;
+        float serverPosX = 0.0f;
+        float serverPosY = 0.0f;
+    };
+
     // STATE packet (Server → Client)
     struct StatePacketHeader {
         uint8_t type = static_cast<uint8_t>(GamePacket::STATE);
@@ -171,6 +180,7 @@ namespace network {
         uint32_t timestamp = 0;    // Server timestamp (ms)
         uint16_t entityCount = 0;  // Number of entities following
         float scrollOffset = 0.0f; // Background scroll offset
+        uint8_t inputAckCount = 0;
     };
 
     // PING packet
@@ -183,6 +193,13 @@ namespace network {
     struct PongPacket {
         uint8_t type = static_cast<uint8_t>(GamePacket::PONG);
         uint32_t timestamp = 0; // Echo of PING timestamp
+    };
+
+    // LEVEL_COMPLETE packet (Server → Client)
+    struct LevelCompletePacket {
+        uint8_t type = static_cast<uint8_t>(GamePacket::LEVEL_COMPLETE);
+        uint8_t completedLevel = 0;  // Level number that was completed
+        uint8_t nextLevel = 0;        // Next level to load (0 = no more levels)
     };
 
 #pragma pack(pop)

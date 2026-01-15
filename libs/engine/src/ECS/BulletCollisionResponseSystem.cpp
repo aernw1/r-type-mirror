@@ -69,7 +69,6 @@ namespace RType {
 
                     if (health.current <= 0) {
                         health.current = 0;
-                        // add bossKilled event For later to transition to new level
                     }
                 }
 

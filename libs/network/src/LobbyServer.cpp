@@ -12,7 +12,10 @@
 
 namespace network {
 
-    LobbyServer::LobbyServer(uint16_t port, size_t maxPlayers, size_t minPlayers) : _server(port), _maxPlayers(maxPlayers), _minPlayers(minPlayers), _rng(std::random_device{}()) {
+    LobbyServer::LobbyServer(Network::INetworkModule* network, uint16_t port, size_t maxPlayers,
+        size_t minPlayers)
+        : _server(network, port), _maxPlayers(maxPlayers), _minPlayers(minPlayers),
+          _rng(std::random_device{}()) {
         _clients.resize(_maxPlayers);
         _players.resize(_maxPlayers);
         _lastUpdateTime = std::chrono::steady_clock::now();

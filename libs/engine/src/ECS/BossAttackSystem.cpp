@@ -8,6 +8,7 @@
 #include "ECS/BossAttackSystem.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
+#include <iostream>
 #include <cmath>
 
 #ifndef M_PI
@@ -22,6 +23,10 @@ namespace RType {
 
             for (auto bossEntity : bosses) {
                 if (!registry.IsEntityAlive(bossEntity)) {
+                    continue;
+                }
+
+                if (registry.HasComponent<BossKilled>(bossEntity)) {
                     continue;
                 }
 
@@ -84,6 +89,16 @@ namespace RType {
         void BossAttackSystem::CreateBossBullet(Registry& registry, float x, float y, float angle, float speed) {
             Entity bullet = registry.CreateEntity();
 
+            // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+            if (registry.HasComponent<Obstacle>(bullet)) {
+                std::cerr << "[BOSS CLEANUP] Removing Obstacle from bullet entity " << bullet << std::endl;
+                registry.RemoveComponent<Obstacle>(bullet);
+            }
+            if (registry.HasComponent<ObstacleMetadata>(bullet)) {
+                std::cerr << "[BOSS CLEANUP] Removing ObstacleMetadata from bullet entity " << bullet << std::endl;
+                registry.RemoveComponent<ObstacleMetadata>(bullet);
+            }
+
             registry.AddComponent<Position>(bullet, Position{x, y});
 
             float vx = std::cos(angle) * speed;
@@ -108,7 +123,17 @@ namespace RType {
 
         void BossAttackSystem::CreateBlackOrb(Registry& registry, Entity bossEntity, float bossX, float bossY) {
             Entity orb = registry.CreateEntity();
-            
+
+            // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+            if (registry.HasComponent<Obstacle>(orb)) {
+                std::cerr << "[BOSS CLEANUP] Removing Obstacle from orb entity " << orb << std::endl;
+                registry.RemoveComponent<Obstacle>(orb);
+            }
+            if (registry.HasComponent<ObstacleMetadata>(orb)) {
+                std::cerr << "[BOSS CLEANUP] Removing ObstacleMetadata from orb entity " << orb << std::endl;
+                registry.RemoveComponent<ObstacleMetadata>(orb);
+            }
+
             const float spawnX = bossX + 70.0f;
             const float spawnY = bossY + 160.0f;
 
@@ -151,6 +176,16 @@ namespace RType {
 
         void BossAttackSystem::CreateThirdBullet(Registry& registry, Entity bossEntity, float bossX, float bossY) {
             Entity thirdBullet = registry.CreateEntity();
+
+            // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+            if (registry.HasComponent<Obstacle>(thirdBullet)) {
+                std::cerr << "[BOSS CLEANUP] Removing Obstacle from third bullet entity " << thirdBullet << std::endl;
+                registry.RemoveComponent<Obstacle>(thirdBullet);
+            }
+            if (registry.HasComponent<ObstacleMetadata>(thirdBullet)) {
+                std::cerr << "[BOSS CLEANUP] Removing ObstacleMetadata from third bullet entity " << thirdBullet << std::endl;
+                registry.RemoveComponent<ObstacleMetadata>(thirdBullet);
+            }
 
             const float spawnX = bossX + 350.0f;
             const float spawnY = bossY + -30.0f;

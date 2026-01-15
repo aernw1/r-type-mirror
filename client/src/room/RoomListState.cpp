@@ -46,7 +46,16 @@ namespace RType {
                 m_bgTexture = m_renderer->LoadTexture("../assets/backgrounds/1.jpg");
             }
 
-            m_roomClient = std::make_unique<network::RoomClient>(m_context.serverIp, m_context.serverPort);
+            if (!m_context.networkModule) {
+                m_hasError = true;
+                m_errorMessage = "Internal error: network module missing";
+                m_errorTimer = 3.0f;
+                createUI();
+                return;
+            }
+
+            m_roomClient = std::make_unique<network::RoomClient>(
+                m_context.networkModule.get(), m_context.serverIp, m_context.serverPort);
 
             if (!m_roomClient->isConnected()) {
                 m_hasError = true;
@@ -65,7 +74,7 @@ namespace RType {
                 m_roomClient->onRoomJoined([this](network::JoinRoomStatus status) {
                     if (status == network::JoinRoomStatus::SUCCESS) {
                         std::cout << "[RoomListState] Joined room! Transitioning to lobby..." << std::endl;
-                        network::TcpSocket socket = m_roomClient->releaseSocket();
+                        network::NetworkTcpSocket socket = m_roomClient->releaseSocket();
                         m_machine.ChangeState(std::make_unique<LobbyState>(m_machine, m_context, std::move(socket)));
                     } else {
                         m_hasError = true;

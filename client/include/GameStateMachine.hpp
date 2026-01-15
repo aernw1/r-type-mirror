@@ -13,9 +13,10 @@
 #include <vector>
 #include "Renderer/IRenderer.hpp"
 #include "ECS/Registry.hpp"
+#include "Audio/IAudio.hpp"
 #include "../../libs/network/include/GameClient.hpp"
-#include "../../libs/network/include/TcpSocket.hpp"
 #include "../../libs/network/include/Protocol.hpp"
+#include "../../libs/network/include/INetworkModule.hpp"
 
 namespace RType {
     namespace Client {
@@ -32,6 +33,8 @@ namespace RType {
             std::shared_ptr<Renderer::IRenderer> renderer;
             std::shared_ptr<ECS::Registry> registry;
             std::shared_ptr<network::GameClient> networkClient;
+            std::shared_ptr<Network::INetworkModule> networkModule;
+            std::shared_ptr<Audio::IAudio> audio;
 
             std::string playerName;
             std::string serverIp;

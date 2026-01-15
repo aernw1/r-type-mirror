@@ -9,13 +9,14 @@
 
 #include "GameStateMachine.hpp"
 #include "LobbyClient.hpp"
-#include "TcpSocket.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
+#include "ECS/AudioSystem.hpp"
 #include "Renderer/IRenderer.hpp"
 #include "GameState.hpp"
+#include "Audio/IAudio.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -29,7 +30,7 @@ namespace RType {
         class LobbyState : public IState {
         public:
             LobbyState(GameStateMachine& machine, GameContext& context);
-            LobbyState(GameStateMachine& machine, GameContext& context, network::TcpSocket&& socket);
+            LobbyState(GameStateMachine& machine, GameContext& context, network::NetworkTcpSocket&& socket);
             ~LobbyState() override = default;
 
             void Init() override;
@@ -48,13 +49,17 @@ namespace RType {
             GameStateMachine& m_machine;
             GameContext& m_context;
 
-            network::LobbyClient m_client;
+            std::unique_ptr<network::LobbyClient> m_client;
             std::string m_playerName;
 
             RType::ECS::Registry m_registry;
             std::shared_ptr<Renderer::IRenderer> m_renderer;
             std::unique_ptr<RType::ECS::RenderingSystem> m_renderingSystem;
             std::unique_ptr<RType::ECS::TextRenderingSystem> m_textSystem;
+            std::unique_ptr<RType::ECS::AudioSystem> m_audioSystem;
+
+            Audio::MusicId m_lobbyMusic = Audio::INVALID_MUSIC_ID;
+            bool m_lobbyMusicPlaying = false;
 
             Renderer::FontId m_fontLarge = Renderer::INVALID_FONT_ID;
             Renderer::FontId m_fontMedium = Renderer::INVALID_FONT_ID;
