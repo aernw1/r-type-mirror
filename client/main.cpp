@@ -35,6 +35,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Player Name: " << playerName << std::endl;
     std::cout << "=====================" << std::endl;
 
+    RType::Client::SettingsState::LoadSettingsFromFile();
+
     auto renderer = std::make_shared<Renderer::SFMLRenderer>();
     auto networkModule = std::make_shared<Network::AsioNetworkModule>();
     networkModule->Initialize(nullptr);
@@ -42,11 +44,11 @@ int main(int argc, char* argv[]) {
 
     Renderer::WindowConfig config;
     config.title = "R-Type - " + playerName;
-    config.width = 1280;
-    config.height = 720;
-    config.resizable = true;
-    config.fullscreen = false;
-    config.targetFramerate = 60;
+    config.width = RType::Client::SettingsState::GetScreenWidth();
+    config.height = RType::Client::SettingsState::GetScreenHeight();
+    config.fullscreen = RType::Client::SettingsState::GetFullscreen();
+    config.resizable = !config.fullscreen;
+    config.targetFramerate = RType::Client::SettingsState::GetTargetFramerate();
 
     if (!renderer->CreateWindow(config)) {
         std::cerr << "Failed to create window" << std::endl;
@@ -61,10 +63,7 @@ int main(int argc, char* argv[]) {
     context.serverPort = serverPort;
     context.playerName = playerName;
 
-    // Configure audio (master volume default 1.0)
     audio->ConfigureDevice(Audio::AudioConfig{});
-
-    RType::Client::SettingsState::LoadSettingsFromFile();
 
     RType::Client::GameStateMachine machine;
 
