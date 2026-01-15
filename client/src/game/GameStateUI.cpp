@@ -234,6 +234,82 @@ namespace RType {
                     label.color = {0.4f, 0.4f, 0.4f, 0.5f};
                 }
             }
+
+            updatePowerUpIcons();
+        }
+
+        void InGameState::updatePowerUpIcons() {
+            if (m_context.playerNumber < 1 || m_context.playerNumber > MAX_PLAYERS) {
+                return;
+            }
+
+            size_t playerIndex = static_cast<size_t>(m_context.playerNumber - 1);
+            if (!m_playersHUD[playerIndex].active) {
+                return;
+            }
+
+            ECS::Entity playerEntity = m_playersHUD[playerIndex].playerEntity;
+            if (playerEntity == ECS::NULL_ENTITY) {
+                playerEntity = m_localPlayerEntity;
+            }
+
+            bool hasSpreadShot = false;
+            bool hasLaserBeam = false;
+            bool hasSpeedBoost = false;
+            bool hasShield = false;
+
+            if (playerEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerEntity) &&
+                m_registry.HasComponent<ActivePowerUps>(playerEntity)) {
+                const auto& powerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
+                hasSpreadShot = powerUps.hasSpreadShot;
+                hasLaserBeam = powerUps.hasLaserBeam;
+                hasSpeedBoost = powerUps.speedMultiplier > 1.0f;
+                hasShield = powerUps.hasShield;
+            }
+
+            const float textSpacing = 18.0f;
+            const float columnSpacing = 80.0f;
+            const float startX = 710.0f;
+            const float startY = 675.0f;
+            float currentY = startY;
+
+            updatePowerUpText(m_playersHUD[playerIndex].powerupSpreadEntity, "SPREAD",
+                             hasSpreadShot, startX, currentY);
+            currentY += textSpacing;
+
+            updatePowerUpText(m_playersHUD[playerIndex].powerupLaserEntity, "LASER",
+                             hasLaserBeam, startX, currentY);
+            currentY += textSpacing;
+
+            currentY = startY;
+            updatePowerUpText(m_playersHUD[playerIndex].powerupSpeedEntity, "SPEED",
+                             hasSpeedBoost, startX + columnSpacing, currentY);
+            currentY += textSpacing;
+
+            updatePowerUpText(m_playersHUD[playerIndex].powerupShieldEntity, "SHIELD",
+                             hasShield, startX + columnSpacing, currentY);
+        }
+
+        void InGameState::updatePowerUpText(ECS::Entity& textEntity, const std::string& text,
+                                            bool isActive, float x, float y) {
+            if (textEntity == ECS::NULL_ENTITY || !m_registry.IsEntityAlive(textEntity)) {
+                textEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(textEntity, Position{x, y});
+                Renderer::FontId fontId = (m_hudFontSmall != Renderer::INVALID_FONT_ID) ? m_hudFontSmall : m_hudFont;
+                TextLabel label(text, fontId, 10);
+                label.color = isActive ? Math::Color{1.0f, 1.0f, 1.0f, 1.0f} : Math::Color{0.5f, 0.5f, 0.5f, 0.7f};
+                m_registry.AddComponent<TextLabel>(textEntity, std::move(label));
+            } else {
+                if (m_registry.HasComponent<Position>(textEntity)) {
+                    auto& pos = m_registry.GetComponent<Position>(textEntity);
+                    pos.x = x;
+                    pos.y = y;
+                }
+                if (m_registry.HasComponent<TextLabel>(textEntity)) {
+                    auto& label = m_registry.GetComponent<TextLabel>(textEntity);
+                    label.color = isActive ? Math::Color{1.0f, 1.0f, 1.0f, 1.0f} : Math::Color{0.5f, 0.5f, 0.5f, 0.7f};
+                }
+            }
         }
 
         void InGameState::Draw() {

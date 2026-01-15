@@ -21,6 +21,7 @@ namespace ECS {
         UpdateSpriteAnimations(registry, deltaTime);
         UpdateVisualEffects(registry, deltaTime);
         UpdateFloatingTexts(registry, deltaTime);
+        UpdatePowerUpGlow(registry, deltaTime);
         CleanupCompletedAnimations(registry);
     }
 
@@ -132,6 +133,31 @@ namespace ECS {
 
             if (text.lifetime >= text.maxLifetime) {
                 m_entitiesToDestroy.push_back(entity);
+            }
+        }
+    }
+
+    void AnimationSystem::UpdatePowerUpGlow(Registry& registry, float deltaTime) {
+        auto entities = registry.GetEntitiesWithComponent<PowerUpGlow>();
+
+        for (Entity entity : entities) {
+            if (!registry.IsEntityAlive(entity)) {
+                continue;
+            }
+
+            auto& glow = registry.GetComponent<PowerUpGlow>(entity);
+            glow.time += deltaTime * glow.pulseSpeed;
+
+            float pulse = (std::sin(glow.time) + 1.0f) * 0.5f;
+            float alpha = glow.minAlpha + (glow.maxAlpha - glow.minAlpha) * pulse;
+            float scaleMultiplier = 1.0f + glow.scalePulse * (pulse * 2.0f - 1.0f);
+            float scale = glow.baseScale * scaleMultiplier;
+
+            if (registry.HasComponent<Drawable>(entity)) {
+                auto& drawable = registry.GetComponent<Drawable>(entity);
+                drawable.tint.a = alpha;
+                drawable.scale.x = scale;
+                drawable.scale.y = scale;
             }
         }
     }

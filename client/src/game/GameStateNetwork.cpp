@@ -403,8 +403,13 @@ namespace RType {
 
                         if (powerupSprite != Renderer::INVALID_SPRITE_ID) {
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(powerupSprite, 5));
-                            d.scale = {0.8f, 0.8f};
+                            if (puType == ECS::PowerUpType::FORCE_POD) {
+                                d.scale = {1.0f, 1.0f};
+                            } else {
+                                d.scale = {2.5f, 2.5f};
+                            }
                             d.tint = powerupColor;
+                            m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
                         }
 
                         m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{32.0f, 32.0f});

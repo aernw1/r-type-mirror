@@ -56,6 +56,10 @@ namespace RType {
             bool isDead = false;
             RType::ECS::Entity scoreEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity playerEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity powerupSpreadEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity powerupLaserEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity powerupSpeedEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity powerupShieldEntity = RType::ECS::NULL_ENTITY;
         };
 
         struct PredictedInput {
@@ -99,6 +103,9 @@ namespace RType {
 
             void initializeUI();
             void updateHUD();
+            void updatePowerUpIcons();
+            void updatePowerUpText(RType::ECS::Entity& textEntity, const std::string& text,
+                                   bool isActive, float x, float y);
             void renderChargeBar();
             void renderHealthBars();
             void renderBossHealthBar();

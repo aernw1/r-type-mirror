@@ -660,6 +660,18 @@ namespace RType {
                 if (playerHUD.scoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.scoreEntity)) {
                     m_registry.DestroyEntity(playerHUD.scoreEntity);
                 }
+                if (playerHUD.powerupSpreadEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupSpreadEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupSpreadEntity);
+                }
+                if (playerHUD.powerupLaserEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupLaserEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupLaserEntity);
+                }
+                if (playerHUD.powerupSpeedEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupSpeedEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupSpeedEntity);
+                }
+                if (playerHUD.powerupShieldEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupShieldEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupShieldEntity);
+                }
             }
 
             for (auto& [playerEntity, labelEntity] : m_playerNameLabels) {

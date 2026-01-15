@@ -80,7 +80,8 @@ namespace RType {
 
                     auto& drawable = registry.AddComponent<Drawable>(powerup, Drawable(spriteId, 5));
                     drawable.tint = data.color;
-                    drawable.scale = Math::Vector2(2.0f, 2.0f);
+                    drawable.scale = Math::Vector2(2.5f, 2.5f);
+                    registry.AddComponent<PowerUpGlow>(powerup);
                 }
             }
 
