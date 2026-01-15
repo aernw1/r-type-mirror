@@ -22,6 +22,7 @@ namespace ECS {
         void UpdateSpriteAnimations(Registry& registry, float deltaTime);
         void UpdateVisualEffects(Registry& registry, float deltaTime);
         void UpdateFloatingTexts(Registry& registry, float deltaTime);
+        void UpdatePowerUpGlow(Registry& registry, float deltaTime);
         void CleanupCompletedAnimations(Registry& registry);
 
         Animation::IAnimation* m_animation;

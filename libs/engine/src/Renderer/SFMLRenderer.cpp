@@ -253,14 +253,11 @@ namespace Renderer {
     void SFMLRenderer::SetSpriteRegion(SpriteId spriteId, const Rectangle& region) {
         auto it = m_sprites.find(spriteId);
         if (it == m_sprites.end()) {
+            RType::Core::Logger::Warning("Attempted to set region for non-existent sprite ID: {}", spriteId);
             return;
         }
 
-        it->second.sprite.setTextureRect(sf::IntRect(
-            static_cast<int>(region.position.x),
-            static_cast<int>(region.position.y),
-            static_cast<int>(region.size.x),
-            static_cast<int>(region.size.y)));
+        it->second.sprite.setTextureRect(ToSFMLRect(region));
     }
 
     void SFMLRenderer::DrawSprite(SpriteId spriteId, const Transform2D& transform, const Color& tint) {

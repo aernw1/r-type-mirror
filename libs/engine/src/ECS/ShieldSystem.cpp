@@ -50,6 +50,25 @@ namespace RType {
                     drawable.tint = Math::Color(1.0f, 1.0f, 1.0f, 1.0f);
                 }
             }
+
+            auto players = registry.GetEntitiesWithComponent<Player>();
+            for (Entity entity : players) {
+                if (!registry.IsEntityAlive(entity)) {
+                    continue;
+                }
+
+                if (!registry.HasComponent<Shield>(entity) && registry.HasComponent<Drawable>(entity)) {
+                    auto& drawable = registry.GetComponent<Drawable>(entity);
+                    if (registry.HasComponent<ActivePowerUps>(entity)) {
+                        const auto& active = registry.GetComponent<ActivePowerUps>(entity);
+                        if (!active.hasShield && drawable.tint.r < 0.8f && drawable.tint.b > 0.8f) {
+                            drawable.tint = Math::Color(1.0f, 1.0f, 1.0f, 1.0f);
+                        }
+                    } else if (drawable.tint.r < 0.8f && drawable.tint.b > 0.8f) {
+                        drawable.tint = Math::Color(1.0f, 1.0f, 1.0f, 1.0f);
+                    }
+                }
+            }
         }
 
     }

@@ -80,7 +80,8 @@ namespace RType {
 
                     auto& drawable = registry.AddComponent<Drawable>(powerup, Drawable(spriteId, 5));
                     drawable.tint = data.color;
-                    drawable.scale = Math::Vector2(2.0f, 2.0f);
+                    drawable.scale = Math::Vector2(2.5f, 2.5f);
+                    registry.AddComponent<PowerUpGlow>(powerup);
                 }
             }
 
@@ -115,7 +116,11 @@ namespace RType {
                 case PowerUpType::SPREAD_SHOT: {
                     if (!activePowerUps.hasSpreadShot) {
                         activePowerUps.hasSpreadShot = true;
+                        activePowerUps.hasLaserBeam = false;
 
+                        if (registry.HasComponent<WeaponSlot>(player)) {
+                            registry.RemoveComponent<WeaponSlot>(player);
+                        }
                         registry.AddComponent<WeaponSlot>(
                             player,
                             WeaponSlot(WeaponType::SPREAD, 0.3f, 20)
@@ -127,7 +132,11 @@ namespace RType {
                 case PowerUpType::LASER_BEAM: {
                     if (!activePowerUps.hasLaserBeam) {
                         activePowerUps.hasLaserBeam = true;
+                        activePowerUps.hasSpreadShot = false;
 
+                        if (registry.HasComponent<WeaponSlot>(player)) {
+                            registry.RemoveComponent<WeaponSlot>(player);
+                        }
                         registry.AddComponent<WeaponSlot>(
                             player,
                             WeaponSlot(WeaponType::LASER, 0.15f, 40)

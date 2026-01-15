@@ -38,6 +38,11 @@ namespace RType {
                     m_menuMusic = m_context.audio->LoadMusic("../assets/sounds/menu.flac");
                 }
                 m_menuMusicPlaying = false;
+
+                m_selectMusic = m_context.audio->LoadMusic("assets/sounds/select.flac");
+                if (m_selectMusic == Audio::INVALID_MUSIC_ID) {
+                    m_selectMusic = m_context.audio->LoadMusic("../assets/sounds/select.flac");
+                }
             }
 
             m_fontLarge = m_renderer->LoadFont("assets/fonts/PressStart2P-Regular.ttf", 48);
@@ -71,6 +76,12 @@ namespace RType {
                 m_context.audio->UnloadMusic(m_menuMusic);
                 m_menuMusic = Audio::INVALID_MUSIC_ID;
                 m_menuMusicPlaying = false;
+            }
+
+            if (m_context.audio && m_selectMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_selectMusic);
+                m_context.audio->UnloadMusic(m_selectMusic);
+                m_selectMusic = Audio::INVALID_MUSIC_ID;
             }
 
             for (Entity entity : m_entities) {
@@ -176,8 +187,19 @@ namespace RType {
         }
 
         void MenuState::HandleInput() {
+            auto playSelectSound = [this]() {
+                if (m_context.audio && m_selectMusic != Audio::INVALID_MUSIC_ID) {
+                    m_context.audio->StopMusic(m_selectMusic);
+                    Audio::PlaybackOptions opts;
+                    opts.volume = 1.0f;
+                    opts.loop = false;
+                    m_context.audio->PlayMusic(m_selectMusic, opts);
+                }
+            };
+
             if (m_renderer->IsKeyPressed(Renderer::Key::Up) && !m_upKeyPressed) {
                 m_upKeyPressed = true;
+                playSelectSound();
                 m_selectedIndex--;
                 if (m_selectedIndex < 0) {
                     m_selectedIndex = static_cast<int>(MenuItem::COUNT) - 1;
@@ -188,6 +210,7 @@ namespace RType {
 
             if (m_renderer->IsKeyPressed(Renderer::Key::Down) && !m_downKeyPressed) {
                 m_downKeyPressed = true;
+                playSelectSound();
                 m_selectedIndex++;
                 if (m_selectedIndex >= static_cast<int>(MenuItem::COUNT)) {
                     m_selectedIndex = 0;
@@ -198,6 +221,7 @@ namespace RType {
 
             if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_enterKeyPressed) {
                 m_enterKeyPressed = true;
+                playSelectSound();
 
                 if (m_context.audio && m_menuMusic != Audio::INVALID_MUSIC_ID) {
                     m_context.audio->StopMusic(m_menuMusic);
@@ -232,6 +256,15 @@ namespace RType {
 
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
                 m_enterKeyPressed = false;
+            }
+            
+            if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escKeyPressed) {
+                 m_escKeyPressed = true;
+                 playSelectSound();
+                 std::cout << "[MenuState] Escape pressed. Quitting..." << std::endl;
+                 m_machine.PopState();
+            } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
+                m_escKeyPressed = false;
             }
         }
 

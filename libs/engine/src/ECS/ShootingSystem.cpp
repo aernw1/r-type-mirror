@@ -41,6 +41,11 @@ namespace RType {
                     continue;
                 }
 
+                // Skip entities with WeaponSlot - they use special weapons instead of base Shooter
+                if (registry.HasComponent<WeaponSlot>(shooterEntity)) {
+                    continue;
+                }
+
                 // CRITICAL FIX: Prevent obstacles from shooting due to entity ID reuse
                 // Actively clean up contaminated components
                 if (registry.HasComponent<Obstacle>(shooterEntity) ||
@@ -77,6 +82,7 @@ namespace RType {
                                               shooterEntity});
 
                             shooterComp.cooldown = shooterComp.fireRate;
+                            shootCmd.wantsToShoot = false;
                         }
                     }
                 }
@@ -165,6 +171,7 @@ namespace RType {
                             }
 
                             weapon.cooldown = weapon.fireRate;
+                            shootCmd.wantsToShoot = false;
                         }
                     }
                 }
