@@ -250,7 +250,6 @@ namespace RType {
 
             auto bullet = registry.CreateEntity();
 
-            // CRITICAL FIX: Clean up obstacle components from entity ID reuse
             if (registry.HasComponent<Obstacle>(bullet)) {
                 registry.RemoveComponent<Obstacle>(bullet);
             }
@@ -269,8 +268,8 @@ namespace RType {
 
             if (m_bulletSprite != 0) {
                 auto& d = registry.AddComponent<Drawable>(bullet, Drawable(m_bulletSprite, 2));
-                d.scale = {0.3f, 0.05f}; // Long and thin
-                d.tint = Math::Color(0.0f, 1.0f, 1.0f, 1.0f); // Cyan for laser
+                d.scale = {0.3f, 0.05f};
+                d.tint = Math::Color(0.0f, 1.0f, 1.0f, 1.0f);
             }
         }
     }
