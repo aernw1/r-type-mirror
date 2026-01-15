@@ -129,7 +129,7 @@ namespace Breakout {
 
             float angle = relativeX * 60.0f * (3.14159f / 180.0f);
             float speed = std::sqrt(ballVel.dx * ballVel.dx + ballVel.dy * ballVel.dy);
-            if (speed < 200.0f) {
+            if (speed < 250.0f) {
                 speed = 300.0f;
             }
 
@@ -235,8 +235,8 @@ namespace Breakout {
                 std::uniform_real_distribution<float> angleDist(-45.0f, 45.0f);
 
                 float angle = angleDist(gen) * (3.14159f / 180.0f);
-                ballVel.dx = 200.0f * std::sin(angle);
-                ballVel.dy = 200.0f * std::abs(std::cos(angle));
+                ballVel.dx = 250.0f * std::sin(angle);
+                ballVel.dy = 250.0f * std::abs(std::cos(angle));
             }
         }
 

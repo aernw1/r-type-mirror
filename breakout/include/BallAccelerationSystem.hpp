@@ -15,8 +15,8 @@ namespace Breakout {
 
         private:
             float m_elapsedTime = 0.0f;
-            static constexpr float ACCELERATION_RATE = 2.0f;
-            static constexpr float MAX_SPEED_MULTIPLIER = 2.0f;
+            static constexpr float ACCELERATION_RATE = 2.5f;
+            static constexpr float MAX_SPEED_MULTIPLIER = 2.5f;
         };
 
     }

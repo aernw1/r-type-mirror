@@ -30,7 +30,7 @@ namespace Breakout {
             }
 
             float currentSpeed = std::sqrt(ballVel.dx * ballVel.dx + ballVel.dy * ballVel.dy);
-            float targetSpeed = 200.0f * speedMultiplier;
+            float targetSpeed = 250.0f * speedMultiplier;
 
             if (currentSpeed < targetSpeed && currentSpeed > 0.0f) {
                 float newSpeed = currentSpeed + (targetSpeed - currentSpeed) * deltaTime;
