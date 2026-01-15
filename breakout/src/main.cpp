@@ -28,7 +28,7 @@ const Math::Color BRICK_COLORS[] = {
     {0.2f, 1.0f, 1.0f, 1.0f}
 };
 
-Entity CreatePaddle(Registry& registry,o float x, float y) {
+Entity CreatePaddle(Registry& registry, float x, float y) {
     Entity paddle = registry.CreateEntity();
     registry.AddComponent<Position>(paddle, Position{x, y});
     registry.AddComponent<Velocity>(paddle, Velocity{0.0f, 0.0f});
@@ -50,8 +50,8 @@ Entity CreateBall(Registry& registry, float x, float y) {
     std::uniform_real_distribution<float> angleDist(-45.0f, 45.0f);
 
     float angle = angleDist(gen) * (3.14159f / 180.0f);
-    float velX = 200.0f * std::sin(angle);
-    float velY = 200.0f * std::abs(std::cos(angle));
+    float velX = 250.0f * std::sin(angle);
+    float velY = 250.0f * std::abs(std::cos(angle));
 
     registry.AddComponent<Velocity>(ball, Velocity{velX, velY});
     registry.AddComponent<CircleCollider>(ball, CircleCollider{10.0f});
