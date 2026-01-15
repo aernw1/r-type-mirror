@@ -10,6 +10,7 @@
 #include "EditorState.hpp"
 #include "editor/EditorCanvasManager.hpp"
 #include "RoomListState.hpp"
+#include "SettingsState.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/AudioSystem.hpp"
@@ -241,8 +242,8 @@ namespace RType {
                         break;
 
                     case MenuItem::SETTINGS:
-                        std::cout << "[MenuState] Settings not yet implemented" << std::endl;
-                        // TODO: Implement settings state
+                        std::cout << "[MenuState] Opening Settings..." << std::endl;
+                        m_machine.PushState(std::make_unique<SettingsState>(m_machine, m_context));
                         break;
 
                     case MenuItem::QUIT:
@@ -257,7 +258,7 @@ namespace RType {
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
                 m_enterKeyPressed = false;
             }
-            
+
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escKeyPressed) {
                  m_escKeyPressed = true;
                  playSelectSound();
