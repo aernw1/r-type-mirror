@@ -16,7 +16,6 @@ namespace Animation {
     constexpr AnimationGraphId INVALID_GRAPH_ID = 0;
     constexpr AnimationStateId INVALID_STATE_ID = 0;
 
-    // Single frame definition within an animation clip
     struct FrameDef {
         Math::Rectangle region{};
         float duration = 0.1f;

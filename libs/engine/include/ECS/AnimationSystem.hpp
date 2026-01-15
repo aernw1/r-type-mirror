@@ -19,17 +19,13 @@ namespace ECS {
         Animation::IAnimation* GetAnimationBackend() const { return m_animation; }
 
     private:
-        // Update methods for each animation component type
         void UpdateSpriteAnimations(Registry& registry, float deltaTime);
-        void UpdateStateMachines(Registry& registry, float deltaTime);
-        void UpdateAnimationLayers(Registry& registry, float deltaTime);
-        void ProcessAnimationEvents(Registry& registry);
         void UpdateVisualEffects(Registry& registry, float deltaTime);
         void UpdateFloatingTexts(Registry& registry, float deltaTime);
         void CleanupCompletedAnimations(Registry& registry);
 
         Animation::IAnimation* m_animation;
-        std::vector<Entity> m_entitiesToDestroy;  // Deferred destruction list
+        std::vector<Entity> m_entitiesToDestroy;
     };
 
 }
