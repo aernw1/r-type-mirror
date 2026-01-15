@@ -179,9 +179,13 @@ namespace RType {
 
             Audio::SoundId m_playerShootSound = Audio::INVALID_SOUND_ID;
             Audio::MusicId m_shootMusic = Audio::INVALID_MUSIC_ID;
+            Audio::SoundId m_powerUpSound = Audio::INVALID_SOUND_ID;
+            Audio::MusicId m_powerUpMusic = Audio::INVALID_MUSIC_ID;
             float m_shootSfxCooldown = 0.0f;
             Audio::MusicId m_gameMusic = Audio::INVALID_MUSIC_ID;
             bool m_gameMusicPlaying = false;
+            Audio::MusicId m_bossMusic = Audio::INVALID_MUSIC_ID;
+            bool m_bossMusicPlaying = false;
             Audio::MusicId m_gameOverMusic = Audio::INVALID_MUSIC_ID;
             bool m_gameOverMusicPlaying = false;
 

@@ -37,10 +37,26 @@ namespace RType {
                 std::cout << "[DEBUG] Shoot Music ID: " << m_shootMusic << std::endl;
                 std::cout << "[DEBUG] Shoot Sound ID: " << m_playerShootSound << std::endl;
 
+                std::cout << "[DEBUG] Loading powerup sound..." << std::endl;
+                m_powerUpSound = m_context.audio->LoadSound("assets/sounds/powerup.flac");
+                if (m_powerUpSound == Audio::INVALID_SOUND_ID) {
+                    m_powerUpSound = m_context.audio->LoadSound("../assets/sounds/powerup.flac");
+                }
+                m_powerUpMusic = m_context.audio->LoadMusic("assets/sounds/powerup.flac");
+                if (m_powerUpMusic == Audio::INVALID_MUSIC_ID) {
+                    m_powerUpMusic = m_context.audio->LoadMusic("../assets/sounds/powerup.flac");
+                }
+
                 std::cout << "[DEBUG] Loading stage1.flac..." << std::endl;
                 m_gameMusic = m_context.audio->LoadMusic("assets/sounds/stage1.flac");
                 if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
                     m_gameMusic = m_context.audio->LoadMusic("../assets/sounds/stage1.flac");
+                }
+
+                std::cout << "[DEBUG] Loading BOSS.flac..." << std::endl;
+                m_bossMusic = m_context.audio->LoadMusic("assets/sounds/BOSS.flac");
+                if (m_bossMusic == Audio::INVALID_MUSIC_ID) {
+                    m_bossMusic = m_context.audio->LoadMusic("../assets/sounds/BOSS.flac");
                 }
                 std::cout << "[DEBUG] Game Music ID: " << m_gameMusic << std::endl;
 
@@ -93,6 +109,10 @@ namespace RType {
 
             if (m_shootingSystem && m_playerShootSound != Audio::INVALID_SOUND_ID) {
                 m_shootingSystem->SetShootSound(m_playerShootSound);
+            }
+
+            if (m_powerUpCollisionSystem && m_powerUpSound != Audio::INVALID_SOUND_ID) {
+                m_powerUpCollisionSystem->SetPowerUpSound(m_powerUpSound);
             }
 
             initializeFromLevel();

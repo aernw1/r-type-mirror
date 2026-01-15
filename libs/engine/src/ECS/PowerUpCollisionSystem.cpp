@@ -54,6 +54,12 @@ namespace RType {
                             PowerUpFactory::GetPowerUpName(powerupComp.type)
                         );
 
+                        if (m_powerUpSound != Audio::INVALID_SOUND_ID) {
+                            auto sfx = registry.CreateEntity();
+                            auto& se = registry.AddComponent<SoundEffect>(sfx, SoundEffect(m_powerUpSound, 1.0f));
+                            se.pitch = 1.0f;
+                        }
+
                         powerupsToDestroy.push_back(powerup);
                         break;
                     }
