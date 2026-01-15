@@ -90,10 +90,11 @@ namespace RType {
             uint8_t playerNumber = 0;
             uint64_t playerHash = 0;
             bool isLocalPlayer = false;
+            uint8_t lives = 3;
 
             Player() = default;
-            Player(uint8_t number, uint64_t hash, bool local = false)
-                : playerNumber(number), playerHash(hash), isLocalPlayer(local) {}
+            Player(uint8_t number, uint64_t hash, bool local = false, uint8_t startLives = 3)
+                : playerNumber(number), playerHash(hash), isLocalPlayer(local), lives(startLives) {}
         };
 
         enum class EnemyType : uint8_t {

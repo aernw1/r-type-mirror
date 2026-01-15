@@ -103,7 +103,7 @@ namespace RType {
 
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
-                        m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
+                        m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 300});
 
                         m_registry.AddComponent<Controllable>(newEntity, Controllable{200.0f});
                         m_registry.AddComponent<Shooter>(newEntity, Shooter{0.2f, 50.0f, 20.0f});
@@ -141,6 +141,8 @@ namespace RType {
                                 m_playersHUD[localPlayerIndex].playerEntity = newEntity;
                                 m_playersHUD[localPlayerIndex].active = true;
                                 m_playersHUD[localPlayerIndex].score = entityState.score;
+                                m_playersHUD[localPlayerIndex].health = static_cast<int>(entityState.health);
+                                m_playersHUD[localPlayerIndex].maxHealth = 300;
                                 m_playerScore = entityState.score;
                                 if (entityState.health > 0) {
                                     m_playersHUD[localPlayerIndex].isDead = false;
@@ -152,6 +154,8 @@ namespace RType {
                             m_playersHUD[hudPlayerIndex].active = true;
                             m_playersHUD[hudPlayerIndex].playerEntity = newEntity;
                             m_playersHUD[hudPlayerIndex].score = entityState.score;
+                            m_playersHUD[hudPlayerIndex].health = static_cast<int>(entityState.health);
+                            m_playersHUD[hudPlayerIndex].maxHealth = 300;
 
                             if (entityState.health > 0) {
                                 m_playersHUD[hudPlayerIndex].isDead = false;
@@ -496,6 +500,7 @@ namespace RType {
                         for (size_t i = 0; i < MAX_PLAYERS; i++) {
                             if (m_playersHUD[i].playerEntity == ecsEntity) {
                                 m_playersHUD[i].score = entityState.score;
+                                m_playersHUD[i].health = static_cast<int>(entityState.health);
                                 if (ecsEntity == m_localPlayerEntity) {
                                     m_playerScore = entityState.score;
                                 }
@@ -517,18 +522,15 @@ namespace RType {
                         int newHealth = static_cast<int>(entityState.health);
                         if (newHealth < 0)
                             newHealth = 0;
-                        if (newHealth > 100)
-                            newHealth = 100;
 
                         bool playerIsDead = false;
                         size_t playerIndex = MAX_PLAYERS;
-                        bool isPlayerEntity = false;
+                        bool isPlayerEntity = (type == network::EntityType::PLAYER);
 
                         for (size_t i = 0; i < MAX_PLAYERS; i++) {
                             if (m_playersHUD[i].playerEntity == ecsEntity) {
                                 playerIsDead = m_playersHUD[i].isDead;
                                 playerIndex = i;
-                                isPlayerEntity = true;
                                 break;
                             }
                         }
@@ -537,7 +539,6 @@ namespace RType {
                             if (localPlayerIndex < MAX_PLAYERS) {
                                 playerIsDead = m_playersHUD[localPlayerIndex].isDead;
                                 playerIndex = localPlayerIndex;
-                                isPlayerEntity = true;
                             }
                         }
 
@@ -548,11 +549,9 @@ namespace RType {
                             }
                         } else {
                             health.current = newHealth;
-                            if (health.max != 100) {
-                                health.max = 100;
-                            }
 
                             if (isPlayerEntity && playerIndex < MAX_PLAYERS) {
+                                // Player dies when health reaches 0 (all 300 HP gone)
                                 if (newHealth <= 0) {
                                     m_playersHUD[playerIndex].isDead = true;
                                     m_playersHUD[playerIndex].health = 0;

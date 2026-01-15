@@ -155,7 +155,7 @@ namespace network {
         float y = 0.0f;
         float vx = 0.0f; // Velocity X
         float vy = 0.0f; // Velocity Y
-        uint8_t health = 0;
+        uint16_t health = 0;    // Changed to uint16_t to support 300 HP
         uint8_t flags = 0;      // Custom flags per entity type
         uint64_t ownerHash = 0; // Player hash for PLAYER entities (for client-side prediction)
         uint32_t score = 0;

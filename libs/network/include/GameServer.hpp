@@ -81,7 +81,7 @@ namespace network {
         EntityType type;
         float x, y;
         float vx, vy;
-        uint8_t health;
+        uint16_t health;
         uint8_t flags;
         uint64_t ownerHash = 0;
         uint32_t score = 0;
