@@ -9,7 +9,7 @@ namespace Breakout {
 
         void BreakoutPhysicsSystem::Update(RType::ECS::Registry& registry, float deltaTime) {
             constexpr float SCREEN_WIDTH = 800.0f;
-            constexpr float SCREEN_HEIGHT = 600.0f;
+            constexpr float SCREEN_HEIGHT = 900.0f;
 
             RType::ECS::Entity ballEntity = RType::ECS::NULL_ENTITY;
             auto entities = registry.GetEntitiesWithComponent<RType::ECS::CircleCollider>();

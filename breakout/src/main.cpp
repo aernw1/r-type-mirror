@@ -32,7 +32,7 @@ Entity CreatePaddle(Registry& registry, float x, float y) {
     Entity paddle = registry.CreateEntity();
     registry.AddComponent<Position>(paddle, Position{x, y});
     registry.AddComponent<Velocity>(paddle, Velocity{0.0f, 0.0f});
-    registry.AddComponent<Controllable>(paddle, Controllable{400.0f});
+    registry.AddComponent<Controllable>(paddle, Controllable{480.0f});
     registry.AddComponent<BoxCollider>(paddle, BoxCollider{100.0f, 20.0f});
 
     Drawable drawable(Renderer::INVALID_SPRITE_ID, 10);
@@ -93,9 +93,9 @@ int main() {
 
     auto renderer = std::make_shared<Renderer::SFMLRenderer>();
     Renderer::WindowConfig config;
-    config.title = "Breakout - Engine Demo";
+    config.title = "Breakout";
     config.width = 800;
-    config.height = 600;
+    config.height = 900;
     config.resizable = false;
     config.fullscreen = false;
     config.targetFramerate = 60;
@@ -106,8 +106,8 @@ int main() {
     }
 
     Renderer::Camera2D camera;
-    camera.center = Renderer::Vector2(400.0f, 300.0f);
-    camera.size = Renderer::Vector2(800.0f, 600.0f);
+    camera.center = Renderer::Vector2(400.0f, 450.0f);
+    camera.size = Renderer::Vector2(800.0f, 900.0f);
     renderer->SetCamera(camera);
 
     Core::EngineConfig engineConfig;
@@ -122,7 +122,7 @@ int main() {
     auto& registry = engine->GetRegistry();
 
     const float SCREEN_WIDTH = 800.0f;
-    const float SCREEN_HEIGHT = 600.0f;
+    const float SCREEN_HEIGHT = 900.0f;
     const int BRICK_COLS = 9;
     const int BRICK_ROWS = 7;
     const float BRICK_WIDTH = 80.0f;
