@@ -34,22 +34,15 @@ namespace RType {
                 if (m_shootMusic == Audio::INVALID_MUSIC_ID) {
                      m_shootMusic = m_context.audio->LoadMusic("../assets/sounds/players_shoot.flac");
                 }
-                std::cout << "[DEBUG] Shoot Music ID: " << m_shootMusic << std::endl;
-                std::cout << "[DEBUG] Shoot Sound ID: " << m_playerShootSound << std::endl;
-
-                std::cout << "[DEBUG] Loading stage1.flac..." << std::endl;
                 m_gameMusic = m_context.audio->LoadMusic("assets/sounds/stage1.flac");
                 if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
                     m_gameMusic = m_context.audio->LoadMusic("../assets/sounds/stage1.flac");
                 }
-                std::cout << "[DEBUG] Game Music ID: " << m_gameMusic << std::endl;
 
-                std::cout << "[DEBUG] Loading gameover.flac..." << std::endl;
                 m_gameOverMusic = m_context.audio->LoadMusic("assets/sounds/gameover.flac");
                 if (m_gameOverMusic == Audio::INVALID_MUSIC_ID) {
                     m_gameOverMusic = m_context.audio->LoadMusic("../assets/sounds/gameover.flac");
                 }
-                std::cout << "[DEBUG] GameOver Music ID: " << m_gameOverMusic << std::endl;
 
                 if (m_gameMusic != Audio::INVALID_MUSIC_ID) {
                     auto cmd = m_registry.CreateEntity();
@@ -285,8 +278,6 @@ namespace RType {
                 }
             }
 
-            std::cout << "[INIT] Built m_obstacleIdToCollider map with " << m_obstacleIdToCollider.size()
-                      << " entries from " << m_obstacleColliderEntities.size() << " collider entities" << std::endl;
         }
 
         void InGameState::createSystems() {
@@ -369,7 +360,6 @@ namespace RType {
             if (m_isNetworkSession) {
                 return;
             }
-            std::cout << "[GameState] Initializing local player (ECS)..." << std::endl;
 
             const uint8_t playerNumber = m_context.playerNumber == 0 ? 1 : m_context.playerNumber;
             const uint64_t playerHash = m_context.playerHash;

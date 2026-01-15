@@ -113,7 +113,6 @@ namespace RType {
             void initializeBossHealthBar();
             void destroyBossHealthBar();
             void renderGameOverOverlay();
-            void renderDebugColliders();
             void triggerGameOverIfNeeded();
             void enterResultsScreen();
 
