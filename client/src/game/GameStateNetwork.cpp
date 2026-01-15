@@ -291,6 +291,27 @@ namespace RType {
                             }
                         }
 
+                        bool isPlayerBullet = (entityState.flags < 10);
+                        
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                           CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+
+                        if (isPlayerBullet && m_localPlayerEntity != ECS::NULL_ENTITY && 
+                            m_registry.IsEntityAlive(m_localPlayerEntity) && m_effectFactory &&
+                            m_registry.HasComponent<Position>(m_localPlayerEntity)) {
+                            const auto& playerPos = m_registry.GetComponent<Position>(m_localPlayerEntity);
+                            float bulletX = entityState.x;
+                            float bulletY = entityState.y;
+                            float dx = bulletX - playerPos.x;
+                            float dy = bulletY - playerPos.y;
+                            float distance = std::sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 80.0f && dx > 0 && std::abs(dy) < 40.0f && entityState.vx > 400.0f) {
+                                m_effectFactory->CreateShootingEffect(m_registry, playerPos.x, playerPos.y, m_localPlayerEntity);
+                            }
+                        }
+
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         m_bulletFlagsMap[entityState.entityId] = entityState.flags;
                     } else if (type == network::EntityType::POWERUP) {
@@ -306,24 +327,21 @@ namespace RType {
                         Math::Color powerupColor = ECS::PowerUpFactory::GetPowerUpColor(puType);
                         Renderer::SpriteId powerupSprite = Renderer::INVALID_SPRITE_ID;
                         
-                        if (puType == ECS::PowerUpType::FORCE_POD) {
+                        powerupSprite = GetPowerUpSprite(puType);
+                        
+                        if (powerupSprite == Renderer::INVALID_SPRITE_ID && puType == ECS::PowerUpType::FORCE_POD) {
                             auto textureIt = m_levelAssets.textures.find("powerup-force-pod");
                             if (textureIt != m_levelAssets.textures.end()) {
-                                powerupSprite = m_renderer->CreateSprite(textureIt->second, Renderer::Rectangle{{0.0f, 0.0f}, {128.0f, 128.0f}});
+                                powerupSprite = m_renderer->CreateSprite(textureIt->second, {});
                             } else {
-                                powerupSprite = GetPowerUpSprite(puType);
+                                powerupSprite = GetPowerUpSprite(ECS::PowerUpType::LASER_BEAM);
                             }
-                        } else {
-                            powerupSprite = GetPowerUpSprite(puType);
                         }
 
                         if (powerupSprite != Renderer::INVALID_SPRITE_ID) {
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(powerupSprite, 5));
-                            if (puType == ECS::PowerUpType::FORCE_POD) {
-                                d.scale = {0.25f, 0.25f};
-                            } else {
-                                d.scale = {2.5f, 2.5f};
-                            }
+                            float scale = ECS::PowerUpFactory::GetPowerUpScale(puType);
+                            d.scale = {scale, scale};
                             d.tint = powerupColor;
                             m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
                         }

@@ -138,6 +138,17 @@ namespace RType {
                 Core::Logger::Warning("[GameState] Failed to load explosion spritesheet");
             }
 
+            m_shootingTexture = m_renderer->LoadTexture("assets/SFX/shooting.png");
+            if (m_shootingTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_shootingTexture = m_renderer->LoadTexture("../assets/SFX/shooting.png");
+            }
+            if (m_shootingTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_shootingSprite = m_renderer->CreateSprite(m_shootingTexture, {});
+                Core::Logger::Info("[GameState] Shooting animation spritesheet loaded");
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load shooting animation spritesheet");
+            }
+
             m_enemyBulletGreenTexture = m_renderer->LoadTexture("assets/projectiles/bullet-green.png");
             if (m_enemyBulletGreenTexture == Renderer::INVALID_TEXTURE_ID) {
                 m_enemyBulletGreenTexture = m_renderer->LoadTexture("../assets/projectiles/bullet-green.png");
@@ -337,13 +348,44 @@ namespace RType {
                 Core::Logger::Info("[GameState] Created explosion animation clip with {} frames", 11);
             }
 
+            // Create shooting animation clip (10 frames, 25x25 each, horizontal strip, right to left)
+            // Since animation goes right to left, we reverse the frame order
+            if (m_shootingTexture != Renderer::INVALID_TEXTURE_ID) {
+                const int frameCount = 10;
+                const float frameWidth = 25.0f;
+                const float frameHeight = 25.0f;
+                
+                Animation::AnimationClipConfig shootingConfig;
+                shootingConfig.name = "shooting_animation";
+                shootingConfig.texturePath = "assets/SFX/shooting.png";
+                shootingConfig.looping = false;
+                shootingConfig.playbackSpeed = 1.0f;
+                
+                // Create frames in reverse order (right to left in sprite sheet)
+                for (int i = frameCount - 1; i >= 0; --i) {
+                    Animation::FrameDef frame;
+                    frame.region.position.x = static_cast<float>(i) * frameWidth;
+                    frame.region.position.y = 0.0f;
+                    frame.region.size.x = frameWidth;
+                    frame.region.size.y = frameHeight;
+                    frame.duration = 0.05f;  // 50ms per frame
+                    shootingConfig.frames.push_back(frame);
+                }
+                
+                m_shootingClipId = m_animationModule->CreateClip(shootingConfig);
+                Core::Logger::Info("[GameState] Created shooting animation clip with {} frames (reversed for right-to-left)", frameCount);
+            }
+
             m_animationSystem = std::make_unique<RType::ECS::AnimationSystem>(m_animationModule.get());
 
-            // Initialize effect factory with explosion clip
+            // Initialize effect factory with explosion and shooting clips
             ECS::EffectConfig effectConfig;
             effectConfig.explosionSmall = m_explosionClipId;
             effectConfig.effectsTexture = m_explosionTexture;
             effectConfig.effectsSprite = m_explosionSprite;
+            effectConfig.shootingAnimation = m_shootingClipId;
+            effectConfig.shootingTexture = m_shootingTexture;
+            effectConfig.shootingSprite = m_shootingSprite;
             m_effectFactory = std::make_unique<RType::ECS::EffectFactory>(effectConfig);
 
             m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
@@ -359,6 +401,7 @@ namespace RType {
                 m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
                 m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
                 m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(bulletSprite);
+                m_shootingSystem->SetEffectFactory(m_effectFactory.get());
                 m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
                 m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
                 m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();

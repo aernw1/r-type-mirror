@@ -71,6 +71,7 @@ namespace RType {
             bool m_downKeyPressed = false;
             bool m_enterKeyPressed = false;
             bool m_escKeyPressed = false;
+            int m_ignoreInputFrames = 1;
 
             float m_animTime = 0.0f;
             float m_titlePulse = 0.0f;

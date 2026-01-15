@@ -122,9 +122,12 @@ namespace RType {
                 if (m_hasUnsavedChanges) {
                     Core::Logger::Warning("[EditorState] Exiting with unsaved changes");
                 }
-                std::cout << "[EditorState] Returning to menu..." << std::endl;
-                m_renderer->ResetCamera();
-                m_machine.PopState();
+                Core::Logger::Info("[EditorState] Returning to menu...");
+                if (m_machine.IsRunning() && m_machine.GetCurrentState() == this) {
+                    m_machine.PopState();
+                } else {
+                    Core::Logger::Error("[EditorState] Cannot pop state - state machine is empty or invalid");
+                }
             });
 
             m_inputHandler->HandleKeyPress(Renderer::Key::S, [this]() {

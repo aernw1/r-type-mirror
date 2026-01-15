@@ -45,11 +45,12 @@ namespace RType {
                     auto& animatedSprite = registry.GetComponent<AnimatedSprite>(entity);
                     const auto& anim = registry.GetComponent<SpriteAnimation>(entity);
                     
-                    if (animatedSprite.needsUpdate || 
-                        (anim.currentRegion.size.x > 0 && anim.currentRegion.size.y > 0)) {
+                    if (animatedSprite.needsUpdate || anim.currentRegion.size.x > 0) {
                         if (anim.currentRegion.size.x > 0 && anim.currentRegion.size.y > 0) {
                             m_renderer->SetSpriteRegion(drawable.spriteId, anim.currentRegion);
                             animatedSprite.needsUpdate = false;
+                        } else if (anim.clipId != Animation::INVALID_CLIP_ID && anim.currentRegion.size.x <= 0) {
+                            animatedSprite.needsUpdate = true;
                         }
                     }
                 }

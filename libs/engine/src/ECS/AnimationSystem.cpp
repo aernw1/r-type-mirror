@@ -98,6 +98,19 @@ namespace ECS {
             auto& effect = registry.GetComponent<VisualEffect>(entity);
             effect.lifetime += deltaTime;
 
+            if (effect.owner != NULL_ENTITY && registry.IsEntityAlive(effect.owner) &&
+                registry.HasComponent<Position>(effect.owner) &&
+                registry.HasComponent<Position>(entity)) {
+                const auto& ownerPos = registry.GetComponent<Position>(effect.owner);
+                auto& effectPos = registry.GetComponent<Position>(entity);
+                
+                float offsetX = effect.offsetX;
+                float offsetY = effect.offsetY;
+                
+                effectPos.x = ownerPos.x + offsetX;
+                effectPos.y = ownerPos.y + offsetY;
+            }
+
             if (effect.lifetime >= effect.maxLifetime) {
                 m_entitiesToDestroy.push_back(entity);
             }
