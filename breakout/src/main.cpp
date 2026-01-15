@@ -233,41 +233,41 @@ int main() {
 
         static bool winMessageShown = false;
         if (remainingBricks == 0 && !winMessageShown) {
-            std::cout << "You won! All bricks destroyed!" << std::endl;
+                std::cout << "You won! All bricks destroyed!" << std::endl;
 
-            if (registry.IsEntityAlive(paddle)) {
-                registry.DestroyEntity(paddle);
-            }
-            if (registry.IsEntityAlive(ball)) {
-                registry.DestroyEntity(ball);
-            }
+                if (registry.IsEntityAlive(paddle)) {
+                    registry.DestroyEntity(paddle);
+                }
+                if (registry.IsEntityAlive(ball)) {
+                    registry.DestroyEntity(ball);
+                }
 
-            const float WIN_Y = SCREEN_HEIGHT / 2.0f - 50.0f;
-            const float LETTER_SPACING = 120.0f;
-            const float WIN_START_X = SCREEN_WIDTH / 2.0f - LETTER_SPACING;
+                const float WIN_Y = SCREEN_HEIGHT / 2.0f - 50.0f;
+                const float LETTER_SPACING = 120.0f;
+                const float WIN_START_X = SCREEN_WIDTH / 2.0f - LETTER_SPACING;
 
-            winWEntity = registry.CreateEntity();
-            registry.AddComponent<Position>(winWEntity, Position{WIN_START_X, WIN_Y});
-            TextLabel wLabel("W", winFont, 80);
+                winWEntity = registry.CreateEntity();
+                registry.AddComponent<Position>(winWEntity, Position{WIN_START_X, WIN_Y});
+                TextLabel wLabel("W", winFont, 80);
             wLabel.color = {1.0f, 0.2f, 0.2f, 1.0f};
-            wLabel.centered = true;
-            registry.AddComponent<TextLabel>(winWEntity, std::move(wLabel));
+                wLabel.centered = true;
+                registry.AddComponent<TextLabel>(winWEntity, std::move(wLabel));
 
-            winIEntity = registry.CreateEntity();
-            registry.AddComponent<Position>(winIEntity, Position{WIN_START_X + LETTER_SPACING, WIN_Y});
-            TextLabel iLabel("I", winFont, 80);
+                winIEntity = registry.CreateEntity();
+                registry.AddComponent<Position>(winIEntity, Position{WIN_START_X + LETTER_SPACING, WIN_Y});
+                TextLabel iLabel("I", winFont, 80);
             iLabel.color = {1.0f, 0.5f, 0.2f, 1.0f};
-            iLabel.centered = true;
-            registry.AddComponent<TextLabel>(winIEntity, std::move(iLabel));
+                iLabel.centered = true;
+                registry.AddComponent<TextLabel>(winIEntity, std::move(iLabel));
 
-            winNEntity = registry.CreateEntity();
-            registry.AddComponent<Position>(winNEntity, Position{WIN_START_X + LETTER_SPACING * 2, WIN_Y});
-            TextLabel nLabel("N", winFont, 80);
+                winNEntity = registry.CreateEntity();
+                registry.AddComponent<Position>(winNEntity, Position{WIN_START_X + LETTER_SPACING * 2, WIN_Y});
+                TextLabel nLabel("N", winFont, 80);
             nLabel.color = {1.0f, 1.0f, 0.2f, 1.0f};
-            nLabel.centered = true;
-            registry.AddComponent<TextLabel>(winNEntity, std::move(nLabel));
+                nLabel.centered = true;
+                registry.AddComponent<TextLabel>(winNEntity, std::move(nLabel));
 
-            winMessageShown = true;
+                winMessageShown = true;
         }
 
         renderer->EndFrame();
