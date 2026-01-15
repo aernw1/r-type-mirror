@@ -36,6 +36,7 @@ namespace Renderer {
 
         SpriteId CreateSprite(TextureId textureId, const Rectangle& region) override;
         void DestroySprite(SpriteId spriteId) override;
+        void SetSpriteRegion(SpriteId spriteId, const Rectangle& region) override;
 
         void DrawSprite(SpriteId spriteId, const Transform2D& transform,
                         const Color& tint = Color{}) override;

@@ -146,6 +146,9 @@ namespace Renderer {
         virtual SpriteId CreateSprite(TextureId textureId, const Rectangle& region) = 0;
         virtual void DestroySprite(SpriteId spriteId) = 0;
 
+        // Update the texture region of an existing sprite (for animations)
+        virtual void SetSpriteRegion(SpriteId spriteId, const Rectangle& region) = 0;
+
         virtual void DrawSprite(SpriteId spriteId, const Transform2D& transform,
                                 const Color& tint = Color{}) = 0;
         virtual void DrawRectangle(const Rectangle& rectangle, const Color& color) = 0;
