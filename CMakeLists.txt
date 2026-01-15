@@ -43,6 +43,7 @@ target_link_libraries(r-type_server PRIVATE rtype_network rtype_asio_network)
 add_executable(r-type_client
     client/main.cpp
     client/src/MenuState.cpp
+    client/src/SettingsState.cpp
     client/src/room/RoomListState.cpp
     client/src/LobbyState.cpp
     client/src/GameState.cpp

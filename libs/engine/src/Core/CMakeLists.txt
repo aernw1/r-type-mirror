@@ -1,6 +1,7 @@
 set(CORE_SOURCES
     Engine.cpp
     ModuleLoader.cpp
+    ColorFilter.cpp
 )
 
 set(CORE_HEADERS
@@ -8,6 +9,7 @@ set(CORE_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/Core/Module.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/Core/ModuleLoader.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/Core/Logger.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/Core/ColorFilter.hpp
 )
 
 add_library(rtype_core STATIC
