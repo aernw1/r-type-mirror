@@ -7,6 +7,7 @@
 
 #include "GameStateMachine.hpp"
 #include "MenuState.hpp"
+#include "SettingsState.hpp"
 #include "Renderer/SFMLRenderer.hpp"
 #include "AsioNetworkModule.hpp"
 #include "Audio/SFMLAudio.hpp"
@@ -62,6 +63,8 @@ int main(int argc, char* argv[]) {
 
     // Configure audio (master volume default 1.0)
     audio->ConfigureDevice(Audio::AudioConfig{});
+
+    RType::Client::SettingsState::LoadSettingsFromFile();
 
     RType::Client::GameStateMachine machine;
 
