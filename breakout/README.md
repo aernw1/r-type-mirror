@@ -10,6 +10,7 @@ Destroy all bricks by bouncing the ball with the paddle.
 
 - **Left Arrow** : Move the paddle to the left
 - **Right Arrow** : Move the paddle to the right
+- **C** : Toggle colour-blind mode (ON/OFF)
 - **Escape** : Quit the game
 
 ## Game Mechanics

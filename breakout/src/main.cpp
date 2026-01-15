@@ -1,4 +1,5 @@
 #include "Core/Engine.hpp"
+#include "Core/ColorFilter.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/MovementSystem.hpp"
@@ -13,6 +14,8 @@
 #include <iostream>
 #include <memory>
 #include <random>
+#include <fstream>
+#include <string>
 
 using namespace RType;
 using namespace RType::ECS;
@@ -170,6 +173,25 @@ int main() {
 
     int score = 0;
     bool running = true;
+    bool cKeyPressed = false;
+    bool colourBlindMode = false;
+
+    std::ifstream settingsFile("breakout_settings.json");
+    if (!settingsFile.is_open()) {
+        settingsFile.open("../breakout_settings.json");
+    }
+    if (settingsFile.is_open()) {
+        std::string line;
+        while (std::getline(settingsFile, line)) {
+            if (line.find("colourBlindMode=") == 0) {
+                std::string value = line.substr(17);
+                colourBlindMode = (value == "true" || value == "1");
+                Core::ColorFilter::SetColourBlindMode(colourBlindMode);
+                break;
+            }
+        }
+        settingsFile.close();
+    }
 
     while (renderer->IsWindowOpen() && running) {
         float deltaTime = renderer->GetDeltaTime();
@@ -252,6 +274,24 @@ int main() {
 
         if (renderer->IsKeyPressed(Renderer::Key::Escape)) {
             running = false;
+        }
+
+        if (renderer->IsKeyPressed(Renderer::Key::C) && !cKeyPressed) {
+            cKeyPressed = true;
+            colourBlindMode = !colourBlindMode;
+            Core::ColorFilter::SetColourBlindMode(colourBlindMode);
+            std::cout << "Colour-blind mode: " << (colourBlindMode ? "ON" : "OFF") << std::endl;
+
+            std::ofstream outFile("breakout_settings.json");
+            if (!outFile.is_open()) {
+                outFile.open("../breakout_settings.json");
+            }
+            if (outFile.is_open()) {
+                outFile << "colourBlindMode=" << (colourBlindMode ? "true" : "false") << std::endl;
+                outFile.close();
+            }
+        } else if (!renderer->IsKeyPressed(Renderer::Key::C)) {
+            cKeyPressed = false;
         }
     }
 
