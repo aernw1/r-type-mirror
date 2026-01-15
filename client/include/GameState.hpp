@@ -178,6 +178,8 @@ namespace RType {
             float m_shootSfxCooldown = 0.0f;
             Audio::MusicId m_gameMusic = Audio::INVALID_MUSIC_ID;
             bool m_gameMusicPlaying = false;
+            Audio::MusicId m_bossMusic = Audio::INVALID_MUSIC_ID;
+            bool m_bossMusicPlaying = false;
             Audio::MusicId m_gameOverMusic = Audio::INVALID_MUSIC_ID;
             bool m_gameOverMusicPlaying = false;
 

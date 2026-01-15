@@ -50,6 +50,12 @@ namespace RType {
                 if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
                     m_gameMusic = m_context.audio->LoadMusic("../assets/sounds/stage1.flac");
                 }
+
+                std::cout << "[DEBUG] Loading BOSS.flac..." << std::endl;
+                m_bossMusic = m_context.audio->LoadMusic("assets/sounds/BOSS.flac");
+                if (m_bossMusic == Audio::INVALID_MUSIC_ID) {
+                    m_bossMusic = m_context.audio->LoadMusic("../assets/sounds/BOSS.flac");
+                }
                 std::cout << "[DEBUG] Game Music ID: " << m_gameMusic << std::endl;
 
                 std::cout << "[DEBUG] Loading gameover.flac..." << std::endl;

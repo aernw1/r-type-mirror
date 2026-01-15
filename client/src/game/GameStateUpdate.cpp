@@ -441,16 +441,40 @@ namespace RType {
                 m_shootingSystem->Update(m_registry, dt);
             }
 
+            if (m_bossHealthBar.active && !m_bossMusicPlaying && !m_isGameOver) {
+                auto it = m_networkEntityMap.find(m_bossHealthBar.bossNetworkId);
+                if (it != m_networkEntityMap.end()) {
+                    auto bossEntity = it->second;
+                    if (m_registry.IsEntityAlive(bossEntity) && m_registry.HasComponent<Position>(bossEntity)) {
+                        auto& pos = m_registry.GetComponent<Position>(bossEntity);
+                        if (pos.x < 1300.0f) {
+                            if (m_context.audio) {
+                                if (m_gameMusicPlaying) {
+                                    m_context.audio->StopMusic(m_gameMusic);
+                                    m_gameMusicPlaying = false;
+                                }
+                                if (m_bossMusic != Audio::INVALID_MUSIC_ID) {
+                                    Audio::PlaybackOptions opts;
+                                    opts.loop = true;
+                                    opts.volume = 0.6f;
+                                    m_context.audio->PlayMusic(m_bossMusic, opts);
+                                    m_bossMusicPlaying = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (m_audioSystem) {
-                if (!m_isGameOver && m_gameMusic != Audio::INVALID_MUSIC_ID && !m_gameMusicPlaying) {
-                    auto cmd = m_registry.CreateEntity();
-                    auto& me = m_registry.AddComponent<MusicEffect>(cmd, MusicEffect(m_gameMusic));
-                    me.play = true;
-                    me.stop = false;
-                    me.loop = true;
-                    me.volume = 0.35f;
-                    me.pitch = 1.0f;
-                    m_gameMusicPlaying = true;
+                if (!m_isGameOver && !m_bossMusicPlaying && m_gameMusic != Audio::INVALID_MUSIC_ID && !m_gameMusicPlaying) {
+                    if (m_context.audio) {
+                         Audio::PlaybackOptions opts;
+                         opts.loop = true;
+                         opts.volume = 0.35f;
+                         m_context.audio->PlayMusic(m_gameMusic, opts);
+                         m_gameMusicPlaying = true;
+                    }
                 }
                 m_audioSystem->Update(m_registry, dt);
             }
@@ -553,6 +577,11 @@ namespace RType {
                     m_gameMusicPlaying = false;
                 }
                 
+                if (m_bossMusic != Audio::INVALID_MUSIC_ID && m_bossMusicPlaying) {
+                    m_context.audio->StopMusic(m_bossMusic);
+                    m_bossMusicPlaying = false;
+                }
+                
                 if (m_gameOverMusic != Audio::INVALID_MUSIC_ID && !m_gameOverMusicPlaying) {
                     Audio::PlaybackOptions opts;
                     opts.loop = true;
@@ -613,6 +642,13 @@ namespace RType {
                 m_context.audio->UnloadMusic(m_gameMusic);
                 m_gameMusic = Audio::INVALID_MUSIC_ID;
                 m_gameMusicPlaying = false;
+            }
+
+            if (m_context.audio && m_bossMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_bossMusic);
+                m_context.audio->UnloadMusic(m_bossMusic);
+                m_bossMusic = Audio::INVALID_MUSIC_ID;
+                m_bossMusicPlaying = false;
             }
 
             if (m_context.audio && m_gameOverMusic != Audio::INVALID_MUSIC_ID) {
