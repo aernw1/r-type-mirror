@@ -70,14 +70,12 @@ namespace RType {
                     m_currentInputs |= network::InputFlags::SHOOT;
                     if (m_isNetworkSession) {
                         if (m_shootMusic != Audio::INVALID_MUSIC_ID) {
-                             std::cout << "[DEBUG] Direct PlayMusic Call (Shoot ID: " << m_shootMusic << ")" << std::endl;
                              Audio::PlaybackOptions opts;
                              opts.volume = 1.0f;
                              opts.loop = false;
                              m_context.audio->StopMusic(m_shootMusic); 
                              m_context.audio->PlayMusic(m_shootMusic, opts);
                         } else if (m_playerShootSound != Audio::INVALID_SOUND_ID) {
-                            std::cout << "[DEBUG] Direct PlaySound Call (ID: " << m_playerShootSound << ")" << std::endl;
                             Audio::PlaybackOptions opts;
                             opts.volume = 1.0f;
                             m_context.audio->PlaySound(m_playerShootSound, opts);
@@ -105,18 +103,12 @@ namespace RType {
                     m_context.networkClient->SendInput(static_cast<uint8_t>(m_currentInputs));
                     m_lastInputTime = now;
 
-                    static int inputLog = 0;
-                    if (inputLog++ % 10 == 0) {
-                        auto epoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-                        std::cout << "[CLIENT SEND INPUT] t=" << epoch << " inputs=" << m_currentInputs << std::endl;
-                    }
                 }
                 m_previousInputs = m_currentInputs;
             }
 
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
                 m_escapeKeyPressed = true;
-                std::cout << "[GameState] Returning to lobby..." << std::endl;
                 m_machine.PopState();
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
                 m_escapeKeyPressed = false;
@@ -152,20 +144,8 @@ namespace RType {
                 m_movementSystem->Update(m_registry, dt);
             }
 
-            // IMPORTANT: Sync obstacle colliders BEFORE player prediction
-            // so collision checks use current frame positions
-            static bool loggedMode = false;
-            if (!loggedMode) {
-                std::cout << "[UPDATE MODE] m_isNetworkSession=" << m_isNetworkSession << std::endl;
-                loggedMode = true;
-            }
 
             if (m_isNetworkSession) {
-                static bool loggedNetworkPath = false;
-                if (!loggedNetworkPath) {
-                    std::cout << "[UPDATE] Taking NETWORK session path" << std::endl;
-                    loggedNetworkPath = true;
-                }
                 // Scroll backgrounds
                 for (auto& bg : m_backgroundEntities) {
                     if (!m_registry.IsEntityAlive(bg))
@@ -177,9 +157,6 @@ namespace RType {
                     const auto& scrollable = m_registry.GetComponent<Scrollable>(bg);
                     pos.x += scrollable.speed * dt;
                 }
-                // Scroll obstacle visuals - ARCHITECTURAL FIX
-                // Instead of maintaining static list, query obstacle colliders and scroll their visuals
-                // This fixes entity ID recycling bug where bullets reused obstacle IDs
                 auto obstacleColliders = m_registry.GetEntitiesWithComponent<ECS::ObstacleMetadata>();
                 for (auto collider : obstacleColliders) {
                     if (!m_registry.HasComponent<ECS::ObstacleMetadata>(collider)) {
@@ -188,7 +165,6 @@ namespace RType {
                     const auto& metadata = m_registry.GetComponent<ECS::ObstacleMetadata>(collider);
                     auto visual = metadata.visualEntity;
 
-                    // Only scroll if visual entity exists and has required components
                     if (visual == ECS::NULL_ENTITY ||
                         !m_registry.IsEntityAlive(visual) ||
                         !m_registry.HasComponent<Position>(visual) ||
@@ -200,10 +176,6 @@ namespace RType {
                     const auto& scrollable = m_registry.GetComponent<Scrollable>(visual);
                     pos.x += scrollable.speed * dt;
                 }
-                // Synchronize collider positions to visual entities using ObstacleMetadata
-                // ONLY for obstacles that still have Scrollable (not yet synced via network)
-                // Use component query instead of static list
-                static int syncDebugCounter = 0;
                 auto obstacleCollidersForSync = m_registry.GetEntitiesWithComponent<ECS::ObstacleMetadata>();
                 for (auto collider : obstacleCollidersForSync) {
                     if (!m_registry.IsEntityAlive(collider) ||
@@ -211,66 +183,32 @@ namespace RType {
                         !m_registry.HasComponent<Position>(collider))
                         continue;
 
-                    // Skip obstacles that are synced via network (no Scrollable component)
                     if (!m_registry.HasComponent<Scrollable>(collider))
                         continue;
 
                     const auto& metadata = m_registry.GetComponent<ObstacleMetadata>(collider);
 
-                    // If visual entity exists, sync collider to visual position + offset
                     if (metadata.visualEntity != ECS::NULL_ENTITY &&
                         m_registry.IsEntityAlive(metadata.visualEntity) &&
                         m_registry.HasComponent<Position>(metadata.visualEntity)) {
 
                         const auto& visualPos = m_registry.GetComponent<Position>(metadata.visualEntity);
                         auto& colliderPos = m_registry.GetComponent<Position>(collider);
-
-                        // Debug: Log first few syncs to verify it's running
-                        if (syncDebugCounter < 5) {
-                            std::cout << "[RUNTIME SYNC] Collider " << collider
-                                      << ": visual=(" << visualPos.x << "," << visualPos.y << ")"
-                                      << " offset=(" << metadata.offsetX << "," << metadata.offsetY << ")"
-                                      << " -> collider=(" << visualPos.x + metadata.offsetX << ","
-                                      << visualPos.y + metadata.offsetY << ")" << std::endl;
-                            syncDebugCounter++;
-                        }
-
-                        // Collider position = visual position + stored offset
                         colliderPos.x = visualPos.x + metadata.offsetX;
                         colliderPos.y = visualPos.y + metadata.offsetY;
-                    }
-                    // Fallback: if no visual (missing texture), scroll collider independently
-                    else if (m_registry.HasComponent<Scrollable>(collider)) {
+                    } else if (m_registry.HasComponent<Scrollable>(collider)) {
                         auto& pos = m_registry.GetComponent<Position>(collider);
                         const auto& scrollable = m_registry.GetComponent<Scrollable>(collider);
                         pos.x += scrollable.speed * dt;
-
-                        if (syncDebugCounter < 5) {
-                            std::cout << "[RUNTIME SYNC FALLBACK] Collider " << collider
-                                      << " scrolling independently at (" << pos.x << "," << pos.y << ")" << std::endl;
-                            syncDebugCounter++;
-                        }
                     }
                 }
             } else if (m_scrollingSystem) {
-                static bool loggedScrollingPath = false;
-                if (!loggedScrollingPath) {
-                    std::cout << "[UPDATE] Taking ScrollingSystem path (non-network)" << std::endl;
-                    loggedScrollingPath = true;
-                }
-                // Non-network mode: use ScrollingSystem which also handles sync
                 m_scrollingSystem->Update(m_registry, dt);
             }
 
             if (m_isNetworkSession && m_localPlayerEntity != ECS::NULL_ENTITY &&
                 m_registry.IsEntityAlive(m_localPlayerEntity) &&
                 m_registry.HasComponent<Position>(m_localPlayerEntity)) {
-                static bool loggedPrediction = false;
-                if (!loggedPrediction) {
-                    std::cout << "[UPDATE] Player prediction code is running" << std::endl;
-                    std::cout << "[UPDATE] m_obstacleColliderEntities.size()=" << m_obstacleColliderEntities.size() << std::endl;
-                    loggedPrediction = true;
-                }
                 auto& pos = m_registry.GetComponent<Position>(m_localPlayerEntity);
 
                 float newX = pos.x;
@@ -299,7 +237,6 @@ namespace RType {
                 }
 
                 bool blocked = false;
-                static int collisionDebugCounter = 0;
                 for (auto& collider : m_obstacleColliderEntities) {
                     if (!m_registry.IsEntityAlive(collider) ||
                         !m_registry.HasComponent<Position>(collider) ||
@@ -315,37 +252,6 @@ namespace RType {
                         newY + playerH > obstPos.y;
 
                     if (wouldCollide) {
-                        if (collisionDebugCounter < 3) {
-                            std::cout << "[COLLISION DETECTED] Player at (" << newX << "," << newY
-                                      << ") size=(" << playerW << "," << playerH << ")"
-                                      << " vs Obstacle ENTITY=" << collider
-                                      << " at (" << obstPos.x << "," << obstPos.y << ")"
-                                      << " size=(" << obstBox.width << "," << obstBox.height << ")" << std::endl;
-
-                            // Check if this entity has ObstacleMetadata
-                            if (m_registry.HasComponent<ObstacleMetadata>(collider)) {
-                                const auto& meta = m_registry.GetComponent<ObstacleMetadata>(collider);
-                                std::cout << "  -> Has metadata: visualEntity=" << meta.visualEntity
-                                          << " offset=(" << meta.offsetX << "," << meta.offsetY << ")" << std::endl;
-
-                                // Check if visual entity actually exists and has drawable
-                                if (meta.visualEntity != ECS::NULL_ENTITY) {
-                                    bool alive = m_registry.IsEntityAlive(meta.visualEntity);
-                                    bool hasPos = m_registry.HasComponent<Position>(meta.visualEntity);
-                                    bool hasDrawable = m_registry.HasComponent<Drawable>(meta.visualEntity);
-                                    std::cout << "  -> Visual entity: alive=" << alive
-                                              << " hasPos=" << hasPos
-                                              << " hasDrawable=" << hasDrawable << std::endl;
-                                    if (hasPos) {
-                                        const auto& vPos = m_registry.GetComponent<Position>(meta.visualEntity);
-                                        std::cout << "  -> Visual position: (" << vPos.x << "," << vPos.y << ")" << std::endl;
-                                    }
-                                }
-                            } else {
-                                std::cout << "  -> NO METADATA!" << std::endl;
-                            }
-                            collisionDebugCounter++;
-                        }
                         blocked = true;
                         float overlapLeft = (newX + playerW) - obstPos.x;
                         float overlapRight = (obstPos.x + obstBox.width) - newX;
@@ -411,6 +317,9 @@ namespace RType {
             if (m_collisionDetectionSystem) {
                 m_collisionDetectionSystem->Update(m_registry, dt);
             }
+            if (m_powerUpCollisionSystem) {
+                m_powerUpCollisionSystem->Update(m_registry, dt);
+            }
             if (m_bulletResponseSystem) {
                 m_bulletResponseSystem->Update(m_registry, dt);
             }
@@ -427,7 +336,6 @@ namespace RType {
                 m_healthSystem->Update(m_registry, dt);
             }
 
-            // Scrolling already handled earlier (before player prediction)
             m_localScrollOffset += -150.0f * dt;
 
             if (m_shieldSystem) {
@@ -479,7 +387,6 @@ namespace RType {
                 m_audioSystem->Update(m_registry, dt);
             }
 
-            // Update animation system (explosions, effects, floating text)
             if (m_animationSystem) {
                 m_animationSystem->Update(m_registry, dt);
             }
@@ -576,7 +483,6 @@ namespace RType {
             m_chargeTime = 0.0f;
 
             if (m_context.audio) {
-                std::cout << "[DEBUG] Game Over " << std::endl;
                 if (m_gameMusic != Audio::INVALID_MUSIC_ID && m_gameMusicPlaying) {
                     m_context.audio->StopMusic(m_gameMusic);
                     m_gameMusicPlaying = false;
@@ -630,7 +536,6 @@ namespace RType {
         }
 
         void InGameState::Cleanup() {
-            std::cout << "[GameState] Cleaning up game state..." << std::endl;
 
             if (m_context.audio && m_shootMusic != Audio::INVALID_MUSIC_ID) {
                 m_context.audio->StopMusic(m_shootMusic);
@@ -700,6 +605,18 @@ namespace RType {
             for (auto& playerHUD : m_playersHUD) {
                 if (playerHUD.scoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.scoreEntity)) {
                     m_registry.DestroyEntity(playerHUD.scoreEntity);
+                }
+                if (playerHUD.powerupSpreadEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupSpreadEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupSpreadEntity);
+                }
+                if (playerHUD.powerupLaserEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupLaserEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupLaserEntity);
+                }
+                if (playerHUD.powerupSpeedEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupSpeedEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupSpeedEntity);
+                }
+                if (playerHUD.powerupShieldEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupShieldEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupShieldEntity);
                 }
             }
 

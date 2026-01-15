@@ -443,16 +443,14 @@ namespace RType {
                 : musicId(id) {}
         };
 
-        // Sprite sheet animation component for simple frame-by-frame playback
         struct SpriteAnimation : public IComponent {
             Animation::AnimationClipId clipId = Animation::INVALID_CLIP_ID;
             float currentTime = 0.0f;
             float playbackSpeed = 1.0f;
             bool playing = true;
             bool looping = false;
-            bool destroyOnComplete = false;  // Auto-destroy entity when animation finishes
+            bool destroyOnComplete = false;
 
-            // Cached frame data (updated by AnimationSystem)
             std::size_t currentFrameIndex = 0;
             Math::Rectangle currentRegion{};
 
@@ -461,17 +459,15 @@ namespace RType {
                 : clipId(clip), playbackSpeed(speed), looping(loop) {}
         };
 
-        // Animation state machine component for complex entity animations
         struct AnimationStateMachine : public IComponent {
             Animation::AnimationGraphId graphId = Animation::INVALID_GRAPH_ID;
             Animation::AnimationStateId currentState = Animation::INVALID_STATE_ID;
             Animation::AnimationStateId previousState = Animation::INVALID_STATE_ID;
             float stateTime = 0.0f;
-            float blendFactor = 0.0f;        // 0 = previous, 1 = current (for transitions)
+            float blendFactor = 0.0f;
             float blendDuration = 0.0f;
             bool isTransitioning = false;
 
-            // Parameters storage (up to 8 for cache efficiency)
             static constexpr std::size_t MAX_PARAMS = 8;
             std::array<float, MAX_PARAMS> parameters{};
             std::array<std::array<char, 32>, MAX_PARAMS> parameterNames{};
@@ -488,7 +484,6 @@ namespace RType {
                         return;
                     }
                 }
-                // Add new parameter if not found
                 if (parameterCount < MAX_PARAMS) {
                     std::strncpy(parameterNames[parameterCount].data(), name, 31);
                     parameterNames[parameterCount][31] = '\0';
@@ -507,14 +502,12 @@ namespace RType {
             }
         };
 
-        // Marker component for entities that need sprite region updates from animation
         struct AnimatedSprite : public IComponent {
             bool needsUpdate = true;
 
             AnimatedSprite() = default;
         };
 
-        // One-shot visual effect component (auto-destroys after lifetime)
         struct VisualEffect : public IComponent {
             Animation::EffectType type = Animation::EffectType::EXPLOSION_SMALL;
             float lifetime = 0.0f;
@@ -525,13 +518,12 @@ namespace RType {
                 : type(t), maxLifetime(duration) {}
         };
 
-        // Floating text component for damage numbers, score popups, etc.
         struct FloatingText : public IComponent {
             char text[32] = {};
             float lifetime = 0.0f;
             float maxLifetime = 1.5f;
-            float velocityY = -50.0f;    // Negative = float upward
-            float fadeStartTime = 0.5f;  // When to start fading (seconds)
+            float velocityY = -50.0f;
+            float fadeStartTime = 0.5f;
             Math::Color color{1.0f, 1.0f, 1.0f, 1.0f};
 
             FloatingText() = default;
@@ -544,7 +536,6 @@ namespace RType {
             }
         };
 
-        // Animation events queue component (for triggering sounds, effects, etc.)
         struct AnimationEvents : public IComponent {
             static constexpr std::size_t MAX_EVENTS = 4;
             std::array<std::array<char, 32>, MAX_EVENTS> eventNames{};
@@ -572,18 +563,28 @@ namespace RType {
             }
         };
 
-        // Animation layer for blending multiple animations (advanced)
         struct AnimationLayer : public IComponent {
             Animation::AnimationClipId clipId = Animation::INVALID_CLIP_ID;
             float currentTime = 0.0f;
-            float weight = 1.0f;             // Blend weight (0-1)
+            float weight = 1.0f;
             float playbackSpeed = 1.0f;
-            bool additive = false;           // Additive vs override blending
-            int layerIndex = 0;              // Lower = base, higher = overlay
+            bool additive = false;
+            int layerIndex = 0;
 
             AnimationLayer() = default;
             AnimationLayer(Animation::AnimationClipId clip, int layer, float w = 1.0f)
                 : clipId(clip), weight(w), layerIndex(layer) {}
+        };
+
+        struct PowerUpGlow : public IComponent {
+            float time = 0.0f;
+            float pulseSpeed = 2.0f;
+            float minAlpha = 0.7f;
+            float maxAlpha = 1.0f;
+            float baseScale = 2.5f;
+            float scalePulse = 0.08f;
+
+            PowerUpGlow() = default;
         };
     }
 

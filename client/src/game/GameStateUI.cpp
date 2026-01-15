@@ -41,7 +41,7 @@ namespace RType {
             }
 
             if (m_hudFont == Renderer::INVALID_FONT_ID) {
-                std::cerr << "[GameState] Error: Failed to load HUD font!" << std::endl;
+                Core::Logger::Error("[GameState] Failed to load HUD font");
                 return;
             }
 
@@ -86,7 +86,6 @@ namespace RType {
                 m_playersHUD[m_context.playerNumber - 1].active = true;
             }
 
-            std::cout << "[GameState] HUD initialized for P" << (int)m_context.playerNumber << std::endl;
         }
 
         void InGameState::updateHUD() {
@@ -234,6 +233,82 @@ namespace RType {
                     label.color = {0.4f, 0.4f, 0.4f, 0.5f};
                 }
             }
+
+            updatePowerUpIcons();
+        }
+
+        void InGameState::updatePowerUpIcons() {
+            if (m_context.playerNumber < 1 || m_context.playerNumber > MAX_PLAYERS) {
+                return;
+            }
+
+            size_t playerIndex = static_cast<size_t>(m_context.playerNumber - 1);
+            if (!m_playersHUD[playerIndex].active) {
+                return;
+            }
+
+            ECS::Entity playerEntity = m_playersHUD[playerIndex].playerEntity;
+            if (playerEntity == ECS::NULL_ENTITY) {
+                playerEntity = m_localPlayerEntity;
+            }
+
+            bool hasSpreadShot = false;
+            bool hasLaserBeam = false;
+            bool hasSpeedBoost = false;
+            bool hasShield = false;
+
+            if (playerEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerEntity) &&
+                m_registry.HasComponent<ActivePowerUps>(playerEntity)) {
+                const auto& powerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
+                hasSpreadShot = powerUps.hasSpreadShot;
+                hasLaserBeam = powerUps.hasLaserBeam;
+                hasSpeedBoost = powerUps.speedMultiplier > 1.0f;
+                hasShield = powerUps.hasShield;
+            }
+
+            const float textSpacing = 18.0f;
+            const float columnSpacing = 80.0f;
+            const float startX = 710.0f;
+            const float startY = 675.0f;
+            float currentY = startY;
+
+            updatePowerUpText(m_playersHUD[playerIndex].powerupSpreadEntity, "SPREAD",
+                             hasSpreadShot, startX, currentY);
+            currentY += textSpacing;
+
+            updatePowerUpText(m_playersHUD[playerIndex].powerupLaserEntity, "LASER",
+                             hasLaserBeam, startX, currentY);
+            currentY += textSpacing;
+
+            currentY = startY;
+            updatePowerUpText(m_playersHUD[playerIndex].powerupSpeedEntity, "SPEED",
+                             hasSpeedBoost, startX + columnSpacing, currentY);
+            currentY += textSpacing;
+
+            updatePowerUpText(m_playersHUD[playerIndex].powerupShieldEntity, "SHIELD",
+                             hasShield, startX + columnSpacing, currentY);
+        }
+
+        void InGameState::updatePowerUpText(ECS::Entity& textEntity, const std::string& text,
+                                            bool isActive, float x, float y) {
+            if (textEntity == ECS::NULL_ENTITY || !m_registry.IsEntityAlive(textEntity)) {
+                textEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(textEntity, Position{x, y});
+                Renderer::FontId fontId = (m_hudFontSmall != Renderer::INVALID_FONT_ID) ? m_hudFontSmall : m_hudFont;
+                TextLabel label(text, fontId, 10);
+                label.color = isActive ? Math::Color{1.0f, 1.0f, 1.0f, 1.0f} : Math::Color{0.5f, 0.5f, 0.5f, 0.7f};
+                m_registry.AddComponent<TextLabel>(textEntity, std::move(label));
+            } else {
+                if (m_registry.HasComponent<Position>(textEntity)) {
+                    auto& pos = m_registry.GetComponent<Position>(textEntity);
+                    pos.x = x;
+                    pos.y = y;
+                }
+                if (m_registry.HasComponent<TextLabel>(textEntity)) {
+                    auto& label = m_registry.GetComponent<TextLabel>(textEntity);
+                    label.color = isActive ? Math::Color{1.0f, 1.0f, 1.0f, 1.0f} : Math::Color{0.5f, 0.5f, 0.5f, 0.7f};
+                }
+            }
         }
 
         void InGameState::Draw() {
@@ -244,140 +319,6 @@ namespace RType {
             renderHealthBars();
             renderBossHealthBar();
             renderGameOverOverlay();
-
-            // DEBUG: Visualize obstacle colliders (DISABLED - causes visual confusion with ID reuse)
-            // renderDebugColliders();
-        }
-
-        void InGameState::renderDebugColliders() {
-            static bool loggedVisualization = false;
-            static int frameCount = 0;
-            frameCount++;
-
-            if (!loggedVisualization) {
-                // Query obstacle entities dynamically instead of using static lists
-                auto obstacleMetadata = m_registry.GetEntitiesWithComponent<ObstacleMetadata>();
-                auto allObstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
-
-                std::cout << "[DEBUG VIZ] Obstacle colliders (ObstacleMetadata): " << obstacleMetadata.size() << std::endl;
-                std::cout << "[DEBUG VIZ] Total Obstacle entities in registry: " << allObstacles.size() << std::endl;
-
-                int logged = 0;
-                for (auto entity : allObstacles) {
-                    if (!m_registry.IsEntityAlive(entity)) continue;
-                    if (!m_registry.HasComponent<Position>(entity) || !m_registry.HasComponent<BoxCollider>(entity)) continue;
-
-                    const auto& pos = m_registry.GetComponent<Position>(entity);
-                    const auto& box = m_registry.GetComponent<BoxCollider>(entity);
-
-                    bool isTracked = false;
-                    for (auto& tracked : m_obstacleColliderEntities) {
-                        if (tracked == entity) { isTracked = true; break; }
-                    }
-
-                    std::cout << "  Obstacle " << entity << ": pos=(" << pos.x << "," << pos.y
-                              << ") size=(" << box.width << "," << box.height << ")"
-                              << " tracked=" << (isTracked ? "YES" : "NO") << std::endl;
-
-                    if (++logged >= 10) {
-                        std::cout << "  ... (showing first 10 only)" << std::endl;
-                        break;
-                    }
-                }
-
-                loggedVisualization = true;
-            }
-
-            // Draw obstacle visual sprite positions (green dots)
-            // Query obstacle colliders and draw their visual entities
-            auto obstacleMetadataEntities = m_registry.GetEntitiesWithComponent<ObstacleMetadata>();
-            for (auto collider : obstacleMetadataEntities) {
-                if (!m_registry.HasComponent<ObstacleMetadata>(collider))
-                    continue;
-
-                const auto& metadata = m_registry.GetComponent<ObstacleMetadata>(collider);
-                auto visual = metadata.visualEntity;
-
-                if (visual == ECS::NULL_ENTITY || !m_registry.IsEntityAlive(visual))
-                    continue;
-                if (!m_registry.HasComponent<Position>(visual))
-                    continue;
-
-                const auto& pos = m_registry.GetComponent<Position>(visual);
-
-                // Draw a small green circle at the visual entity's position
-                Renderer::Rectangle marker;
-                marker.position = Renderer::Vector2(pos.x - 3, pos.y - 3);
-                marker.size = Renderer::Vector2(6, 6);
-                m_renderer->DrawRectangle(marker, Renderer::Color(0.0f, 1.0f, 0.0f, 0.9f));
-            }
-
-            // Draw ALL entities with Obstacle component and BoxCollider
-            // This will catch any colliders not in m_obstacleColliderEntities
-            auto allObstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
-            for (auto entity : allObstacles) {
-                if (!m_registry.IsEntityAlive(entity))
-                    continue;
-                if (!m_registry.HasComponent<Position>(entity) ||
-                    !m_registry.HasComponent<BoxCollider>(entity))
-                    continue;
-
-                const auto& pos = m_registry.GetComponent<Position>(entity);
-                const auto& box = m_registry.GetComponent<BoxCollider>(entity);
-
-                // Check if this entity is in our tracked list
-                bool isTracked = false;
-                for (auto& tracked : m_obstacleColliderEntities) {
-                    if (tracked == entity) {
-                        isTracked = true;
-                        break;
-                    }
-                }
-
-                // Use different colors for tracked vs untracked colliders
-                Renderer::Color borderColor;
-                Renderer::Color fillColor;
-                if (isTracked) {
-                    // Tracked colliders: yellow border, red fill
-                    borderColor = Renderer::Color(1.0f, 1.0f, 0.0f, 0.6f);
-                    fillColor = Renderer::Color(1.0f, 0.0f, 0.0f, 0.4f);
-                } else {
-                    // UNTRACKED colliders: magenta border, blue fill (THESE ARE THE INVISIBLE ONES!)
-                    borderColor = Renderer::Color(1.0f, 0.0f, 1.0f, 0.9f);
-                    fillColor = Renderer::Color(0.0f, 0.0f, 1.0f, 0.6f);
-                }
-
-                // Draw border
-                Renderer::Rectangle borderRect;
-                borderRect.position = Renderer::Vector2(pos.x - 2, pos.y - 2);
-                borderRect.size = Renderer::Vector2(box.width + 4, box.height + 4);
-                m_renderer->DrawRectangle(borderRect, borderColor);
-
-                // Draw collider box
-                Renderer::Rectangle rect;
-                rect.position = Renderer::Vector2(pos.x, pos.y);
-                rect.size = Renderer::Vector2(box.width, box.height);
-                m_renderer->DrawRectangle(rect, fillColor);
-
-                // If this collider has metadata, draw a cyan dot
-                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
-                    const auto& metadata = m_registry.GetComponent<ObstacleMetadata>(entity);
-
-                    if (metadata.visualEntity != ECS::NULL_ENTITY &&
-                        m_registry.IsEntityAlive(metadata.visualEntity) &&
-                        m_registry.HasComponent<Position>(metadata.visualEntity)) {
-
-                        float colliderCenterX = pos.x + box.width / 2;
-                        float colliderCenterY = pos.y + box.height / 2;
-
-                        // Draw a cyan dot at collider center to show the link
-                        Renderer::Rectangle linkMarker;
-                        linkMarker.position = Renderer::Vector2(colliderCenterX - 2, colliderCenterY - 2);
-                        linkMarker.size = Renderer::Vector2(4, 4);
-                        m_renderer->DrawRectangle(linkMarker, Renderer::Color(0.0f, 1.0f, 1.0f, 0.8f));
-                    }
-                }
-            }
         }
 
         void InGameState::renderChargeBar() {

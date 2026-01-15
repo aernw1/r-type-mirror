@@ -21,15 +21,7 @@ using namespace Animation;
 namespace RType {
     namespace Client {
 
-        void InGameState::OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks) {
-#ifdef DEBUG_NETWORK_VERBOSE
-            static int stateLog = 0;
-            if (stateLog++ % 60 == 0) {
-                auto now = std::chrono::steady_clock::now();
-                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-                std::cout << "[CLIENT RECV STATE] t=" << ms << " tick=" << tick << " entities=" << entities.size() << std::endl;
-            }
-#endif
+        void InGameState::OnServerStateUpdate(uint32_t /*tick*/, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks) {
 
             if (m_context.networkClient) {
                 m_serverScrollOffset = m_context.networkClient->GetLastScrollOffset();
@@ -56,9 +48,6 @@ namespace RType {
                                         m_registry.HasComponent<ECS::WeaponSlot>(obsEntity) ||
                                         m_registry.HasComponent<ECS::Velocity>(obsEntity);
                     if (contaminated) {
-                        std::cout << "[CLIENT SCRUB] Obstacle entity " << obsEntity
-                                  << " had Bullet/Shooter/WeaponSlot/Velocity; destroying to avoid obstacle bullets."
-                                  << std::endl;
 
                         for (auto itMap = m_networkEntityMap.begin(); itMap != m_networkEntityMap.end();) {
                             if (itMap->second == obsEntity) {
@@ -92,30 +81,8 @@ namespace RType {
 
                 if (auto it = m_networkEntityMap.find(entityState.entityId); it == m_networkEntityMap.end()) {
                     if (type == network::EntityType::PLAYER) {
-                        bool isForcePod = (entityState.flags & 0x80) != 0;
-                        if (isForcePod) {
-                            auto newEntity = m_registry.CreateEntity();
-                            CleanupInvalidComponents(newEntity, network::EntityType::PLAYER);
-                            m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
-                            m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
-
-                            Renderer::SpriteId podSprite = m_powerupForcePodSprite;
-                            if (podSprite != Renderer::INVALID_SPRITE_ID) {
-                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(podSprite, 9));
-                                d.scale = {0.4f, 0.4f};
-                                d.origin = Math::Vector2(128.0f, 128.0f);
-                            }
-
-                            m_networkEntityMap[entityState.entityId] = newEntity;
-                            std::cout << "[GameState] Created FORCE POD entity " << entityState.entityId << std::endl;
+                        if (entityState.ownerHash == m_context.playerHash && m_localPlayerEntity != ECS::NULL_ENTITY) {
                             continue;
-                        }
-
-                        if (entityState.ownerHash == m_context.playerHash) {
-                            auto existing = m_networkEntityMap.find(entityState.entityId);
-                            if (existing != m_networkEntityMap.end()) {
-                                continue;
-                            }
                         }
 
                         Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
@@ -189,10 +156,7 @@ namespace RType {
                             if (entityState.health > 0) {
                                 m_playersHUD[hudPlayerIndex].isDead = false;
                             }
-                            std::cout << "[GameState] Player P" << (int)playerNum << " (" << playerName << ") added to scoreboard" << std::endl;
                         }
-
-                        std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
                     } else if (type == network::EntityType::ENEMY) {
                         uint8_t enemyType = entityState.flags;
                         EnemySpriteConfig config = GetEnemySpriteConfig(enemyType);
@@ -222,7 +186,6 @@ namespace RType {
                         drawable.tint = enemyTint;
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
-                        std::cout << "[GameState] Created ENEMY entity " << entityState.entityId << " type " << static_cast<int>(enemyType) << std::endl;
                     } else if (type == network::EntityType::BOSS) {
                         Renderer::SpriteId bossSprite = Renderer::INVALID_SPRITE_ID;
                         auto spriteIt = m_levelAssets.sprites.find("boss_dragon");
@@ -252,37 +215,14 @@ namespace RType {
                         m_bossHealthBar.bossNetworkId = entityState.entityId;
                     } else if (type == network::EntityType::BULLET) {
                         auto newEntity = m_registry.CreateEntity();
-
-                        bool hadObstacle = m_registry.HasComponent<ECS::Obstacle>(newEntity);
-                        bool hadObstacleMeta = m_registry.HasComponent<ECS::ObstacleMetadata>(newEntity);
-                        bool hadDrawable = m_registry.HasComponent<ECS::Drawable>(newEntity);
-
-                        if (hadObstacle || hadObstacleMeta || hadDrawable) {
-                            std::cerr << "[CLIENT BULLET] NEW bullet entity " << newEntity
-                                      << " has contaminated components: Obstacle=" << hadObstacle
-                                      << " ObstacleMeta=" << hadObstacleMeta
-                                      << " Drawable=" << hadDrawable;
-                            if (hadDrawable) {
-                                const auto& drawable = m_registry.GetComponent<ECS::Drawable>(newEntity);
-                                std::cerr << " DrawableSpriteId=" << drawable.spriteId;
-                            }
-                            std::cerr << std::endl;
-                        }
-
                         CleanupInvalidComponents(newEntity, network::EntityType::BULLET);
 
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
-                        static uint64_t bulletSpriteLogCount = 0;
-                        const char* chosenSpriteKey = "(none)";
-                        Renderer::SpriteId chosenSpriteId = Renderer::INVALID_SPRITE_ID;
-
                         if (entityState.flags == 15) {
                             auto thirdBulletSpriteIt = m_levelAssets.sprites.find("third_bullet");
                             if (thirdBulletSpriteIt != m_levelAssets.sprites.end()) {
-                                chosenSpriteKey = "third_bullet";
-                                chosenSpriteId = thirdBulletSpriteIt->second;
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(thirdBulletSpriteIt->second, 12));
                                 d.scale = {2.5f, 2.5f};
                                 d.origin = Math::Vector2(16.0f, 16.0f);
@@ -294,8 +234,6 @@ namespace RType {
                         } else if (entityState.flags == 14) {
                             auto blackOrbSpriteIt = m_levelAssets.sprites.find("black_orb");
                             if (blackOrbSpriteIt != m_levelAssets.sprites.end()) {
-                                chosenSpriteKey = "black_orb";
-                                chosenSpriteId = blackOrbSpriteIt->second;
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(blackOrbSpriteIt->second, 12));
                                 d.scale = {2.0f, 2.0f};
                                 d.origin = Math::Vector2(20.0f, 20.0f);
@@ -307,8 +245,6 @@ namespace RType {
                         } else if (entityState.flags == 13) {
                             auto bossBulletSpriteIt = m_levelAssets.sprites.find("boss_bullet");
                             if (bossBulletSpriteIt != m_levelAssets.sprites.end()) {
-                                chosenSpriteKey = "boss_bullet";
-                                chosenSpriteId = bossBulletSpriteIt->second;
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bossBulletSpriteIt->second, 12));
                                 d.scale = {2.0f, 2.0f};
                                 d.origin = Math::Vector2(8.0f, 4.0f);
@@ -337,8 +273,6 @@ namespace RType {
                                 continue;
                             }
 
-                            chosenSpriteKey = "enemy_bullet(config/bullet)";
-                            chosenSpriteId = bulletSprite;
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSprite, 12));
                             d.scale = {scaleValue, scaleValue};
                             d.origin = Math::Vector2(128.0f, 128.0f);
@@ -346,8 +280,6 @@ namespace RType {
                         } else {
                             auto bulletSpriteIt = m_levelAssets.sprites.find("bullet");
                             if (bulletSpriteIt != m_levelAssets.sprites.end()) {
-                                chosenSpriteKey = "bullet";
-                                chosenSpriteId = bulletSpriteIt->second;
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSpriteIt->second, 12));
                                 d.scale = {0.1f, 0.1f};
                                 d.origin = Math::Vector2(128.0f, 128.0f);
@@ -355,14 +287,6 @@ namespace RType {
                             }
                         }
 
-                        if (bulletSpriteLogCount < 300 || (bulletSpriteLogCount % 20) == 0) {
-                            std::cout << "[CLIENT BULLET SPRITE] netId=" << entityState.entityId
-                                      << " flags=" << static_cast<int>(entityState.flags)
-                                      << " spriteKey=" << chosenSpriteKey
-                                      << " spriteId=" << chosenSpriteId
-                                      << std::endl;
-                        }
-                        bulletSpriteLogCount++;
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         m_bulletFlagsMap[entityState.entityId] = entityState.flags;
                     } else if (type == network::EntityType::POWERUP) {
@@ -376,54 +300,42 @@ namespace RType {
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
                         Math::Color powerupColor = ECS::PowerUpFactory::GetPowerUpColor(puType);
-
                         Renderer::SpriteId powerupSprite = Renderer::INVALID_SPRITE_ID;
-                        switch (puType) {
-                            case ECS::PowerUpType::FIRE_RATE_BOOST:
-                                powerupSprite = m_powerupSpreadSprite;
-                                break;
-                            case ECS::PowerUpType::SPREAD_SHOT:
-                                powerupSprite = m_powerupSpreadSprite;
-                                break;
-                            case ECS::PowerUpType::LASER_BEAM:
-                                powerupSprite = m_powerupLaserSprite;
-                                break;
-                            case ECS::PowerUpType::FORCE_POD:
-                                powerupSprite = m_powerupForcePodSprite;
-                                break;
-                            case ECS::PowerUpType::SPEED_BOOST:
-                                powerupSprite = m_powerupSpeedSprite;
-                                break;
-                            case ECS::PowerUpType::SHIELD:
-                                powerupSprite = m_powerupShieldSprite;
-                                break;
-                            default:
-                                powerupSprite = m_powerupSpreadSprite;
-                                break;
+                        
+                        if (puType == ECS::PowerUpType::FORCE_POD) {
+                            auto textureIt = m_levelAssets.textures.find("powerup-force-pod");
+                            if (textureIt != m_levelAssets.textures.end()) {
+                                powerupSprite = m_renderer->CreateSprite(textureIt->second, Renderer::Rectangle{{0.0f, 0.0f}, {128.0f, 128.0f}});
+                            } else {
+                                powerupSprite = GetPowerUpSprite(puType);
+                            }
+                        } else {
+                            powerupSprite = GetPowerUpSprite(puType);
                         }
 
                         if (powerupSprite != Renderer::INVALID_SPRITE_ID) {
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(powerupSprite, 5));
-                            d.scale = {0.8f, 0.8f};
+                            if (puType == ECS::PowerUpType::FORCE_POD) {
+                                d.scale = {0.25f, 0.25f};
+                            } else {
+                                d.scale = {2.5f, 2.5f};
+                            }
                             d.tint = powerupColor;
+                            m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
                         }
 
                         m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{32.0f, 32.0f});
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::POWERUP,
+                                           CollisionLayers::PLAYER));
+                        m_registry.AddComponent<ECS::PowerUp>(newEntity, ECS::PowerUp(puType, entityState.entityId));
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
-                        std::cout << "[GameState] Created POWERUP entity " << entityState.entityId << " type " << static_cast<int>(powerupType) << std::endl;
                     } else if (type == network::EntityType::OBSTACLE) {
                         uint64_t obstacleId = entityState.ownerHash;
                         auto colliderIt = m_obstacleIdToCollider.find(obstacleId);
 
-                        static int obstacleNotFoundLog = 0;
                         if (colliderIt == m_obstacleIdToCollider.end()) {
-                            if (obstacleNotFoundLog < 5) {
-                                std::cout << "[CLIENT OBSTACLE MISSING] Received NEW obstacle uniqueId=" << obstacleId
-                                          << " but not found in m_obstacleIdToCollider map (size="
-                                          << m_obstacleIdToCollider.size() << ")" << std::endl;
-                                obstacleNotFoundLog++;
-                            }
                             continue;
                         }
 
@@ -435,9 +347,6 @@ namespace RType {
 
                         if (!m_registry.HasComponent<ECS::Obstacle>(colliderEntity) ||
                             !m_registry.HasComponent<ECS::ObstacleMetadata>(colliderEntity)) {
-                            std::cout << "[CLIENT ENTITY REUSE] Obstacle ID " << obstacleId
-                                      << " maps to entity " << colliderEntity
-                                      << " which is NO LONGER an obstacle - skipping mapping" << std::endl;
                             continue;
                         }
 
@@ -462,8 +371,6 @@ namespace RType {
                             }
                             m_networkEntityMap.erase(it);
                             m_bulletFlagsMap.erase(entityState.entityId);
-                            std::cout << "[CLIENT BULLET RECREATE] netId=" << entityState.entityId
-                                      << " had obstacle/invalid mapping; recreating bullet entity." << std::endl;
                             continue;
                         }
                     }
@@ -492,44 +399,19 @@ namespace RType {
                         uint64_t obstacleId = entityState.ownerHash;
                         auto colliderIt = m_obstacleIdToCollider.find(obstacleId);
 
-                        static int obstacleNotFoundLog = 0;
                         if (colliderIt == m_obstacleIdToCollider.end()) {
-                            if (obstacleNotFoundLog < 5) {
-                                std::cout << "[CLIENT OBSTACLE MISSING] Received obstacle uniqueId=" << obstacleId
-                                          << " but not found in m_obstacleIdToCollider map (size="
-                                          << m_obstacleIdToCollider.size() << ")" << std::endl;
-                                obstacleNotFoundLog++;
-                            }
                             continue;
                         }
 
                         ECS::Entity colliderEntity = colliderIt->second;
 
-                        static int entityReuseLog = 0;
                         if (!m_registry.IsEntityAlive(colliderEntity)) {
-                            if (entityReuseLog < 10) {
-                                std::cout << "[CLIENT ENTITY REUSE] Obstacle network ID " << entityState.entityId
-                                          << " maps to DEAD entity " << colliderEntity << std::endl;
-                                entityReuseLog++;
-                            }
                             m_networkEntityMap.erase(it);
                             continue;
                         }
 
                         if (!m_registry.HasComponent<ECS::Obstacle>(colliderEntity)) {
-                            if (entityReuseLog < 10) {
-                                std::cout << "[CLIENT ENTITY REUSE] Obstacle network ID " << entityState.entityId
-                                          << " maps to entity " << colliderEntity << " which is NO LONGER AN OBSTACLE"
-                                          << " (now has: "
-                                          << (m_registry.HasComponent<ECS::Bullet>(colliderEntity) ? "Bullet " : "")
-                                          << (m_registry.HasComponent<ECS::Enemy>(colliderEntity) ? "Enemy " : "")
-                                          << (m_registry.HasComponent<ECS::Player>(colliderEntity) ? "Player " : "")
-                                          << ")" << std::endl;
-
-                                CleanupInvalidComponents(colliderEntity, network::EntityType::OBSTACLE);
-
-                                entityReuseLog++;
-                            }
+                            CleanupInvalidComponents(colliderEntity, network::EntityType::OBSTACLE);
                             m_networkEntityMap.erase(it);
                             continue;
                         }
@@ -539,24 +421,11 @@ namespace RType {
                             continue;
                         }
 
-                        static int clientObstacleLog = 0;
-                        if (clientObstacleLog < 5) {
-                            std::cout << "[CLIENT RECV] Obstacle uniqueId=" << obstacleId
-                                      << " entity=" << colliderEntity
-                                      << " received pos=(" << entityState.x << "," << entityState.y << ")" << std::endl;
-                            clientObstacleLog++;
-                        }
-
                         auto& colliderPos = m_registry.GetComponent<Position>(colliderEntity);
                         colliderPos.x = entityState.x;
                         colliderPos.y = entityState.y;
 
-                        static int scrollableRemovalLog = 0;
                         if (m_registry.HasComponent<Scrollable>(colliderEntity)) {
-                            if (scrollableRemovalLog < 10) {
-                                std::cout << "[CLIENT] Removing Scrollable from obstacle entity " << colliderEntity << std::endl;
-                                scrollableRemovalLog++;
-                            }
                             m_registry.RemoveComponent<Scrollable>(colliderEntity);
                         }
 
@@ -746,19 +615,6 @@ namespace RType {
                 }
             }
 
-            static bool loggedObstacleMapping = false;
-            if (!loggedObstacleMapping) {
-                int obstaclesInNetworkMap = 0;
-                for (const auto& pair : m_networkEntityMap) {
-                    if (m_registry.IsEntityAlive(pair.second) &&
-                        m_registry.HasComponent<ECS::Obstacle>(pair.second)) {
-                        obstaclesInNetworkMap++;
-                    }
-                }
-                std::cout << "[CLIENT NETWORK MAP] m_networkEntityMap has " << obstaclesInNetworkMap
-                          << " obstacle entities mapped (total map size: " << m_networkEntityMap.size() << ")" << std::endl;
-                loggedObstacleMapping = true;
-            }
 
             for (uint32_t entityId : entitiesToRemove) {
                 auto it = m_networkEntityMap.find(entityId);
