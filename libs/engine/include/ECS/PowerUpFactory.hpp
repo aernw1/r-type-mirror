@@ -46,6 +46,7 @@ namespace RType {
             static Math::Color GetPowerUpColor(PowerUpType type);
             static const char* GetPowerUpSpritePath(PowerUpType type);
             static const char* GetPowerUpName(PowerUpType type);
+            static float GetPowerUpScale(PowerUpType type);
         };
 
     }

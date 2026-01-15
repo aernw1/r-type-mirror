@@ -80,8 +80,10 @@ namespace RType {
 
                     auto& drawable = registry.AddComponent<Drawable>(powerup, Drawable(spriteId, 5));
                     drawable.tint = data.color;
-                    drawable.scale = Math::Vector2(2.5f, 2.5f);
-                    registry.AddComponent<PowerUpGlow>(powerup);
+                    float scale = GetPowerUpScale(type);
+                    drawable.scale = Math::Vector2(scale, scale);
+                    auto& glow = registry.AddComponent<PowerUpGlow>(powerup);
+                    glow.baseScale = scale;
                 }
             }
 
@@ -200,12 +202,13 @@ namespace RType {
                 if (textureId != Renderer::INVALID_TEXTURE_ID) {
                     Renderer::SpriteId spriteId = renderer->CreateSprite(
                         textureId,
-                        Renderer::Rectangle{{0.0f, 0.0f}, {128.0f, 128.0f}}
+                        Renderer::Rectangle{{0.0f, 0.0f}, {96.0f, 96.0f}}
                     );
 
                     auto& drawable = registry.AddComponent<Drawable>(forcePod, Drawable(spriteId, 9));
                     drawable.tint = Math::Color(1.0f, 0.6f, 0.0f, 1.0f);
-                    drawable.scale = Math::Vector2(0.4f, 0.4f);
+                    float scale = GetPowerUpScale(PowerUpType::FORCE_POD);
+                    drawable.scale = Math::Vector2(scale, scale);
                 }
             }
 
@@ -222,6 +225,13 @@ namespace RType {
 
         const char* PowerUpFactory::GetPowerUpName(PowerUpType type) {
             return POWERUP_DATA_TABLE[static_cast<size_t>(type)].name;
+        }
+
+        float PowerUpFactory::GetPowerUpScale(PowerUpType type) {
+            if (type == PowerUpType::FORCE_POD) {
+                return 0.33f;
+            }
+            return 2.5f;
         }
     }
 }

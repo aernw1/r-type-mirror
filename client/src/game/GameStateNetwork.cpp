@@ -339,7 +339,8 @@ namespace RType {
                             float scale = ECS::PowerUpFactory::GetPowerUpScale(puType);
                             d.scale = {scale, scale};
                             d.tint = powerupColor;
-                            m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
+                            auto& glow = m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
+                            glow.baseScale = scale;
                         }
 
                         m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{32.0f, 32.0f});
