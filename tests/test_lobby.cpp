@@ -7,9 +7,11 @@
 
 #include "LobbyServer.hpp"
 #include "LobbyClient.hpp"
+#include "AsioNetworkModule.hpp"
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <memory>
 
 using namespace std::chrono_literals;
 
@@ -17,7 +19,10 @@ int main() {
     std::cout << "=== Lobby Test ===" << std::endl;
 
     std::thread serverThread([]() {
-        network::LobbyServer server(4242, 4);
+        auto networkModule = std::make_shared<Network::AsioNetworkModule>();
+        networkModule->Initialize(nullptr);
+
+        network::LobbyServer server(networkModule.get(), 4242, 4);
         std::cout << "[Server] Started on port 4242" << std::endl;
 
         while (!server.isGameStarted()) {
@@ -30,7 +35,10 @@ int main() {
     std::this_thread::sleep_for(100ms);
 
     std::thread client1Thread([]() {
-        network::LobbyClient client("127.0.0.1", 4242);
+        auto networkModule = std::make_shared<Network::AsioNetworkModule>();
+        networkModule->Initialize(nullptr);
+
+        network::LobbyClient client(networkModule.get(), "127.0.0.1", 4242);
         client.connect("Alice");
 
         while (!client.isConnected()) {
@@ -53,7 +61,10 @@ int main() {
     std::this_thread::sleep_for(100ms);
 
     std::thread client2Thread([]() {
-        network::LobbyClient client("127.0.0.1", 4242);
+        auto networkModule = std::make_shared<Network::AsioNetworkModule>();
+        networkModule->Initialize(nullptr);
+
+        network::LobbyClient client(networkModule.get(), "127.0.0.1", 4242);
         client.connect("Bob");
 
         while (!client.isConnected()) {

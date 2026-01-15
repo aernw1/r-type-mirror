@@ -3,6 +3,7 @@
 #include "../../include/ECS/ShootingSystem.hpp"
 #include "../../include/ECS/RenderingSystem.hpp"
 #include <cmath>
+#include <iostream>
 
 namespace RType {
     namespace ECS {
@@ -39,6 +40,23 @@ namespace RType {
                 if (!registry.IsEntityAlive(shooterEntity) || !registry.HasComponent<Shooter>(shooterEntity)) {
                     continue;
                 }
+
+                // CRITICAL FIX: Prevent obstacles from shooting due to entity ID reuse
+                // Actively clean up contaminated components
+                if (registry.HasComponent<Obstacle>(shooterEntity) ||
+                    registry.HasComponent<ObstacleMetadata>(shooterEntity)) {
+                    std::cerr << "[SHOOTING] BLOCKED obstacle entity " << shooterEntity
+                              << " from shooting (has Shooter=" << registry.HasComponent<Shooter>(shooterEntity)
+                              << " ShootCommand=" << registry.HasComponent<ShootCommand>(shooterEntity) << ")" << std::endl;
+                    if (registry.HasComponent<Shooter>(shooterEntity)) {
+                        registry.RemoveComponent<Shooter>(shooterEntity);
+                    }
+                    if (registry.HasComponent<ShootCommand>(shooterEntity)) {
+                        registry.RemoveComponent<ShootCommand>(shooterEntity);
+                    }
+                    continue;
+                }
+
                 auto& shooterComp = registry.GetComponent<Shooter>(shooterEntity);
 
                 shooterComp.cooldown = shooterComp.cooldown - deltaTime;
@@ -66,6 +84,17 @@ namespace RType {
 
             for (const auto& spawn : spawns) {
                 auto bulletEntity = registry.CreateEntity();
+
+                // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+                if (registry.HasComponent<Obstacle>(bulletEntity)) {
+                    std::cerr << "[SHOOTING CLEANUP] Removing Obstacle from bullet entity " << bulletEntity << std::endl;
+                    registry.RemoveComponent<Obstacle>(bulletEntity);
+                }
+                if (registry.HasComponent<ObstacleMetadata>(bulletEntity)) {
+                    std::cerr << "[SHOOTING CLEANUP] Removing ObstacleMetadata from bullet entity " << bulletEntity << std::endl;
+                    registry.RemoveComponent<ObstacleMetadata>(bulletEntity);
+                }
+
                 registry.AddComponent<Position>(bulletEntity, Position(spawn.x, spawn.y));
                 registry.AddComponent<Velocity>(bulletEntity, Velocity(600.0f, 0.0f));
                 registry.AddComponent<Bullet>(bulletEntity, Bullet(spawn.shooter));
@@ -83,13 +112,33 @@ namespace RType {
                 registry.AddComponent<CollisionLayer>(bulletEntity,
                                                       CollisionLayer(CollisionLayers::PLAYER_BULLET,
                                                                      CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+
+                if (m_shootSound != Audio::INVALID_SOUND_ID) {
+                    auto sfx = registry.CreateEntity();
+                    auto& se = registry.AddComponent<SoundEffect>(sfx, SoundEffect(m_shootSound, 1.0f));
+                    se.pitch = 1.0f;
+                }
             }
 
-            // Handle WeaponSlot components (spread shot, laser, etc.)
             auto weaponSlots = registry.GetEntitiesWithComponent<WeaponSlot>();
 
             for (auto entity : weaponSlots) {
                 if (!registry.IsEntityAlive(entity)) continue;
+
+                // CRITICAL FIX: Prevent obstacles from shooting with weapon slots
+                if (registry.HasComponent<Obstacle>(entity) ||
+                    registry.HasComponent<ObstacleMetadata>(entity)) {
+                    std::cerr << "[SHOOTING] BLOCKED obstacle entity " << entity
+                              << " from using weapon slot (has WeaponSlot=" << registry.HasComponent<WeaponSlot>(entity)
+                              << " ShootCommand=" << registry.HasComponent<ShootCommand>(entity) << ")" << std::endl;
+                    if (registry.HasComponent<WeaponSlot>(entity)) {
+                        registry.RemoveComponent<WeaponSlot>(entity);
+                    }
+                    if (registry.HasComponent<ShootCommand>(entity)) {
+                        registry.RemoveComponent<ShootCommand>(entity);
+                    }
+                    continue;
+                }
 
                 auto& weapon = registry.GetComponent<WeaponSlot>(entity);
                 if (!weapon.enabled) continue;
@@ -123,7 +172,6 @@ namespace RType {
         }
 
         void ShootingSystem::CreateSpreadShot(Registry& registry, Entity shooter, const Position& pos, int damage) {
-            // Create 3 bullets at different angles
             float angles[] = {-15.0f, 0.0f, 15.0f}; // degrees
 
             for (float angle : angles) {
@@ -132,11 +180,23 @@ namespace RType {
                 float vy = 600.0f * std::sin(radians);
 
                 auto bullet = registry.CreateEntity();
+
+                // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+                if (registry.HasComponent<Obstacle>(bullet)) {
+                    registry.RemoveComponent<Obstacle>(bullet);
+                }
+                if (registry.HasComponent<ObstacleMetadata>(bullet)) {
+                    registry.RemoveComponent<ObstacleMetadata>(bullet);
+                }
+
                 registry.AddComponent<Position>(bullet, Position(pos.x + 50, pos.y + 25));
                 registry.AddComponent<Velocity>(bullet, Velocity(vx, vy));
                 registry.AddComponent<Bullet>(bullet, Bullet(shooter));
                 registry.AddComponent<Damage>(bullet, Damage(damage));
                 registry.AddComponent<BoxCollider>(bullet, BoxCollider(8.0f, 4.0f));
+                registry.AddComponent<CollisionLayer>(bullet,
+                                                      CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                                                     CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
 
                 if (m_bulletSprite != 0) {
                     auto& d = registry.AddComponent<Drawable>(bullet, Drawable(m_bulletSprite, 2));
@@ -148,11 +208,23 @@ namespace RType {
 
         void ShootingSystem::CreateLaserShot(Registry& registry, Entity shooter, const Position& pos, int damage) {
             auto bullet = registry.CreateEntity();
+
+            // CRITICAL FIX: Clean up obstacle components from entity ID reuse
+            if (registry.HasComponent<Obstacle>(bullet)) {
+                registry.RemoveComponent<Obstacle>(bullet);
+            }
+            if (registry.HasComponent<ObstacleMetadata>(bullet)) {
+                registry.RemoveComponent<ObstacleMetadata>(bullet);
+            }
+
             registry.AddComponent<Position>(bullet, Position(pos.x + 50, pos.y + 25));
             registry.AddComponent<Velocity>(bullet, Velocity(800.0f, 0.0f)); // Faster
             registry.AddComponent<Bullet>(bullet, Bullet(shooter));
             registry.AddComponent<Damage>(bullet, Damage(damage));
             registry.AddComponent<BoxCollider>(bullet, BoxCollider(30.0f, 3.0f)); // Longer
+            registry.AddComponent<CollisionLayer>(bullet,
+                                                  CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                                                 CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
 
             if (m_bulletSprite != 0) {
                 auto& d = registry.AddComponent<Drawable>(bullet, Drawable(m_bulletSprite, 2));

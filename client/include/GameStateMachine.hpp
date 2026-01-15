@@ -8,12 +8,15 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <stack>
 #include <vector>
 #include "Renderer/IRenderer.hpp"
 #include "ECS/Registry.hpp"
+#include "Audio/IAudio.hpp"
 #include "../../libs/network/include/GameClient.hpp"
 #include "../../libs/network/include/Protocol.hpp"
+#include "../../libs/network/include/INetworkModule.hpp"
 
 namespace RType {
     namespace Client {
@@ -30,6 +33,8 @@ namespace RType {
             std::shared_ptr<Renderer::IRenderer> renderer;
             std::shared_ptr<ECS::Registry> registry;
             std::shared_ptr<network::GameClient> networkClient;
+            std::shared_ptr<Network::INetworkModule> networkModule;
+            std::shared_ptr<Audio::IAudio> audio;
 
             std::string playerName;
             std::string serverIp;
@@ -37,6 +42,9 @@ namespace RType {
             uint64_t playerHash;
             uint8_t playerNumber;
             std::vector<network::PlayerInfo> allPlayers;
+
+            uint32_t roomId = 0;
+            std::string roomName;
         };
 
         class IState {
@@ -55,29 +63,32 @@ namespace RType {
             GameStateMachine() = default;
             ~GameStateMachine() {
                 while (!m_states.empty()) {
-                    m_states.top()->Cleanup();
-                    m_states.pop();
+                    PopStateImmediate();
                 }
             }
 
             void PushState(std::unique_ptr<IState> state) {
-                m_states.push(std::move(state));
-                m_states.top()->Init();
+                if (m_isDispatching) {
+                    m_pending = PendingOp{OpType::Push, std::move(state)};
+                    return;
+                }
+                PushStateImmediate(std::move(state));
             }
 
             void PopState() {
-                if (!m_states.empty()) {
-                    m_states.top()->Cleanup();
-                    m_states.pop();
+                if (m_isDispatching) {
+                    m_pending = PendingOp{OpType::Pop, nullptr};
+                    return;
                 }
+                PopStateImmediate();
             }
 
             void ChangeState(std::unique_ptr<IState> state) {
-                if (!m_states.empty()) {
-                    m_states.top()->Cleanup();
-                    m_states.pop();
+                if (m_isDispatching) {
+                    m_pending = PendingOp{OpType::Change, std::move(state)};
+                    return;
                 }
-                PushState(std::move(state));
+                ChangeStateImmediate(std::move(state));
             }
 
             IState* GetCurrentState() {
@@ -85,23 +96,88 @@ namespace RType {
             }
 
             void Update(float dt) {
-                if (GetCurrentState())
+                if (GetCurrentState()) {
+                    m_isDispatching = true;
                     GetCurrentState()->Update(dt);
+                    m_isDispatching = false;
+                    ApplyPending();
+                }
             }
 
             void Draw() {
-                if (GetCurrentState())
+                if (GetCurrentState()) {
+                    m_isDispatching = true;
                     GetCurrentState()->Draw();
+                    m_isDispatching = false;
+                    ApplyPending();
+                }
             }
 
             void HandleInput() {
-                if (GetCurrentState())
+                if (GetCurrentState()) {
+                    m_isDispatching = true;
                     GetCurrentState()->HandleInput();
+                    m_isDispatching = false;
+                    ApplyPending();
+                }
             }
 
             bool IsRunning() const { return !m_states.empty(); }
         private:
+            enum class OpType {
+                Push,
+                Pop,
+                Change
+            };
+
+            struct PendingOp {
+                OpType type;
+                std::unique_ptr<IState> state;
+            };
+
+            void ApplyPending() {
+                if (!m_pending.has_value()) {
+                    return;
+                }
+                PendingOp op = std::move(*m_pending);
+                m_pending.reset();
+
+                switch (op.type) {
+                case OpType::Push:
+                    PushStateImmediate(std::move(op.state));
+                    break;
+                case OpType::Pop:
+                    PopStateImmediate();
+                    break;
+                case OpType::Change:
+                    ChangeStateImmediate(std::move(op.state));
+                    break;
+                }
+            }
+
+            void PushStateImmediate(std::unique_ptr<IState> state) {
+                m_states.push(std::move(state));
+                m_states.top()->Init();
+            }
+
+            void PopStateImmediate() {
+                if (!m_states.empty()) {
+                    m_states.top()->Cleanup();
+                    m_states.pop();
+                }
+            }
+
+            void ChangeStateImmediate(std::unique_ptr<IState> state) {
+                if (!m_states.empty()) {
+                    m_states.top()->Cleanup();
+                    m_states.pop();
+                }
+                PushStateImmediate(std::move(state));
+            }
+
             std::stack<std::unique_ptr<IState>> m_states;
+            bool m_isDispatching = false;
+            std::optional<PendingOp> m_pending;
         };
 
     }

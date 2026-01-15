@@ -12,7 +12,10 @@
 
 namespace network {
 
-    LobbyServer::LobbyServer(uint16_t port, size_t maxPlayers, size_t minPlayers) : _server(port), _maxPlayers(maxPlayers), _minPlayers(minPlayers), _rng(std::random_device{}()) {
+    LobbyServer::LobbyServer(Network::INetworkModule* network, uint16_t port, size_t maxPlayers,
+        size_t minPlayers)
+        : _server(network, port), _maxPlayers(maxPlayers), _minPlayers(minPlayers),
+          _rng(std::random_device{}()) {
         _clients.resize(_maxPlayers);
         _players.resize(_maxPlayers);
         _lastUpdateTime = std::chrono::steady_clock::now();
@@ -131,6 +134,7 @@ namespace network {
             if (_players[i] && i != clientIdx) {
                 Serializer existingPlayerPayload;
                 existingPlayerPayload.writeU8(_players[i]->number);
+                existingPlayerPayload.writeU64(_players[i]->hash);
                 existingPlayerPayload.writeString(_players[i]->name, PLAYER_NAME_SIZE);
                 sendTo(clientIdx, LobbyPacket::PLAYER_JOIN, existingPlayerPayload.finalize());
 
@@ -144,6 +148,7 @@ namespace network {
 
         Serializer joinPayload;
         joinPayload.writeU8(player.number);
+        joinPayload.writeU64(player.hash);
         joinPayload.writeString(player.name, PLAYER_NAME_SIZE);
         broadcast(LobbyPacket::PLAYER_JOIN, joinPayload.finalize());
 

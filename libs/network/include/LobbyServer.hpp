@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include "TcpServer.hpp"
-#include "TcpSocket.hpp"
+#include "NetworkTcpSocket.hpp"
 #include "Protocol.hpp"
 #include "Serializer.hpp"
 #include "Deserializer.hpp"
@@ -22,7 +21,8 @@ namespace network {
 
     class LobbyServer {
     public:
-        LobbyServer(uint16_t port, size_t maxPlayers = MAX_PLAYERS, size_t minPlayers = 2);
+        LobbyServer(Network::INetworkModule* network, uint16_t port, size_t maxPlayers = MAX_PLAYERS,
+            size_t minPlayers = 2);
 
         void update();
         void printStatus() const;
@@ -52,8 +52,8 @@ namespace network {
         void updateCountdown();
         bool allPlayersReady() const;
 
-        TcpServer _server;
-        std::vector<std::optional<TcpSocket>> _clients;
+        NetworkTcpServer _server;
+        std::vector<std::optional<NetworkTcpSocket>> _clients;
         std::vector<std::optional<PlayerInfo>> _players;
         size_t _maxPlayers;
         size_t _minPlayers;

@@ -1,5 +1,6 @@
 set(ECS_SOURCES
     Registry.cpp
+    AudioSystem.cpp
     MovementSystem.cpp
     InputSystem.cpp
     RenderingSystem.cpp
@@ -23,10 +24,17 @@ set(ECS_SOURCES
     PowerUpCollisionSystem.cpp
     ForcePodSystem.cpp
     ShieldSystem.cpp
+    BossSystem.cpp
+    BossAttackSystem.cpp
+    BlackOrbSystem.cpp
+    ThirdBulletSystem.cpp
+    AnimationSystem.cpp
+    EffectFactory.cpp
 )
 
 set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Component.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/AudioSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Components/TextLabel.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Components/Clickable.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Entity.hpp
@@ -56,6 +64,12 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/PowerUpCollisionSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ForcePodSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShieldSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossAttackSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BlackOrbSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ThirdBulletSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/AnimationSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/EffectFactory.hpp
 )
 
 add_library(rtype_ecs STATIC
@@ -68,7 +82,7 @@ target_include_directories(rtype_ecs PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(rtype_ecs PUBLIC nlohmann_json::nlohmann_json)
+target_link_libraries(rtype_ecs PUBLIC nlohmann_json::nlohmann_json rtype_animation)
 
 set_target_properties(rtype_ecs PROPERTIES
     POSITION_INDEPENDENT_CODE ON

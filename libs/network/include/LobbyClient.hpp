@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "TcpSocket.hpp"
+#include "NetworkTcpSocket.hpp"
 #include "Protocol.hpp"
 #include "Serializer.hpp"
 #include "Deserializer.hpp"
@@ -19,7 +19,8 @@ namespace network {
 
     class LobbyClient {
     public:
-        LobbyClient(const std::string& serverAddr, uint16_t port);
+        LobbyClient(Network::INetworkModule* network, const std::string& serverAddr, uint16_t port);
+        explicit LobbyClient(NetworkTcpSocket&& socket);
 
         void connect(const std::string& playerName);
         void ready();
@@ -48,7 +49,7 @@ namespace network {
 
         void send(LobbyPacket type, const std::vector<uint8_t>& payload = {});
 
-        TcpSocket _socket;
+        NetworkTcpSocket _socket;
         PlayerInfo _myInfo;
         std::vector<PlayerInfo> _players;
 

@@ -12,13 +12,25 @@
 
 // ==================== CONSTANTS ====================
 constexpr size_t PLAYER_NAME_SIZE = 32;
+constexpr size_t ROOM_NAME_SIZE = 32;
 constexpr size_t MAX_PLAYERS = 4;
+constexpr size_t MAX_ROOMS = 16;
 constexpr size_t MAX_ENTITIES = 256;
 
 namespace network {
 
     // ==================== LOBBY PROTOCOL (TCP) ====================
     enum class LobbyPacket : uint8_t {
+        // Room management packets
+        LIST_ROOMS_REQ = 0x01,   // Client → Server: request room list
+        LIST_ROOMS_ACK = 0x02,   // Server → Client: room list response
+        CREATE_ROOM_REQ = 0x03,  // Client → Server: create a new room
+        CREATE_ROOM_ACK = 0x04,  // Server → Client: room created (with ID)
+        JOIN_ROOM_REQ = 0x05,    // Client → Server: join a room
+        JOIN_ROOM_ACK = 0x06,    // Server → Client: join accepted/rejected
+        ROOM_UPDATE = 0x07,      // Server → All: room state changed
+
+        // Lobby packets (within a room)
         CONNECT_REQ = 0x10,
         CONNECT_ACK = 0x11,
         PLAYER_JOIN = 0x12,
@@ -41,6 +53,7 @@ namespace network {
         PING = 0x04,       // Bidirectional: Keepalive
         PONG = 0x05,       // Bidirectional: Keepalive response
         DISCONNECT = 0x06, // Client → Server: Graceful disconnect
+        LEVEL_COMPLETE = 0x07, // Server → Client: Level completed (boss defeated)
     };
 
     // Input flags bitfield
@@ -60,9 +73,28 @@ namespace network {
         BULLET = 0x03,
         POWERUP = 0x04,
         OBSTACLE = 0x05,
+        BOSS = 0x06,
     };
 
     // ==================== STRUCTURES ====================
+
+    // Room information for room list
+    struct RoomInfo {
+        uint32_t id = 0;
+        char name[ROOM_NAME_SIZE] = {};
+        uint8_t playerCount = 0;
+        uint8_t maxPlayers = MAX_PLAYERS;
+        bool inGame = false;
+    };
+
+    // Join room result status
+    enum class JoinRoomStatus : uint8_t {
+        SUCCESS = 0x00,
+        ROOM_FULL = 0x01,
+        ROOM_NOT_FOUND = 0x02,
+        ROOM_IN_GAME = 0x03,
+    };
+
     struct PlayerInfo {
         uint8_t number = 0;
         uint64_t hash = 0;
@@ -133,6 +165,14 @@ namespace network {
         uint8_t fireRate = 20;
     };
 
+    // Input acknowledgment per player (sent with STATE packet)
+    struct InputAck {
+        uint64_t playerHash = 0;
+        uint32_t lastProcessedSeq = 0;
+        float serverPosX = 0.0f;
+        float serverPosY = 0.0f;
+    };
+
     // STATE packet (Server → Client)
     struct StatePacketHeader {
         uint8_t type = static_cast<uint8_t>(GamePacket::STATE);
@@ -140,6 +180,7 @@ namespace network {
         uint32_t timestamp = 0;    // Server timestamp (ms)
         uint16_t entityCount = 0;  // Number of entities following
         float scrollOffset = 0.0f; // Background scroll offset
+        uint8_t inputAckCount = 0;
     };
 
     // PING packet
@@ -152,6 +193,13 @@ namespace network {
     struct PongPacket {
         uint8_t type = static_cast<uint8_t>(GamePacket::PONG);
         uint32_t timestamp = 0; // Echo of PING timestamp
+    };
+
+    // LEVEL_COMPLETE packet (Server → Client)
+    struct LevelCompletePacket {
+        uint8_t type = static_cast<uint8_t>(GamePacket::LEVEL_COMPLETE);
+        uint8_t completedLevel = 0;  // Level number that was completed
+        uint8_t nextLevel = 0;        // Next level to load (0 = no more levels)
     };
 
 #pragma pack(pop)

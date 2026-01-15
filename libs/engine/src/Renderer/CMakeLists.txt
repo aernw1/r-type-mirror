@@ -88,6 +88,7 @@ target_link_libraries(rtype_sfml_renderer
     PUBLIC
         rtype_core
         rtype_ecs
+    PRIVATE
         ${SFML_LIBRARIES}
 )
 

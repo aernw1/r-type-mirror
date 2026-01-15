@@ -6,9 +6,12 @@
 #include <typeindex>
 #include <type_traits>
 #include <vector>
+#include <array>
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
 #include "Entity.hpp"
+#include "Audio/IAudio.hpp"
+#include "Animation/AnimationTypes.hpp"
 
 namespace RType {
 
@@ -110,6 +113,89 @@ namespace RType {
                 : type(enemyType), id(enemyId) {}
         };
 
+        struct Boss : public IComponent {
+            Boss() = default;
+        };
+
+        struct BossKilled : public IComponent {
+            Entity bossEntity;
+            int levelNumber;
+            float timeSinceDeath = 0.0f;
+
+            BossKilled() = default;
+            BossKilled(Entity boss, int level)
+                : bossEntity(boss), levelNumber(level) {}
+        };
+
+        enum class BossAttackPattern {
+            IDLE = 0,
+            FAN_SPRAY = 1,
+            DIRECT_SHOT = 2,
+            CIRCLE = 3,
+            BLACK_ORB = 4,
+            THIRD_BULLET = 5
+        };
+
+        struct BossAttack : public IComponent {
+            float attackCooldown = 3.0f;
+            float timeSinceLastAttack = 0.0f;
+            BossAttackPattern currentPattern = BossAttackPattern::FAN_SPRAY;
+
+            BossAttack() = default;
+            BossAttack(float cooldown) : attackCooldown(cooldown) {}
+        };
+
+        struct BossBullet : public IComponent {
+            BossBullet() = default;
+        };
+
+        struct BlackOrb : public IComponent {
+            float attractionRadius = 200.0f;
+            float absorptionRadius = 30.0f;
+            float attractionForce = 500.0f;
+            bool isActive = true;
+
+            BlackOrb() = default;
+            BlackOrb(float attraction, float absorption, float force)
+                : attractionRadius(attraction), absorptionRadius(absorption), attractionForce(force) {}
+        };
+
+        struct ProximityDamage : public IComponent {
+            float damageRadius = 120.0f;
+            float damageAmount = 1.0f;
+            float tickRate = 0.5f;
+            float timeSinceDamage = 0.0f;
+
+            ProximityDamage() = default;
+            ProximityDamage(float radius, float damage, float rate)
+                : damageRadius(radius), damageAmount(damage), tickRate(rate) {}
+        };
+
+        struct DamageFlash : public IComponent {
+            float duration = 0.1f;
+            float timeRemaining = 0.0f;
+            bool isActive = false;
+
+            DamageFlash() = default;
+            DamageFlash(float flashDuration) : duration(flashDuration) {}
+
+            void Trigger() {
+                isActive = true;
+                timeRemaining = duration;
+            }
+        };
+
+        struct ThirdBullet : public IComponent {
+            float spawnInterval = 0.3f;
+            float timeSinceSpawn = 0.0f;
+            int damage = 50;
+            bool isActive = true;
+
+            ThirdBullet() = default;
+            ThirdBullet(float interval, int dmg)
+                : spawnInterval(interval), damage(dmg) {}
+        };
+
         struct Health : public IComponent {
             int current = 100;
             int max = 100;
@@ -191,6 +277,20 @@ namespace RType {
 
             Obstacle() = default;
             Obstacle(bool isBlocking) : blocking(isBlocking) {}
+        };
+
+        struct ObstacleVisual : public IComponent {
+        };
+
+        // Stable network identifier for server->client entity mirroring.
+        // IMPORTANT: This must live on the entity as a component, because raw ECS entity IDs are recycled.
+        // If we instead map "ECS entity id -> network id" in a hash map, then destroying and reusing an
+        // ECS id in the same tick can cause a new entity to inherit the old network id (type confusion).
+        struct NetworkId : public IComponent {
+            uint32_t id = 0;
+
+            NetworkId() = default;
+            explicit NetworkId(uint32_t networkId) : id(networkId) {}
         };
 
         struct ObstacleMetadata : public IComponent {
@@ -315,6 +415,175 @@ namespace RType {
 
             Shield() = default;
             Shield(float dur = 0.0f) : duration(dur), timeRemaining(dur) {}
+        };
+
+        struct SoundEffect : public IComponent {
+            Audio::SoundId soundId = Audio::INVALID_SOUND_ID;
+            float volume = 1.0f;
+            float pitch = 1.0f;
+            float pan = 0.0f;
+            bool loop = false;
+            bool positional = false;
+
+            SoundEffect() = default;
+            SoundEffect(Audio::SoundId id, float vol = 1.0f)
+                : soundId(id), volume(vol) {}
+        };
+
+        struct MusicEffect : public IComponent {
+            Audio::MusicId musicId = Audio::INVALID_MUSIC_ID;
+            bool play = true;
+            bool stop = false;
+            float volume = 1.0f;
+            float pitch = 1.0f;
+            bool loop = true;
+
+            MusicEffect() = default;
+            explicit MusicEffect(Audio::MusicId id)
+                : musicId(id) {}
+        };
+
+        // Sprite sheet animation component for simple frame-by-frame playback
+        struct SpriteAnimation : public IComponent {
+            Animation::AnimationClipId clipId = Animation::INVALID_CLIP_ID;
+            float currentTime = 0.0f;
+            float playbackSpeed = 1.0f;
+            bool playing = true;
+            bool looping = false;
+            bool destroyOnComplete = false;  // Auto-destroy entity when animation finishes
+
+            // Cached frame data (updated by AnimationSystem)
+            std::size_t currentFrameIndex = 0;
+            Math::Rectangle currentRegion{};
+
+            SpriteAnimation() = default;
+            SpriteAnimation(Animation::AnimationClipId clip, bool loop = false, float speed = 1.0f)
+                : clipId(clip), playbackSpeed(speed), looping(loop) {}
+        };
+
+        // Animation state machine component for complex entity animations
+        struct AnimationStateMachine : public IComponent {
+            Animation::AnimationGraphId graphId = Animation::INVALID_GRAPH_ID;
+            Animation::AnimationStateId currentState = Animation::INVALID_STATE_ID;
+            Animation::AnimationStateId previousState = Animation::INVALID_STATE_ID;
+            float stateTime = 0.0f;
+            float blendFactor = 0.0f;        // 0 = previous, 1 = current (for transitions)
+            float blendDuration = 0.0f;
+            bool isTransitioning = false;
+
+            // Parameters storage (up to 8 for cache efficiency)
+            static constexpr std::size_t MAX_PARAMS = 8;
+            std::array<float, MAX_PARAMS> parameters{};
+            std::array<std::array<char, 32>, MAX_PARAMS> parameterNames{};
+            std::size_t parameterCount = 0;
+
+            AnimationStateMachine() = default;
+            explicit AnimationStateMachine(Animation::AnimationGraphId graph)
+                : graphId(graph) {}
+
+            void SetParameter(const char* name, float value) {
+                for (std::size_t i = 0; i < parameterCount; ++i) {
+                    if (std::strncmp(parameterNames[i].data(), name, 31) == 0) {
+                        parameters[i] = value;
+                        return;
+                    }
+                }
+                // Add new parameter if not found
+                if (parameterCount < MAX_PARAMS) {
+                    std::strncpy(parameterNames[parameterCount].data(), name, 31);
+                    parameterNames[parameterCount][31] = '\0';
+                    parameters[parameterCount] = value;
+                    parameterCount++;
+                }
+            }
+
+            float GetParameter(const char* name) const {
+                for (std::size_t i = 0; i < parameterCount; ++i) {
+                    if (std::strncmp(parameterNames[i].data(), name, 31) == 0) {
+                        return parameters[i];
+                    }
+                }
+                return 0.0f;
+            }
+        };
+
+        // Marker component for entities that need sprite region updates from animation
+        struct AnimatedSprite : public IComponent {
+            bool needsUpdate = true;
+
+            AnimatedSprite() = default;
+        };
+
+        // One-shot visual effect component (auto-destroys after lifetime)
+        struct VisualEffect : public IComponent {
+            Animation::EffectType type = Animation::EffectType::EXPLOSION_SMALL;
+            float lifetime = 0.0f;
+            float maxLifetime = 1.0f;
+
+            VisualEffect() = default;
+            VisualEffect(Animation::EffectType t, float duration)
+                : type(t), maxLifetime(duration) {}
+        };
+
+        // Floating text component for damage numbers, score popups, etc.
+        struct FloatingText : public IComponent {
+            char text[32] = {};
+            float lifetime = 0.0f;
+            float maxLifetime = 1.5f;
+            float velocityY = -50.0f;    // Negative = float upward
+            float fadeStartTime = 0.5f;  // When to start fading (seconds)
+            Math::Color color{1.0f, 1.0f, 1.0f, 1.0f};
+
+            FloatingText() = default;
+            FloatingText(const char* txt, float duration, const Math::Color& col)
+                : maxLifetime(duration), color(col) {
+                if (txt) {
+                    std::strncpy(text, txt, 31);
+                    text[31] = '\0';
+                }
+            }
+        };
+
+        // Animation events queue component (for triggering sounds, effects, etc.)
+        struct AnimationEvents : public IComponent {
+            static constexpr std::size_t MAX_EVENTS = 4;
+            std::array<std::array<char, 32>, MAX_EVENTS> eventNames{};
+            std::size_t eventCount = 0;
+
+            AnimationEvents() = default;
+
+            void PushEvent(const char* name) {
+                if (eventCount < MAX_EVENTS && name) {
+                    std::strncpy(eventNames[eventCount].data(), name, 31);
+                    eventNames[eventCount][31] = '\0';
+                    eventCount++;
+                }
+            }
+
+            void Clear() { eventCount = 0; }
+
+            bool HasEvent(const char* name) const {
+                for (std::size_t i = 0; i < eventCount; ++i) {
+                    if (std::strncmp(eventNames[i].data(), name, 31) == 0) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+
+        // Animation layer for blending multiple animations (advanced)
+        struct AnimationLayer : public IComponent {
+            Animation::AnimationClipId clipId = Animation::INVALID_CLIP_ID;
+            float currentTime = 0.0f;
+            float weight = 1.0f;             // Blend weight (0-1)
+            float playbackSpeed = 1.0f;
+            bool additive = false;           // Additive vs override blending
+            int layerIndex = 0;              // Lower = base, higher = overlay
+
+            AnimationLayer() = default;
+            AnimationLayer(Animation::AnimationClipId clip, int layer, float w = 1.0f)
+                : clipId(clip), weight(w), layerIndex(layer) {}
         };
     }
 

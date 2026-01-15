@@ -11,7 +11,9 @@
 #include "ECS/Registry.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
+#include "ECS/AudioSystem.hpp"
 #include "Renderer/IRenderer.hpp"
+#include "Audio/IAudio.hpp"
 #include <memory>
 #include <vector>
 
@@ -31,6 +33,15 @@ namespace RType {
         private:
             void createUI();
             void updateAnimations(float dt);
+            void updateMenuSelection();
+
+            enum class MenuItem {
+                PLAY = 0,
+                EDITOR = 1,
+                SETTINGS = 2,
+                QUIT = 3,
+                COUNT = 4
+            };
 
             GameStateMachine& m_machine;
             GameContext& m_context;
@@ -39,6 +50,10 @@ namespace RType {
             std::shared_ptr<Renderer::IRenderer> m_renderer;
             std::unique_ptr<RType::ECS::RenderingSystem> m_renderingSystem;
             std::unique_ptr<RType::ECS::TextRenderingSystem> m_textSystem;
+            std::unique_ptr<RType::ECS::AudioSystem> m_audioSystem;
+
+            Audio::MusicId m_menuMusic = Audio::INVALID_MUSIC_ID;
+            bool m_menuMusicPlaying = false;
 
             Renderer::FontId m_fontLarge = Renderer::INVALID_FONT_ID;
             Renderer::FontId m_fontMedium = Renderer::INVALID_FONT_ID;
@@ -47,11 +62,13 @@ namespace RType {
 
             std::vector<RType::ECS::Entity> m_entities;
             RType::ECS::Entity m_titleEntity = RType::ECS::NULL_ENTITY;
-            RType::ECS::Entity m_playTextEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity m_subtitleEntity = RType::ECS::NULL_ENTITY;
+            std::vector<RType::ECS::Entity> m_menuItems;
 
-            bool m_playKeyPressed = false;
-            bool m_escapeKeyPressed = false;
+            int m_selectedIndex = 0;
+            bool m_upKeyPressed = false;
+            bool m_downKeyPressed = false;
+            bool m_enterKeyPressed = false;
 
             float m_animTime = 0.0f;
             float m_titlePulse = 0.0f;

@@ -8,6 +8,7 @@
 #include "ECS/PlayerCollisionResponseSystem.hpp"
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 namespace RType {
     namespace ECS {
@@ -41,6 +42,7 @@ namespace RType {
 
                 bool hitEnemy = registry.HasComponent<Enemy>(other);
                 bool hitObstacle = registry.HasComponent<Obstacle>(other);
+                bool hitBoss = registry.HasComponent<Boss>(other);
 
                 if (hitEnemy) {
                     if (registry.HasComponent<Damage>(other) && registry.HasComponent<Health>(player)) {
@@ -62,6 +64,18 @@ namespace RType {
                     const auto& obstacle = registry.GetComponent<Obstacle>(other);
 
                     if (obstacle.blocking) {
+                        static int serverCollisionLog = 0;
+                        if (serverCollisionLog < 5) {
+                            if (registry.HasComponent<Position>(other) && registry.HasComponent<BoxCollider>(other)) {
+                                const auto& obstPos = registry.GetComponent<Position>(other);
+                                const auto& obstBox = registry.GetComponent<BoxCollider>(other);
+                                std::cout << "[SERVER PLAYER-OBSTACLE COLLISION] Player entity=" << player
+                                          << " vs Obstacle entity=" << other
+                                          << " at (" << obstPos.x << "," << obstPos.y << ")"
+                                          << " size=(" << obstBox.width << "," << obstBox.height << ")" << std::endl;
+                                serverCollisionLog++;
+                            }
+                        }
                         bool hasShield = registry.HasComponent<Shield>(player);
 
                         bool isInvincible = false;
@@ -180,6 +194,125 @@ namespace RType {
                                     playerPosRef.x = obstaclePos.x + dx * pushDistance;
                                     playerPosRef.y = obstaclePos.y + dy * pushDistance;
                                 }
+                            }
+                        }
+                    }
+                }
+
+                if (hitBoss) {
+                    bool hasShield = registry.HasComponent<Shield>(player);
+
+                    bool isInvincible = false;
+                    if (registry.HasComponent<Invincibility>(player)) {
+                        auto& invincibility = registry.GetComponent<Invincibility>(player);
+                        if (invincibility.remainingTime > 0.0f) {
+                            isInvincible = true;
+                        }
+                    }
+
+                    if (!hasShield && !isInvincible && registry.HasComponent<Health>(player)) {
+                        auto& playerHealth = registry.GetComponent<Health>(player);
+                        constexpr int BOSS_COLLISION_DAMAGE = 10;
+                        playerHealth.current -= BOSS_COLLISION_DAMAGE;
+
+                        if (playerHealth.current < 0) {
+                            playerHealth.current = 0;
+                        }
+
+                        constexpr float INVINCIBILITY_DURATION = 1.0f;
+                        if (registry.HasComponent<Invincibility>(player)) {
+                            auto& invincibility = registry.GetComponent<Invincibility>(player);
+                            invincibility.remainingTime = INVINCIBILITY_DURATION;
+                        } else {
+                            registry.AddComponent<Invincibility>(player, Invincibility(INVINCIBILITY_DURATION));
+                        }
+                    }
+
+                    if (registry.HasComponent<Position>(player) &&
+                        registry.HasComponent<Position>(other)) {
+
+                        bool resolved = false;
+                        const bool hasPlayerBox = registry.HasComponent<BoxCollider>(player);
+                        const bool hasBossBox = registry.HasComponent<BoxCollider>(other);
+
+                        if (hasPlayerBox && hasBossBox) {
+                            auto& playerPosRef = registry.GetComponent<Position>(player);
+                            const auto& bossPos = registry.GetComponent<Position>(other);
+                            const auto& playerBox = registry.GetComponent<BoxCollider>(player);
+                            const auto& bossBox = registry.GetComponent<BoxCollider>(other);
+
+                            float playerLeft = playerPosRef.x;
+                            float playerRight = playerPosRef.x + playerBox.width;
+                            float playerTop = playerPosRef.y;
+                            float playerBottom = playerPosRef.y + playerBox.height;
+
+                            float bossLeft = bossPos.x;
+                            float bossRight = bossPos.x + bossBox.width;
+                            float bossTop = bossPos.y;
+                            float bossBottom = bossPos.y + bossBox.height;
+
+                            float penetrationRight = bossRight - playerLeft;
+                            float penetrationLeft = playerRight - bossLeft;
+                            float penetrationBottom = bossBottom - playerTop;
+                            float penetrationTop = playerBottom - bossTop;
+
+                            if (penetrationLeft > 0.0f && penetrationRight > 0.0f &&
+                                penetrationTop > 0.0f && penetrationBottom > 0.0f) {
+                                const float separationBias = 2.0f;
+
+                                if (std::min(penetrationLeft, penetrationRight) <
+                                    std::min(penetrationTop, penetrationBottom)) {
+                                    if (penetrationLeft < penetrationRight) {
+                                        playerPosRef.x -= penetrationLeft + separationBias;
+                                    } else {
+                                        playerPosRef.x += penetrationRight + separationBias;
+                                    }
+                                    if (registry.HasComponent<Velocity>(player)) {
+                                        auto& playerVel = registry.GetComponent<Velocity>(player);
+                                        playerVel.dx = 0.0f;
+                                    }
+                                } else {
+                                    if (penetrationTop < penetrationBottom) {
+                                        playerPosRef.y -= penetrationTop + separationBias;
+                                    } else {
+                                        playerPosRef.y += penetrationBottom + separationBias;
+                                    }
+                                    if (registry.HasComponent<Velocity>(player)) {
+                                        auto& playerVel = registry.GetComponent<Velocity>(player);
+                                        playerVel.dy = 0.0f;
+                                    }
+                                }
+                                resolved = true;
+                            }
+                        }
+
+                        if (!resolved) {
+                            if (registry.HasComponent<Velocity>(player)) {
+                                auto& playerVel = registry.GetComponent<Velocity>(player);
+                                playerVel.dx = 0.0f;
+                                playerVel.dy = 0.0f;
+                            }
+
+                            const auto& playerPos = registry.GetComponent<Position>(player);
+                            const auto& bossPos = registry.GetComponent<Position>(other);
+
+                            float dx = playerPos.x - bossPos.x;
+                            float dy = playerPos.y - bossPos.y;
+                            float distance = std::sqrt(dx * dx + dy * dy);
+
+                            if (distance > 0.0f) {
+                                dx /= distance;
+                                dy /= distance;
+
+                                float pushDistance = 50.0f;
+                                if (registry.HasComponent<BoxCollider>(other)) {
+                                    const auto& box = registry.GetComponent<BoxCollider>(other);
+                                    pushDistance = std::max(box.width, box.height) * 0.5f + 20.0f;
+                                }
+
+                                auto& playerPosRef = registry.GetComponent<Position>(player);
+                                playerPosRef.x = bossPos.x + dx * pushDistance;
+                                playerPosRef.y = bossPos.y + dy * pushDistance;
                             }
                         }
                     }

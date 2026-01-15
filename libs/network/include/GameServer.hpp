@@ -8,7 +8,7 @@
 #pragma once
 
 #include "Protocol.hpp"
-#include "Endpoint.hpp"
+#include "INetworkModule.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/MovementSystem.hpp"
@@ -18,6 +18,10 @@
 #include "ECS/PlayerCollisionResponseSystem.hpp"
 #include "ECS/ObstacleCollisionResponseSystem.hpp"
 #include "ECS/ScrollingSystem.hpp"
+#include "ECS/BossSystem.hpp"
+#include "ECS/BossAttackSystem.hpp"
+#include "ECS/BlackOrbSystem.hpp"
+#include "ECS/ThirdBulletSystem.hpp"
 #include "ECS/LevelLoader.hpp"
 #include "ECS/HealthSystem.hpp"
 #include "ECS/ScoreSystem.hpp"
@@ -28,7 +32,6 @@
 #include "ECS/ShootingSystem.hpp"
 #include "ECS/ForcePodSystem.hpp"
 #include "ECS/ShieldSystem.hpp"
-#include <asio.hpp>
 #include <vector>
 #include <unordered_map>
 #include <memory>
@@ -67,7 +70,7 @@ namespace network {
 
     struct ConnectedPlayer {
         PlayerInfo info;
-        Endpoint endpoint;
+        Network::Endpoint endpoint;
         std::chrono::steady_clock::time_point lastPingTime;
         uint32_t lastInputSequence = 0;
         bool alive = true;
@@ -90,7 +93,9 @@ namespace network {
 
     class GameServer {
     public:
-        GameServer(uint16_t port, const std::vector<PlayerInfo>& expectedPlayers, const std::string& levelPath = "assets/levels/level1.json");
+        GameServer(Network::INetworkModule* network, uint16_t port,
+            const std::vector<PlayerInfo>& expectedPlayers,
+            const std::string& levelPath = "assets/levels/level1.json");
         ~GameServer();
 
         void Run();
@@ -103,21 +108,27 @@ namespace network {
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
         const std::string& GetLevelPath() const { return m_levelPath; }
     private:
+        uint32_t GetOrAssignNetworkId(RType::ECS::Entity entity);
+
         void WaitForAllPlayers();
         void ProcessIncomingPackets();
         void SendStateSnapshots();
-        void HandlePacket(const std::vector<uint8_t>& data, const Endpoint& from);
-        void HandleHello(const std::vector<uint8_t>& data, const Endpoint& from);
-        void HandleInput(const std::vector<uint8_t>& data, const Endpoint& from);
-        void HandlePing(const std::vector<uint8_t>& data, const Endpoint& from);
+        void HandlePacket(const std::vector<uint8_t>& data, const Network::Endpoint& from);
+        void HandleHello(const std::vector<uint8_t>& data, const Network::Endpoint& from);
+        void HandleInput(const std::vector<uint8_t>& data, const Network::Endpoint& from);
+        void HandlePing(const std::vector<uint8_t>& data, const Network::Endpoint& from);
+        void HandleDisconnect(const std::vector<uint8_t>& data, const Network::Endpoint& from);
 
-        void SendTo(const std::vector<uint8_t>& data, const Endpoint& to);
+        void SendTo(const std::vector<uint8_t>& data, const Network::Endpoint& to);
         void Broadcast(const std::vector<uint8_t>& data);
 
         void UpdateGameLogic(float dt);
         void SpawnPlayer(uint64_t hash, float x, float y);
         void SpawnEnemy();
-        void SpawnEnemyBullet(uint32_t enemyId, float x, float y);
+        bool IsBossActive() const;
+        void CheckBossDefeated();
+        void LoadNextLevelIfNeeded();
+        void SpawnEnemyBullet(uint32_t enemyId, float x, float y, uint8_t enemyType);
         void SpawnBullet(uint64_t ownerHash, float x, float y);
         void UpdateBullets(float dt);
         void UpdateEnemies(float dt);
@@ -127,16 +138,22 @@ namespace network {
         EnemyType GetRandomEnemyType();
         const EnemyStats& GetEnemyStats(EnemyType type) const;
 
+        void RegisterNetworkType(uint32_t netId, EntityType type);
+
         uint32_t GetNextEntityId() { return m_nextEntityId++; }
 
-        asio::io_context m_ioContext;
-        asio::ip::udp::socket m_socket;
+        Network::INetworkModule* m_network = nullptr;
+        Network::SocketId m_udpSocket = Network::INVALID_SOCKET_ID;
         std::vector<PlayerInfo> m_expectedPlayers;
         std::unordered_map<uint64_t, ConnectedPlayer> m_connectedPlayers;
         const std::chrono::seconds DISCONNECT_TIMEOUT{10};
 
         RType::ECS::Registry m_registry;
         std::unique_ptr<RType::ECS::ScrollingSystem> m_scrollingSystem;
+        std::unique_ptr<RType::ECS::BossSystem> m_bossSystem;
+        std::unique_ptr<RType::ECS::BossAttackSystem> m_bossAttackSystem;
+        std::unique_ptr<RType::ECS::BlackOrbSystem> m_blackOrbSystem;
+        std::unique_ptr<RType::ECS::ThirdBulletSystem> m_thirdBulletSystem;
         std::unique_ptr<RType::ECS::MovementSystem> m_movementSystem;
         std::unique_ptr<RType::ECS::CollisionDetectionSystem> m_collisionDetectionSystem;
         std::unique_ptr<RType::ECS::BulletCollisionResponseSystem> m_bulletResponseSystem;
@@ -152,6 +169,12 @@ namespace network {
 
         std::vector<GameEntity> m_entities;
         uint32_t m_currentTick = 0;
+
+        // Stable network IDs for entities (stored as ECS component NetworkId).
+        uint32_t m_nextNetworkId = 1;
+        // Debug: track last known type per network ID to detect collisions/reuse.
+        std::unordered_map<uint32_t, EntityType> m_networkIdTypes;
+
         uint32_t m_nextEntityId = 1;
         std::atomic<bool> m_running{false};
 
@@ -162,6 +185,7 @@ namespace network {
         float m_enemySpawnInterval = 2.0f;
 
         std::unordered_map<uint32_t, float> m_enemyShootCooldowns;
+        std::unordered_map<uint32_t, uint8_t> m_enemyBulletTypes;
 
         std::atomic<uint64_t> m_packetsSent{0};
         std::atomic<uint64_t> m_packetsReceived{0};
@@ -169,6 +193,11 @@ namespace network {
         static const std::array<EnemyStats, 5> s_enemyStats;
 
         std::string m_levelPath;
+
+        // Level progression
+        bool m_bossDefeated = false;
+        bool m_levelComplete = false;
+        int m_currentLevel = 1;
     };
 
 }

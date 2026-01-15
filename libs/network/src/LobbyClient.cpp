@@ -12,11 +12,16 @@
 
 namespace network {
 
-    LobbyClient::LobbyClient(const std::string& serverAddr, uint16_t port) : _socket(serverAddr, port) {
+    LobbyClient::LobbyClient(Network::INetworkModule* network, const std::string& serverAddr, uint16_t port)
+        : _socket(network, serverAddr, port) {
         if (_socket.isConnected())
-            std::cout << "[Client] Connected to server" << std::endl;
+            std::cout << "[LobbyClient] Connected to server" << std::endl;
         else
-            std::cout << "[Client] Failed to connect to server" << std::endl;
+            std::cout << "[LobbyClient] Failed to connect to server" << std::endl;
+    }
+
+    LobbyClient::LobbyClient(NetworkTcpSocket&& socket) : _socket(std::move(socket)) {
+        std::cout << "[LobbyClient] Using existing socket connection" << std::endl;
     }
 
     void LobbyClient::connect(const std::string& playerName) {
@@ -148,6 +153,7 @@ namespace network {
     void LobbyClient::handlePlayerJoin(Deserializer& d) {
         PlayerInfo p;
         p.number = d.readU8();
+        p.hash = d.readU64();
         std::string name = d.readString(PLAYER_NAME_SIZE);
         std::strncpy(p.name, name.c_str(), PLAYER_NAME_SIZE - 1);
 

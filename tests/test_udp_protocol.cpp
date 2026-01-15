@@ -7,11 +7,13 @@
 
 #include "GameServer.hpp"
 #include "GameClient.hpp"
+#include "AsioNetworkModule.hpp"
 #include <iostream>
 #include <thread>
 #include <vector>
 #include <chrono>
 #include <iomanip>
+#include <memory>
 
 using namespace network;
 
@@ -69,7 +71,10 @@ int main() {
     PrintSeparator("STARTING SERVER");
 
     const uint16_t UDP_PORT = 4243;
-    GameServer server(UDP_PORT, players);
+    auto networkModule = std::make_shared<Network::AsioNetworkModule>();
+    networkModule->Initialize(nullptr);
+
+    GameServer server(networkModule.get(), UDP_PORT, players);
 
     std::thread serverThread([&server]() {
         server.Run();
@@ -79,13 +84,13 @@ int main() {
 
     PrintSeparator("CONNECTING CLIENTS");
     std::vector<GameClient*> clients;
-    GameClient client1("127.0.0.1", UDP_PORT, player1);
-    GameClient client2("127.0.0.1", UDP_PORT, player2);
+    GameClient client1(networkModule.get(), "127.0.0.1", UDP_PORT, player1);
+    GameClient client2(networkModule.get(), "127.0.0.1", UDP_PORT, player2);
     clients.push_back(&client1);
     clients.push_back(&client2);
 
     bool firstStateReceived = false;
-    client1.SetStateCallback([&firstStateReceived](uint32_t tick, const std::vector<EntityState>& entities) {
+    client1.SetStateCallback([&firstStateReceived](uint32_t tick, const std::vector<EntityState>& entities, const std::vector<InputAck>& /*inputAcks*/) {
         if (!firstStateReceived) {
             std::cout << "\n[Client Alice] First STATE packet received!" << std::endl;
             std::cout << "  Tick: " << tick << std::endl;

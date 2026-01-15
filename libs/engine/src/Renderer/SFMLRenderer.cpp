@@ -250,6 +250,19 @@ namespace Renderer {
         RType::Core::Logger::Debug("Destroyed sprite ID: {}", spriteId);
     }
 
+    void SFMLRenderer::SetSpriteRegion(SpriteId spriteId, const Rectangle& region) {
+        auto it = m_sprites.find(spriteId);
+        if (it == m_sprites.end()) {
+            return;
+        }
+
+        it->second.sprite.setTextureRect(sf::IntRect(
+            static_cast<int>(region.position.x),
+            static_cast<int>(region.position.y),
+            static_cast<int>(region.size.x),
+            static_cast<int>(region.size.y)));
+    }
+
     void SFMLRenderer::DrawSprite(SpriteId spriteId, const Transform2D& transform, const Color& tint) {
         if (!m_window) {
             return;

@@ -1,3 +1,5 @@
 add_subdirectory(src/ECS)
 add_subdirectory(src/Core)
 add_subdirectory(src/Renderer)
+add_subdirectory(src/Audio)
+add_subdirectory(src/Animation)

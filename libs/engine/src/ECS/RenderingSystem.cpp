@@ -41,6 +41,19 @@ namespace RType {
                     continue;
                 }
 
+                if (registry.HasComponent<AnimatedSprite>(entity) && registry.HasComponent<SpriteAnimation>(entity)) {
+                    auto& animatedSprite = registry.GetComponent<AnimatedSprite>(entity);
+                    const auto& anim = registry.GetComponent<SpriteAnimation>(entity);
+                    
+                    if (animatedSprite.needsUpdate || 
+                        (anim.currentRegion.size.x > 0 && anim.currentRegion.size.y > 0)) {
+                        if (anim.currentRegion.size.x > 0 && anim.currentRegion.size.y > 0) {
+                            m_renderer->SetSpriteRegion(drawable.spriteId, anim.currentRegion);
+                            animatedSprite.needsUpdate = false;
+                        }
+                    }
+                }
+
                 Renderer::Transform2D transform;
                 transform.position = Renderer::Vector2(position.x, position.y);
                 transform.scale = drawable.scale;

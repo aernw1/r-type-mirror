@@ -141,6 +141,28 @@ namespace RType {
                     level.playerSpawns.push_back({100.0f, 680.0f});
                 }
 
+                if (j.contains("boss")) {
+                    const auto& bossJson = j["boss"];
+                    BossDef boss;
+                    boss.texture = bossJson.value("texture", "");
+
+                    if (bossJson.contains("position")) {
+                        boss.x = bossJson["position"].value("x", 0.0f);
+                        boss.y = bossJson["position"].value("y", 0.0f);
+                    } else {
+                        boss.x = bossJson.value("x", 0.0f);
+                        boss.y = bossJson.value("y", 0.0f);
+                    }
+
+                    boss.width = bossJson.value("width", 200.0f);
+                    boss.height = bossJson.value("height", 200.0f);
+                    boss.health = bossJson.value("health", 1000);
+                    boss.scrollSpeed = bossJson.value("scrollSpeed", -300.0f);
+                    boss.attackPattern = bossJson.value("attackPattern", 1);
+
+                    level.boss = boss;
+                }
+
                 Core::Logger::Info("Loaded level '{}' with {} obstacles, {} enemies, {} player spawns",
                                    level.name.empty() ? "unnamed" : level.name,
                                    level.obstacles.size(),
@@ -226,11 +248,13 @@ namespace RType {
 
             CreateServerObstacles(registry, level.obstacles, entities, obstacleIdCounter);
             CreateServerEnemies(registry, level.enemies, entities);
+            CreateServerBoss(registry, level.boss, entities);
 
-            Core::Logger::Info("Created server entities: {} obstacle visuals, {} obstacle colliders, {} enemies",
+            Core::Logger::Info("Created server entities: {} obstacle visuals, {} obstacle colliders, {} enemies, boss: {}",
                                entities.obstacleVisuals.size(),
                                entities.obstacleColliders.size(),
-                               entities.enemies.size());
+                               entities.enemies.size(),
+                               entities.boss != NULL_ENTITY ? "yes" : "no");
 
             return entities;
         }
@@ -305,26 +329,30 @@ namespace RType {
                 auto spriteIt = assets.sprites.find(obs.texture);
                 auto texIt = assets.textures.find(obs.texture);
 
-                if (spriteIt == assets.sprites.end() || texIt == assets.textures.end()) {
+                bool hasTexture = (spriteIt != assets.sprites.end() && texIt != assets.textures.end());
+
+                Entity obsEntity = NULL_ENTITY;
+                if (hasTexture) {
+                    obsEntity = registry.CreateEntity();
+
+                    registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
+
+                    Math::Vector2 obsSize = renderer->GetTextureSize(texIt->second);
+                    auto& drawable = registry.AddComponent<Drawable>(obsEntity, Drawable(spriteIt->second, obs.layer));
+                    drawable.scale = {obs.scaleWidth / obsSize.x, obs.scaleHeight / obsSize.y};
+                    drawable.origin = {0.0f, 0.0f};
+
+                    registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
+                    registry.AddComponent<ObstacleVisual>(obsEntity, ObstacleVisual{});
+                    entities.obstacleVisuals.push_back(obsEntity);
+                } else {
                     Core::Logger::Warning("Obstacle texture '{}' not found in loaded assets", obs.texture);
-                    continue;
                 }
-
-                Entity obsEntity = registry.CreateEntity();
-
-                registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
-
-                Math::Vector2 obsSize = renderer->GetTextureSize(texIt->second);
-                auto& drawable = registry.AddComponent<Drawable>(obsEntity, Drawable(spriteIt->second, obs.layer));
-                drawable.scale = {obs.scaleWidth / obsSize.x, obs.scaleHeight / obsSize.y};
-                drawable.origin = {0.0f, 0.0f};
-
-                registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
-                entities.obstacleVisuals.push_back(obsEntity);
 
                 for (const auto& col : obs.colliders) {
                     Entity colliderEntity = registry.CreateEntity();
-                    registry.AddComponent<Position>(colliderEntity, Position{col.x, col.y});
+                    // Store collider position as offset from visual entity (not absolute)
+                    registry.AddComponent<Position>(colliderEntity, Position{col.x - obs.x, col.y - obs.y});
                     registry.AddComponent<BoxCollider>(colliderEntity, BoxCollider{col.width, col.height});
                     registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
                     registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));
@@ -361,13 +389,13 @@ namespace RType {
 
                 registry.AddComponent<Position>(obsEntity, Position{obs.x, obs.y});
                 registry.AddComponent<Scrollable>(obsEntity, Scrollable(obs.scrollSpeed));
+                registry.AddComponent<ObstacleVisual>(obsEntity, ObstacleVisual{});
                 entities.obstacleVisuals.push_back(obsEntity);
 
                 for (const auto& col : obs.colliders) {
                     Entity colliderEntity = registry.CreateEntity();
-                    float colliderX = obs.x + (col.x - obs.x);
-                    float colliderY = obs.y + (col.y - obs.y);
-                    registry.AddComponent<Position>(colliderEntity, Position{colliderX, colliderY});
+                    // Store collider position as offset from visual entity (not absolute)
+                    registry.AddComponent<Position>(colliderEntity, Position{col.x - obs.x, col.y - obs.y});
                     registry.AddComponent<BoxCollider>(colliderEntity, BoxCollider{col.width, col.height});
                     registry.AddComponent<Scrollable>(colliderEntity, Scrollable(obs.scrollSpeed));
                     registry.AddComponent<Obstacle>(colliderEntity, Obstacle(true));
@@ -389,6 +417,144 @@ namespace RType {
                 EnemyType type = ParseEnemyType(en.type);
                 Entity enemy = EnemyFactory::CreateEnemy(registry, type, en.x, en.y, nullptr);
                 entities.enemies.push_back(enemy);
+            }
+        }
+
+        void LevelLoader::CreateServerBoss(
+            Registry& registry,
+            const std::optional<BossDef>& bossOpt,
+            CreatedEntities& entities) {
+            if (!bossOpt.has_value()) {
+                return;
+            }
+
+            const BossDef& boss = bossOpt.value();
+
+            Entity bossEntity = registry.CreateEntity();
+
+            registry.AddComponent<Boss>(bossEntity, Boss{});
+
+            registry.AddComponent<Position>(bossEntity, Position{boss.x, boss.y});
+
+            registry.AddComponent<Velocity>(bossEntity, Velocity{0.0f, 0.0f});
+
+            registry.AddComponent<Health>(bossEntity, Health{boss.health});
+
+            registry.AddComponent<BoxCollider>(bossEntity, BoxCollider{boss.width, boss.height});
+
+            registry.AddComponent<Scrollable>(bossEntity, Scrollable{boss.scrollSpeed});
+
+            auto& bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{3.0f});
+            bossAttack.currentPattern = static_cast<BossAttackPattern>(boss.attackPattern);
+
+            registry.AddComponent<DamageFlash>(bossEntity, DamageFlash{0.1f});
+
+            registry.AddComponent<CollisionLayer>(bossEntity,
+                CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
+
+            entities.boss = bossEntity;
+
+            Core::Logger::Info("Created boss entity at position ({}, {}) with {} health",
+                boss.x, boss.y, boss.health);
+        }
+
+        std::string LevelLoader::SerializeToString(const LevelData& level) {
+            json j;
+
+            j["name"] = level.name;
+
+            if (!level.textures.empty() || !level.fonts.empty()) {
+                j["assets"] = json::object();
+
+                if (!level.textures.empty()) {
+                    j["assets"]["textures"] = json::object();
+                    for (const auto& [key, path] : level.textures) {
+                        j["assets"]["textures"][key] = path;
+                    }
+                }
+
+                if (!level.fonts.empty()) {
+                    j["assets"]["fonts"] = json::object();
+                    for (const auto& [key, font] : level.fonts) {
+                        j["assets"]["fonts"][key] = {
+                            {"path", font.path},
+                            {"size", font.size}
+                        };
+                    }
+                }
+            }
+
+            j["background"] = {
+                {"texture", level.background.texture},
+                {"scrollSpeed", level.background.scrollSpeed},
+                {"copies", level.background.copies},
+                {"layer", level.background.layer}
+            };
+
+            j["obstacles"] = json::array();
+            for (const auto& obs : level.obstacles) {
+                json obsJson = {
+                    {"texture", obs.texture},
+                    {"position", {{"x", obs.x}, {"y", obs.y}}},
+                    {"scaleWidth", obs.scaleWidth},
+                    {"scaleHeight", obs.scaleHeight},
+                    {"scrollSpeed", obs.scrollSpeed},
+                    {"layer", obs.layer}
+                };
+
+                if (!obs.colliders.empty()) {
+                    obsJson["colliders"] = json::array();
+                    for (const auto& col : obs.colliders) {
+                        obsJson["colliders"].push_back({
+                            {"x", col.x},
+                            {"y", col.y},
+                            {"width", col.width},
+                            {"height", col.height}
+                        });
+                    }
+                }
+
+                j["obstacles"].push_back(obsJson);
+            }
+
+            j["enemies"] = json::array();
+            for (const auto& enemy : level.enemies) {
+                j["enemies"].push_back({
+                    {"type", enemy.type},
+                    {"position", {{"x", enemy.x}, {"y", enemy.y}}}
+                });
+            }
+
+            j["playerSpawns"] = json::array();
+            for (const auto& spawn : level.playerSpawns) {
+                j["playerSpawns"].push_back({
+                    {"x", spawn.x},
+                    {"y", spawn.y}
+                });
+            }
+
+            return j.dump(4);
+        }
+
+        void LevelLoader::SaveToFile(const LevelData& level, const std::string& path) {
+            try {
+                std::string jsonString = SerializeToString(level);
+
+                std::ofstream file(path);
+                if (!file.is_open()) {
+                    throw std::runtime_error("Failed to open file for writing: " + path);
+                }
+
+                file << jsonString;
+                file.close();
+
+                Core::Logger::Info("Successfully saved level '{}' to {}",
+                                   level.name.empty() ? "unnamed" : level.name,
+                                   path);
+
+            } catch (const std::exception& e) {
+                Core::Logger::Error("Failed to save level: {}", e.what());
+                throw;
             }
         }
 
