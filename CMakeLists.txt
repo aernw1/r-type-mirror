@@ -114,4 +114,20 @@ if(TARGET rtype_sfml_renderer)
         rtype_sfml_renderer
     )
     message(STATUS "test_background will be built")
+
+    add_executable(breakout
+        breakout/src/main.cpp
+        breakout/src/BreakoutPhysicsSystem.cpp
+        breakout/src/BreakoutRenderSystem.cpp
+        breakout/src/BallAccelerationSystem.cpp
+    )
+    target_include_directories(breakout PRIVATE
+        ${CMAKE_SOURCE_DIR}/breakout/include
+    )
+    target_link_libraries(breakout PRIVATE
+        rtype_core
+        rtype_ecs
+        rtype_sfml_renderer
+    )
+    message(STATUS "breakout will be built (second game demo)")
 endif()
