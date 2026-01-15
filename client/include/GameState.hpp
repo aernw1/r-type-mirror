@@ -145,6 +145,7 @@ namespace RType {
             };
             EnemySpriteConfig GetEnemySpriteConfig(uint8_t enemyType) const;
             EnemyBulletSpriteConfig GetEnemyBulletSpriteConfig(uint8_t enemyType) const;
+            Renderer::SpriteId GetPowerUpSprite(ECS::PowerUpType type) const;
 
             std::pair<std::string, uint8_t> FindPlayerNameAndNumber(uint64_t ownerHash, const std::unordered_set<uint8_t>& assignedNumbers) const;
             void CreatePlayerNameLabel(RType::ECS::Entity playerEntity, const std::string& playerName, float x, float y);

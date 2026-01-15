@@ -45,6 +45,24 @@ namespace RType {
             return result;
         }
 
+        Renderer::SpriteId InGameState::GetPowerUpSprite(ECS::PowerUpType type) const {
+            switch (type) {
+                case ECS::PowerUpType::FIRE_RATE_BOOST:
+                case ECS::PowerUpType::SPREAD_SHOT:
+                    return m_powerupSpreadSprite;
+                case ECS::PowerUpType::LASER_BEAM:
+                    return m_powerupLaserSprite;
+                case ECS::PowerUpType::FORCE_POD:
+                    return m_powerupForcePodSprite;
+                case ECS::PowerUpType::SPEED_BOOST:
+                    return m_powerupSpeedSprite;
+                case ECS::PowerUpType::SHIELD:
+                    return m_powerupShieldSprite;
+                default:
+                    return m_powerupSpreadSprite;
+            }
+        }
+
         InGameState::EnemyBulletSpriteConfig InGameState::GetEnemyBulletSpriteConfig(uint8_t enemyType) const {
             const Renderer::SpriteId* sprites[] = {
                 &m_enemyBulletGreenSprite,
@@ -118,14 +136,23 @@ namespace RType {
                 shooter.fireRate = fireRate;
             }
 
+            constexpr float SHIELD_DURATION_SECONDS = 5.0f;
             if (activePowerUps.hasShield) {
                 if (!m_registry.HasComponent<Shield>(playerEntity)) {
-                    constexpr float SHIELD_DURATION_SECONDS = 5.0f;
                     m_registry.AddComponent<Shield>(playerEntity, Shield(SHIELD_DURATION_SECONDS));
+                } else {
+                    auto& shield = m_registry.GetComponent<Shield>(playerEntity);
+                    if (shield.timeRemaining <= 0.0f) {
+                        shield.timeRemaining = SHIELD_DURATION_SECONDS;
+                    }
                 }
             } else {
                 if (m_registry.HasComponent<Shield>(playerEntity)) {
                     m_registry.RemoveComponent<Shield>(playerEntity);
+                    if (m_registry.HasComponent<Drawable>(playerEntity)) {
+                        auto& drawable = m_registry.GetComponent<Drawable>(playerEntity);
+                        drawable.tint = Math::Color(1.0f, 1.0f, 1.0f, 1.0f);
+                    }
                 }
             }
 

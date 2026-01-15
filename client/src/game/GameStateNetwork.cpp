@@ -92,30 +92,8 @@ namespace RType {
 
                 if (auto it = m_networkEntityMap.find(entityState.entityId); it == m_networkEntityMap.end()) {
                     if (type == network::EntityType::PLAYER) {
-                        bool isForcePod = (entityState.flags & 0x80) != 0;
-                        if (isForcePod) {
-                            auto newEntity = m_registry.CreateEntity();
-                            CleanupInvalidComponents(newEntity, network::EntityType::PLAYER);
-                            m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
-                            m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
-
-                            Renderer::SpriteId podSprite = m_powerupForcePodSprite;
-                            if (podSprite != Renderer::INVALID_SPRITE_ID) {
-                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(podSprite, 9));
-                                d.scale = {0.4f, 0.4f};
-                                d.origin = Math::Vector2(128.0f, 128.0f);
-                            }
-
-                            m_networkEntityMap[entityState.entityId] = newEntity;
-                            std::cout << "[GameState] Created FORCE POD entity " << entityState.entityId << std::endl;
+                        if (entityState.ownerHash == m_context.playerHash && m_localPlayerEntity != ECS::NULL_ENTITY) {
                             continue;
-                        }
-
-                        if (entityState.ownerHash == m_context.playerHash) {
-                            auto existing = m_networkEntityMap.find(entityState.entityId);
-                            if (existing != m_networkEntityMap.end()) {
-                                continue;
-                            }
                         }
 
                         Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
@@ -375,36 +353,23 @@ namespace RType {
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
                         Math::Color powerupColor = ECS::PowerUpFactory::GetPowerUpColor(puType);
-
                         Renderer::SpriteId powerupSprite = Renderer::INVALID_SPRITE_ID;
-                        switch (puType) {
-                            case ECS::PowerUpType::FIRE_RATE_BOOST:
-                                powerupSprite = m_powerupSpreadSprite;
-                                break;
-                            case ECS::PowerUpType::SPREAD_SHOT:
-                                powerupSprite = m_powerupSpreadSprite;
-                                break;
-                            case ECS::PowerUpType::LASER_BEAM:
-                                powerupSprite = m_powerupLaserSprite;
-                                break;
-                            case ECS::PowerUpType::FORCE_POD:
-                                powerupSprite = m_powerupForcePodSprite;
-                                break;
-                            case ECS::PowerUpType::SPEED_BOOST:
-                                powerupSprite = m_powerupSpeedSprite;
-                                break;
-                            case ECS::PowerUpType::SHIELD:
-                                powerupSprite = m_powerupShieldSprite;
-                                break;
-                            default:
-                                powerupSprite = m_powerupSpreadSprite;
-                                break;
+                        
+                        if (puType == ECS::PowerUpType::FORCE_POD) {
+                            auto textureIt = m_levelAssets.textures.find("powerup-force-pod");
+                            if (textureIt != m_levelAssets.textures.end()) {
+                                powerupSprite = m_renderer->CreateSprite(textureIt->second, Renderer::Rectangle{{0.0f, 0.0f}, {128.0f, 128.0f}});
+                            } else {
+                                powerupSprite = GetPowerUpSprite(puType);
+                            }
+                        } else {
+                            powerupSprite = GetPowerUpSprite(puType);
                         }
 
                         if (powerupSprite != Renderer::INVALID_SPRITE_ID) {
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(powerupSprite, 5));
                             if (puType == ECS::PowerUpType::FORCE_POD) {
-                                d.scale = {1.0f, 1.0f};
+                                d.scale = {0.25f, 0.25f};
                             } else {
                                 d.scale = {2.5f, 2.5f};
                             }
@@ -413,6 +378,10 @@ namespace RType {
                         }
 
                         m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{32.0f, 32.0f});
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::POWERUP,
+                                           CollisionLayers::PLAYER));
+                        m_registry.AddComponent<ECS::PowerUp>(newEntity, ECS::PowerUp(puType, entityState.entityId));
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         std::cout << "[GameState] Created POWERUP entity " << entityState.entityId << " type " << static_cast<int>(powerupType) << std::endl;

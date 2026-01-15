@@ -411,6 +411,9 @@ namespace RType {
             if (m_collisionDetectionSystem) {
                 m_collisionDetectionSystem->Update(m_registry, dt);
             }
+            if (m_powerUpCollisionSystem) {
+                m_powerUpCollisionSystem->Update(m_registry, dt);
+            }
             if (m_bulletResponseSystem) {
                 m_bulletResponseSystem->Update(m_registry, dt);
             }
