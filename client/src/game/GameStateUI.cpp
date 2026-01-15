@@ -105,11 +105,28 @@ namespace RType {
 
             if (m_hudLivesEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudLivesEntity)) {
                 auto& livesLabel = m_registry.GetComponent<TextLabel>(m_hudLivesEntity);
-                livesLabel.text = "LIVES x" + std::to_string(m_playerLives);
 
-                if (m_playerLives <= 1) {
+                // Calculate visual lives from real health (0-300)
+                // 201-300 HP = 3 lives, 101-200 HP = 2 lives, 1-100 HP = 1 life, 0 HP = 0 lives
+                int realHealth = 0;
+                if (m_context.playerNumber >= 1 && m_context.playerNumber <= MAX_PLAYERS) {
+                    realHealth = m_playersHUD[m_context.playerNumber - 1].health;
+                }
+
+                int visualLives = 0;
+                if (realHealth > 200) {
+                    visualLives = 3;
+                } else if (realHealth > 100) {
+                    visualLives = 2;
+                } else if (realHealth > 0) {
+                    visualLives = 1;
+                }
+
+                livesLabel.text = "LIVES x" + std::to_string(visualLives);
+
+                if (visualLives <= 1) {
                     livesLabel.color = {1.0f, 0.2f, 0.2f, 1.0f};
-                } else if (m_playerLives <= 2) {
+                } else if (visualLives <= 2) {
                     livesLabel.color = {1.0f, 0.6f, 0.0f, 1.0f};
                 } else {
                     livesLabel.color = {1.0f, 0.8f, 0.0f, 1.0f};
@@ -403,17 +420,23 @@ namespace RType {
             textParams.scale = 1.0f;
             m_renderer->DrawText(m_hudFontSmall, "HEALTH", textParams);
 
-            float healthPercent = 0.0f;
-            if (m_playersHUD[playerIndex].isDead) {
-                healthPercent = 0.0f;
-            } else if (m_playersHUD[playerIndex].maxHealth > 0) {
-                healthPercent = static_cast<float>(m_playersHUD[playerIndex].health) / static_cast<float>(m_playersHUD[playerIndex].maxHealth);
-                healthPercent = std::max(0.0f, std::min(1.0f, healthPercent));
+            // Calculate visual health (0-100) from real health (0-300)
+            // Each "life" represents 100 HP
+            int realHealth = m_playersHUD[playerIndex].health;
+            int visualHealth = 0;
+
+            if (m_playersHUD[playerIndex].isDead || realHealth <= 0) {
+                visualHealth = 0;
+            } else if (realHealth > 200) {
+                visualHealth = realHealth - 200;  // 201-300 -> 1-100
+            } else if (realHealth > 100) {
+                visualHealth = realHealth - 100;  // 101-200 -> 1-100
+            } else {
+                visualHealth = realHealth;        // 1-100 -> 1-100
             }
 
-            if (m_playersHUD[playerIndex].isDead || m_playersHUD[playerIndex].health <= 0) {
-                healthPercent = 0.0f;
-            }
+            float healthPercent = static_cast<float>(visualHealth) / 100.0f;
+            healthPercent = std::max(0.0f, std::min(1.0f, healthPercent));
 
             float filledWidth = barWidth * healthPercent;
 

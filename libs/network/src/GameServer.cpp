@@ -775,7 +775,7 @@ namespace network {
             entity.y = pos.y;
             entity.vx = vel.dx;
             entity.vy = vel.dy;
-            entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
+            entity.health = static_cast<uint16_t>(std::max(0, health.current));
 
             // Encode player number in flags (lower 4 bits)
             uint8_t flags = player.playerNumber & 0x0F;
@@ -839,6 +839,7 @@ namespace network {
                 const auto& shooter = m_registry.GetComponent<Shooter>(playerEntity);
                 entity.fireRate = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(shooter.fireRate * 10.0f))));
             }
+
             m_entities.push_back(entity);
         }
 
