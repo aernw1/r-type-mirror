@@ -26,6 +26,8 @@ namespace RType {
         std::uint32_t SettingsState::s_screenHeight = 720;
         bool SettingsState::s_fullscreen = false;
         std::uint32_t SettingsState::s_targetFramerate = 60;
+        float SettingsState::s_masterVolume = 1.0f;
+        bool SettingsState::s_muted = false;
 
         const std::vector<SettingsState::Resolution> SettingsState::RESOLUTIONS = {
             {1280, 720, "1280x720"},
@@ -146,10 +148,19 @@ namespace RType {
             screenLabel.centered = true;
             m_registry.AddComponent(screenItem, std::move(screenLabel));
 
+            Entity audioItem = m_registry.CreateEntity();
+            m_entities.push_back(audioItem);
+            m_menuItems.push_back(audioItem);
+            m_registry.AddComponent(audioItem, Position{640.0f, startY + itemSpacing * 2});
+            TextLabel audioLabel("AUDIO", m_fontMedium, 24);
+            audioLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
+            audioLabel.centered = true;
+            m_registry.AddComponent(audioItem, std::move(audioLabel));
+
             Entity backItem = m_registry.CreateEntity();
             m_entities.push_back(backItem);
             m_menuItems.push_back(backItem);
-            m_registry.AddComponent(backItem, Position{640.0f, startY + itemSpacing * 2});
+            m_registry.AddComponent(backItem, Position{640.0f, startY + itemSpacing * 3});
             TextLabel backLabel("BACK", m_fontMedium, 24);
             backLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
             backLabel.centered = true;
@@ -236,6 +247,70 @@ namespace RType {
             m_registry.AddComponent(controlsText, std::move(controlsLabel));
         }
 
+        void SettingsState::createAudioUI() {
+            for (Entity entity : m_audioMenuItems) {
+                if (m_registry.IsEntityAlive(entity)) {
+                    m_registry.DestroyEntity(entity);
+                }
+            }
+            m_audioMenuItems.clear();
+
+            if (m_fontLarge == Renderer::INVALID_FONT_ID)
+                return;
+
+            Entity titleEntity = m_registry.CreateEntity();
+            m_entities.push_back(titleEntity);
+            m_audioMenuItems.push_back(titleEntity);
+            m_registry.AddComponent(titleEntity, Position{640.0f, 150.0f});
+            TextLabel titleLabel("AUDIO SETTINGS", m_fontLarge, 72);
+            titleLabel.color = {0.0f, 1.0f, 1.0f, 1.0f};
+            titleLabel.centered = true;
+            m_registry.AddComponent(titleEntity, std::move(titleLabel));
+
+            float startY = 280.0f;
+            float itemSpacing = 70.0f;
+
+            Entity volumeItem = m_registry.CreateEntity();
+            m_entities.push_back(volumeItem);
+            m_audioMenuItems.push_back(volumeItem);
+            m_registry.AddComponent(volumeItem, Position{640.0f, startY});
+            int volumePercent = static_cast<int>(std::round(m_masterVolume * 100.0f));
+            volumePercent = (volumePercent / 5) * 5;
+            std::string volumeText = "MASTER VOLUME: " + std::to_string(volumePercent) + "%";
+            TextLabel volumeLabel(volumeText, m_fontMedium, 24);
+            volumeLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
+            volumeLabel.centered = true;
+            m_registry.AddComponent(volumeItem, std::move(volumeLabel));
+
+            Entity muteItem = m_registry.CreateEntity();
+            m_entities.push_back(muteItem);
+            m_audioMenuItems.push_back(muteItem);
+            m_registry.AddComponent(muteItem, Position{640.0f, startY + itemSpacing});
+            std::string muteText = "MUTE: " + std::string(m_muted ? "ON" : "OFF");
+            TextLabel muteLabel(muteText, m_fontMedium, 24);
+            muteLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
+            muteLabel.centered = true;
+            m_registry.AddComponent(muteItem, std::move(muteLabel));
+
+            Entity backItem = m_registry.CreateEntity();
+            m_entities.push_back(backItem);
+            m_audioMenuItems.push_back(backItem);
+            m_registry.AddComponent(backItem, Position{640.0f, startY + itemSpacing * 2});
+            TextLabel backLabel("BACK", m_fontMedium, 24);
+            backLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
+            backLabel.centered = true;
+            m_registry.AddComponent(backItem, std::move(backLabel));
+
+            Entity controlsText = m_registry.CreateEntity();
+            m_entities.push_back(controlsText);
+            m_audioMenuItems.push_back(controlsText);
+            m_registry.AddComponent(controlsText, Position{640.0f, 600.0f});
+            TextLabel controlsLabel("UP/DOWN: NAVIGATE  |  LEFT/RIGHT: CHANGE VALUE  |  ESC: BACK", m_fontSmall, 12);
+            controlsLabel.color = {0.5f, 0.86f, 1.0f, 0.85f};
+            controlsLabel.centered = true;
+            m_registry.AddComponent(controlsText, std::move(controlsLabel));
+        }
+
         void SettingsState::updateAnimations(float dt) {
             m_animTime += dt;
         }
@@ -243,6 +318,10 @@ namespace RType {
         void SettingsState::updateMenuSelection() {
             if (m_inScreenMenu) {
                 updateScreenMenuSelection();
+                return;
+            }
+            if (m_inAudioMenu) {
+                updateAudioMenuSelection();
                 return;
             }
 
@@ -301,6 +380,40 @@ namespace RType {
                 auto& label = m_registry.GetComponent<TextLabel>(m_screenMenuItems[3]);
                 std::string framerateText = "FRAME RATE: " + FRAMERATE_NAMES[m_framerateIndex];
                 label.text = framerateText;
+            }
+        }
+
+        void SettingsState::updateAudioMenuSelection() {
+            for (size_t i = 0; i < m_audioMenuItems.size(); i++) {
+                if (m_registry.IsEntityAlive(m_audioMenuItems[i])) {
+                    auto& label = m_registry.GetComponent<TextLabel>(m_audioMenuItems[i]);
+
+                    if (i == 0) {
+                        continue;
+                    }
+
+                    int itemIndex = static_cast<int>(i) - 1;
+                    if (itemIndex == m_audioSelectedIndex) {
+                        float pulse = std::sin(m_animTime * 4.0f) * 0.3f + 0.7f;
+                        label.color = {1.0f, 0.08f + pulse * 0.5f, 0.58f, 1.0f};
+                    } else {
+                        label.color = {0.7f, 0.7f, 0.7f, 1.0f};
+                    }
+                }
+            }
+
+            if (m_audioMenuItems.size() > 1 && m_registry.IsEntityAlive(m_audioMenuItems[1])) {
+                auto& label = m_registry.GetComponent<TextLabel>(m_audioMenuItems[1]);
+                int volumePercent = static_cast<int>(std::round(m_masterVolume * 100.0f));
+                volumePercent = (volumePercent / 5) * 5;
+                std::string volumeText = "MASTER VOLUME: " + std::to_string(volumePercent) + "%";
+                label.text = volumeText;
+            }
+
+            if (m_audioMenuItems.size() > 2 && m_registry.IsEntityAlive(m_audioMenuItems[2])) {
+                auto& label = m_registry.GetComponent<TextLabel>(m_audioMenuItems[2]);
+                std::string muteText = "MUTE: " + std::string(m_muted ? "ON" : "OFF");
+                label.text = muteText;
             }
         }
 
@@ -382,7 +495,7 @@ namespace RType {
                     m_enterKeyPressed = true;
                     playSelectSound();
                     if (static_cast<ScreenItem>(m_screenSelectedIndex) == ScreenItem::BACK) {
-                        exitScreenMenu();
+                        exitSubMenu();
                     }
                 } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
                     m_enterKeyPressed = false;
@@ -391,7 +504,84 @@ namespace RType {
                 if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escKeyPressed) {
                     m_escKeyPressed = true;
                     playSelectSound();
-                    exitScreenMenu();
+                    exitSubMenu();
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
+                    m_escKeyPressed = false;
+                }
+                return;
+            }
+
+            if (m_inAudioMenu) {
+                if (m_renderer->IsKeyPressed(Renderer::Key::Up) && !m_upKeyPressed) {
+                    m_upKeyPressed = true;
+                    playSelectSound();
+                    m_audioSelectedIndex--;
+                    if (m_audioSelectedIndex < 0) {
+                        m_audioSelectedIndex = static_cast<int>(AudioItem::COUNT) - 1;
+                    }
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Up)) {
+                    m_upKeyPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Down) && !m_downKeyPressed) {
+                    m_downKeyPressed = true;
+                    playSelectSound();
+                    m_audioSelectedIndex++;
+                    if (m_audioSelectedIndex >= static_cast<int>(AudioItem::COUNT)) {
+                        m_audioSelectedIndex = 0;
+                    }
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Down)) {
+                    m_downKeyPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Left) && !m_leftKeyPressed) {
+                    m_leftKeyPressed = true;
+                    playSelectSound();
+                    switch (static_cast<AudioItem>(m_audioSelectedIndex)) {
+                        case AudioItem::MASTER_VOLUME:
+                            changeMasterVolume(-1);
+                            break;
+                        case AudioItem::MUTE:
+                            toggleMute();
+                            break;
+                        default:
+                            break;
+                    }
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Left)) {
+                    m_leftKeyPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Right) && !m_rightKeyPressed) {
+                    m_rightKeyPressed = true;
+                    playSelectSound();
+                    switch (static_cast<AudioItem>(m_audioSelectedIndex)) {
+                        case AudioItem::MASTER_VOLUME:
+                            changeMasterVolume(1);
+                            break;
+                        case AudioItem::MUTE:
+                            toggleMute();
+                            break;
+                        default:
+                            break;
+                    }
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Right)) {
+                    m_rightKeyPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_enterKeyPressed) {
+                    m_enterKeyPressed = true;
+                    playSelectSound();
+                    if (static_cast<AudioItem>(m_audioSelectedIndex) == AudioItem::BACK) {
+                        exitSubMenu();
+                    }
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
+                    m_enterKeyPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escKeyPressed) {
+                    m_escKeyPressed = true;
+                    playSelectSound();
+                    exitSubMenu();
                 } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
                     m_escKeyPressed = false;
                 }
@@ -430,7 +620,11 @@ namespace RType {
                         break;
 
                     case SettingsItem::SCREEN:
-                        enterScreenMenu();
+                        enterSubMenu(true);
+                        break;
+
+                    case SettingsItem::AUDIO:
+                        enterSubMenu(false);
                         break;
 
                     case SettingsItem::BACK:
@@ -486,6 +680,8 @@ namespace RType {
                 j["screenHeight"] = m_screenHeight;
                 j["fullscreen"] = m_fullscreen;
                 j["targetFramerate"] = m_targetFramerate;
+                j["masterVolume"] = m_masterVolume;
+                j["muted"] = m_muted;
 
                 std::string filePath = SETTINGS_FILE_PATH;
                 std::ofstream file(filePath);
@@ -512,6 +708,17 @@ namespace RType {
             m_screenHeight = s_screenHeight;
             m_fullscreen = s_fullscreen;
             m_targetFramerate = s_targetFramerate;
+            m_masterVolume = s_masterVolume;
+            m_muted = s_muted;
+            m_volumeBeforeMute = m_masterVolume;
+
+            if (m_context.audio) {
+                if (m_muted) {
+                    m_context.audio->SetMasterVolume(0.0f);
+                } else {
+                    m_context.audio->SetMasterVolume(m_masterVolume);
+                }
+            }
 
             m_resolutionIndex = 0;
             for (size_t i = 0; i < RESOLUTIONS.size(); i++) {
@@ -547,6 +754,8 @@ namespace RType {
                     s_screenHeight = 720;
                     s_fullscreen = false;
                     s_targetFramerate = 60;
+                    s_masterVolume = 1.0f;
+                    s_muted = false;
                     return;
                 }
 
@@ -583,8 +792,20 @@ namespace RType {
                     s_targetFramerate = 60;
                 }
 
-                Core::Logger::Info("[SettingsState] Settings loaded: colourBlindMode={}, resolution={}x{}, fullscreen={}, framerate={}",
-                                   s_colourBlindMode, s_screenWidth, s_screenHeight, s_fullscreen, s_targetFramerate);
+                if (j.contains("masterVolume")) {
+                    s_masterVolume = j["masterVolume"].get<float>();
+                } else {
+                    s_masterVolume = 1.0f;
+                }
+
+                if (j.contains("muted")) {
+                    s_muted = j["muted"].get<bool>();
+                } else {
+                    s_muted = false;
+                }
+
+                Core::Logger::Info("[SettingsState] Settings loaded: colourBlindMode={}, resolution={}x{}, fullscreen={}, framerate={}, masterVolume={}, muted={}",
+                                   s_colourBlindMode, s_screenWidth, s_screenHeight, s_fullscreen, s_targetFramerate, s_masterVolume, s_muted);
             } catch (const std::exception& e) {
                 Core::Logger::Error("[SettingsState] Error loading settings: {}", e.what());
                 s_colourBlindMode = false;
@@ -593,6 +814,8 @@ namespace RType {
                 s_screenHeight = 720;
                 s_fullscreen = false;
                 s_targetFramerate = 60;
+                s_masterVolume = 1.0f;
+                s_muted = false;
             }
         }
 
@@ -605,7 +828,30 @@ namespace RType {
             Core::ColorFilter::SetColourBlindMode(enabled);
         }
 
-        void SettingsState::enterScreenMenu() {
+        void SettingsState::clearMenuUI() {
+            for (auto it = m_entities.begin(); it != m_entities.end();) {
+                Entity entity = *it;
+                if (m_registry.IsEntityAlive(entity)) {
+                    bool isBackground = false;
+                    if (m_registry.HasComponent<Drawable>(entity)) {
+                        const auto& drawable = m_registry.GetComponent<Drawable>(entity);
+                        if (drawable.layer == -10) {
+                            isBackground = true;
+                        }
+                    }
+                    if (!isBackground) {
+                        m_registry.DestroyEntity(entity);
+                        it = m_entities.erase(it);
+                    } else {
+                        ++it;
+                    }
+                } else {
+                    it = m_entities.erase(it);
+                }
+            }
+        }
+
+        void SettingsState::enterSubMenu(bool screen) {
             for (Entity entity : m_menuItems) {
                 if (m_registry.IsEntityAlive(entity)) {
                     m_registry.DestroyEntity(entity);
@@ -618,63 +864,42 @@ namespace RType {
                 m_titleEntity = RType::ECS::NULL_ENTITY;
             }
 
-            for (auto it = m_entities.begin(); it != m_entities.end();) {
-                Entity entity = *it;
-                if (m_registry.IsEntityAlive(entity)) {
-                    bool isBackground = false;
-                    if (m_registry.HasComponent<Drawable>(entity)) {
-                        const auto& drawable = m_registry.GetComponent<Drawable>(entity);
-                        if (drawable.layer == -10) {
-                            isBackground = true;
-                        }
-                    }
-                    if (!isBackground) {
-                        m_registry.DestroyEntity(entity);
-                        it = m_entities.erase(it);
-                    } else {
-                        ++it;
-                    }
-                } else {
-                    it = m_entities.erase(it);
-                }
-            }
+            clearMenuUI();
 
-            m_inScreenMenu = true;
-            m_screenSelectedIndex = 0;
-            createScreenUI();
+            if (screen) {
+                m_inScreenMenu = true;
+                m_screenSelectedIndex = 0;
+                createScreenUI();
+            } else {
+                m_inAudioMenu = true;
+                m_audioSelectedIndex = 0;
+                createAudioUI();
+            }
         }
 
-        void SettingsState::exitScreenMenu() {
-            for (Entity entity : m_screenMenuItems) {
-                if (m_registry.IsEntityAlive(entity)) {
-                    m_registry.DestroyEntity(entity);
-                }
+        void SettingsState::exitSubMenu() {
+            std::vector<Entity>* menuItems = nullptr;
+            if (m_inScreenMenu) {
+                menuItems = &m_screenMenuItems;
+            } else if (m_inAudioMenu) {
+                menuItems = &m_audioMenuItems;
             }
-            m_screenMenuItems.clear();
 
-            for (auto it = m_entities.begin(); it != m_entities.end();) {
-                Entity entity = *it;
-                if (m_registry.IsEntityAlive(entity)) {
-                    bool isBackground = false;
-                    if (m_registry.HasComponent<Drawable>(entity)) {
-                        const auto& drawable = m_registry.GetComponent<Drawable>(entity);
-                        if (drawable.layer == -10) {
-                            isBackground = true;
-                        }
-                    }
-                    if (!isBackground) {
+            if (menuItems) {
+                for (Entity entity : *menuItems) {
+                    if (m_registry.IsEntityAlive(entity)) {
                         m_registry.DestroyEntity(entity);
-                        it = m_entities.erase(it);
-                    } else {
-                        ++it;
                     }
-                } else {
-                    it = m_entities.erase(it);
                 }
+                menuItems->clear();
             }
+
+            clearMenuUI();
 
             m_inScreenMenu = false;
+            m_inAudioMenu = false;
             m_screenSelectedIndex = 0;
+            m_audioSelectedIndex = 0;
             createUI();
         }
 
@@ -704,6 +929,41 @@ namespace RType {
             }
             m_targetFramerate = FRAMERATES[m_framerateIndex];
             applyScreenSettings();
+        }
+
+        void SettingsState::changeMasterVolume(int direction) {
+            if (m_muted) {
+                return;
+            }
+
+            float step = 0.05f;
+            m_masterVolume += direction * step;
+            m_masterVolume = std::clamp(m_masterVolume, 0.0f, 1.0f);
+
+            if (m_context.audio) {
+                m_context.audio->SetMasterVolume(m_masterVolume);
+            }
+
+            s_masterVolume = m_masterVolume;
+            saveSettings();
+        }
+
+        void SettingsState::toggleMute() {
+            m_muted = !m_muted;
+
+            if (m_context.audio) {
+                if (m_muted) {
+                    m_volumeBeforeMute = m_masterVolume;
+                    m_context.audio->SetMasterVolume(0.0f);
+                } else {
+                    m_masterVolume = m_volumeBeforeMute;
+                    m_context.audio->SetMasterVolume(m_masterVolume);
+                }
+            }
+
+            s_muted = m_muted;
+            s_masterVolume = m_masterVolume;
+            saveSettings();
         }
 
         void SettingsState::applyScreenSettings() {
@@ -757,6 +1017,14 @@ namespace RType {
 
         std::uint32_t SettingsState::GetTargetFramerate() {
             return s_targetFramerate;
+        }
+
+        float SettingsState::GetMasterVolume() {
+            return s_masterVolume;
+        }
+
+        bool SettingsState::IsMuted() {
+            return s_muted;
         }
 
     }

@@ -40,28 +40,36 @@ namespace RType {
             static std::uint32_t GetScreenHeight();
             static bool GetFullscreen();
             static std::uint32_t GetTargetFramerate();
+            static float GetMasterVolume();
+            static bool IsMuted();
 
         private:
             void createUI();
             void createScreenUI();
+            void createAudioUI();
             void updateAnimations(float dt);
             void updateMenuSelection();
             void updateScreenMenuSelection();
+            void updateAudioMenuSelection();
             void toggleColourBlindMode();
-            void enterScreenMenu();
-            void exitScreenMenu();
+            void enterSubMenu(bool screen);
+            void exitSubMenu();
             void changeResolution(int direction);
             void toggleFullscreen();
             void changeFrameRate(int direction);
+            void changeMasterVolume(int direction);
+            void toggleMute();
             void applyScreenSettings();
             void saveSettings();
             void loadSettings();
+            void clearMenuUI();
 
             enum class SettingsItem {
                 COLOUR_BLIND = 0,
                 SCREEN = 1,
-                BACK = 2,
-                COUNT = 3
+                AUDIO = 2,
+                BACK = 3,
+                COUNT = 4
             };
 
             enum class ScreenItem {
@@ -70,6 +78,13 @@ namespace RType {
                 FRAME_RATE = 2,
                 BACK = 3,
                 COUNT = 4
+            };
+
+            enum class AudioItem {
+                MASTER_VOLUME = 0,
+                MUTE = 1,
+                BACK = 2,
+                COUNT = 3
             };
 
             struct Resolution {
@@ -98,9 +113,11 @@ namespace RType {
             RType::ECS::Entity m_titleEntity = RType::ECS::NULL_ENTITY;
             std::vector<RType::ECS::Entity> m_menuItems;
             std::vector<RType::ECS::Entity> m_screenMenuItems;
+            std::vector<RType::ECS::Entity> m_audioMenuItems;
 
             int m_selectedIndex = 0;
             int m_screenSelectedIndex = 0;
+            int m_audioSelectedIndex = 0;
             bool m_upKeyPressed = false;
             bool m_downKeyPressed = false;
             bool m_leftKeyPressed = false;
@@ -112,6 +129,7 @@ namespace RType {
 
             bool m_colourBlindMode = false;
             bool m_inScreenMenu = false;
+            bool m_inAudioMenu = false;
 
             std::uint32_t m_screenWidth = 1280;
             std::uint32_t m_screenHeight = 720;
@@ -124,11 +142,17 @@ namespace RType {
             static const std::vector<std::uint32_t> FRAMERATES;
             static const std::vector<std::string> FRAMERATE_NAMES;
 
+            float m_masterVolume = 1.0f;
+            float m_volumeBeforeMute = 1.0f;
+            bool m_muted = false;
+
             static bool s_colourBlindMode;
             static std::uint32_t s_screenWidth;
             static std::uint32_t s_screenHeight;
             static bool s_fullscreen;
             static std::uint32_t s_targetFramerate;
+            static float s_masterVolume;
+            static bool s_muted;
             static const std::string SETTINGS_FILE_PATH;
         };
 
