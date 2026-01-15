@@ -82,6 +82,7 @@ namespace RType {
                                               shooterEntity});
 
                             shooterComp.cooldown = shooterComp.fireRate;
+                            shootCmd.wantsToShoot = false;
                         }
                     }
                 }
@@ -170,6 +171,7 @@ namespace RType {
                             }
 
                             weapon.cooldown = weapon.fireRate;
+                            shootCmd.wantsToShoot = false;
                         }
                     }
                 }
