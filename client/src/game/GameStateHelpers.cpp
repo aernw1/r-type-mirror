@@ -125,10 +125,14 @@ namespace RType {
                     int damage = (weaponType == WeaponType::LASER) ? 40 : 20;
                     m_registry.AddComponent<WeaponSlot>(playerEntity, WeaponSlot(weaponType, fireRate, damage));
                 }
+                activePowerUps.hasSpreadShot = (weaponType == WeaponType::SPREAD);
+                activePowerUps.hasLaserBeam = (weaponType == WeaponType::LASER);
             } else {
                 if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
                     m_registry.RemoveComponent<WeaponSlot>(playerEntity);
                 }
+                activePowerUps.hasSpreadShot = false;
+                activePowerUps.hasLaserBeam = false;
             }
 
             if (!m_registry.HasComponent<WeaponSlot>(playerEntity) && m_registry.HasComponent<Shooter>(playerEntity)) {
