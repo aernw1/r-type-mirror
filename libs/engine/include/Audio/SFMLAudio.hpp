@@ -45,6 +45,7 @@ namespace Audio {
 
     private:
         void CleanupStoppedSounds();
+        void UpdateAllVolumes();
 
         float m_masterVolume = 1.0f;
         SoundId m_nextSoundId = 1;
@@ -52,8 +53,10 @@ namespace Audio {
 
         std::unordered_map<SoundId, sf::SoundBuffer> m_soundBuffers;
         std::list<sf::Sound> m_activeSounds;
+        std::unordered_map<const sf::SoundBuffer*, float> m_soundOriginalVolumes;
 
         std::unordered_map<MusicId, std::unique_ptr<sf::Music>> m_music;
+        std::unordered_map<MusicId, float> m_musicOriginalVolumes;
     };
 
 }
