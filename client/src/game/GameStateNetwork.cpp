@@ -323,24 +323,21 @@ namespace RType {
                         Math::Color powerupColor = ECS::PowerUpFactory::GetPowerUpColor(puType);
                         Renderer::SpriteId powerupSprite = Renderer::INVALID_SPRITE_ID;
                         
-                        if (puType == ECS::PowerUpType::FORCE_POD) {
+                        powerupSprite = GetPowerUpSprite(puType);
+                        
+                        if (powerupSprite == Renderer::INVALID_SPRITE_ID && puType == ECS::PowerUpType::FORCE_POD) {
                             auto textureIt = m_levelAssets.textures.find("powerup-force-pod");
                             if (textureIt != m_levelAssets.textures.end()) {
-                                powerupSprite = m_renderer->CreateSprite(textureIt->second, Renderer::Rectangle{{0.0f, 0.0f}, {128.0f, 128.0f}});
+                                powerupSprite = m_renderer->CreateSprite(textureIt->second, {});
                             } else {
-                                powerupSprite = GetPowerUpSprite(puType);
+                                powerupSprite = GetPowerUpSprite(ECS::PowerUpType::LASER_BEAM);
                             }
-                        } else {
-                            powerupSprite = GetPowerUpSprite(puType);
                         }
 
                         if (powerupSprite != Renderer::INVALID_SPRITE_ID) {
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(powerupSprite, 5));
-                            if (puType == ECS::PowerUpType::FORCE_POD) {
-                                d.scale = {0.25f, 0.25f};
-                            } else {
-                                d.scale = {2.5f, 2.5f};
-                            }
+                            float scale = ECS::PowerUpFactory::GetPowerUpScale(puType);
+                            d.scale = {scale, scale};
                             d.tint = powerupColor;
                             m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
                         }
