@@ -144,6 +144,17 @@ namespace RType {
                 Core::Logger::Warning("[GameState] Failed to load shooting animation spritesheet");
             }
 
+            m_forcePodTexture = m_renderer->LoadTexture("assets/SFX/forcepod.png");
+            if (m_forcePodTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_forcePodTexture = m_renderer->LoadTexture("../assets/SFX/forcepod.png");
+            }
+            if (m_forcePodTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_forcePodSprite = m_renderer->CreateSprite(m_forcePodTexture, {});
+                Core::Logger::Info("[GameState] Force pod animation spritesheet loaded");
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load force pod animation spritesheet");
+            }
+
             m_enemyBulletGreenTexture = m_renderer->LoadTexture("assets/projectiles/bullet-green.png");
             if (m_enemyBulletGreenTexture == Renderer::INVALID_TEXTURE_ID) {
                 m_enemyBulletGreenTexture = m_renderer->LoadTexture("../assets/projectiles/bullet-green.png");
@@ -333,7 +344,7 @@ namespace RType {
                 layout.frameCount = 11;
                 layout.frameWidth = 32.0f;
                 layout.frameHeight = 32.0f;
-                layout.defaultDuration = 0.05f;  // 50ms per frame
+                layout.defaultDuration = 0.05f;
 
                 m_explosionClipId = m_animationModule->CreateClipFromGrid(
                     "explosion_small",
@@ -343,8 +354,6 @@ namespace RType {
                 Core::Logger::Info("[GameState] Created explosion animation clip with {} frames", 11);
             }
 
-            // Create shooting animation clip (10 frames, 25x25 each, horizontal strip, right to left)
-            // Since animation goes right to left, we reverse the frame order
             if (m_shootingTexture != Renderer::INVALID_TEXTURE_ID) {
                 const int frameCount = 10;
                 const float frameWidth = 25.0f;
@@ -356,14 +365,13 @@ namespace RType {
                 shootingConfig.looping = false;
                 shootingConfig.playbackSpeed = 1.0f;
                 
-                // Create frames in reverse order (right to left in sprite sheet)
                 for (int i = frameCount - 1; i >= 0; --i) {
                     Animation::FrameDef frame;
                     frame.region.position.x = static_cast<float>(i) * frameWidth;
                     frame.region.position.y = 0.0f;
                     frame.region.size.x = frameWidth;
                     frame.region.size.y = frameHeight;
-                    frame.duration = 0.05f;  // 50ms per frame
+                    frame.duration = 0.05f;
                     shootingConfig.frames.push_back(frame);
                 }
                 
@@ -371,9 +379,37 @@ namespace RType {
                 Core::Logger::Info("[GameState] Created shooting animation clip with {} frames (reversed for right-to-left)", frameCount);
             }
 
+            if (m_forcePodTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
+                const int totalFramesInSheet = 12;
+                const int frameCount = 6;
+                
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_forcePodTexture);
+                float singleFrameWidth = textureSize.x / static_cast<float>(totalFramesInSheet);
+                float frameHeight = textureSize.y;
+                
+                Animation::AnimationClipConfig forcePodConfig;
+                forcePodConfig.name = "forcepod_rotation";
+                forcePodConfig.texturePath = "assets/SFX/forcepod.png";
+                forcePodConfig.looping = true;
+                forcePodConfig.playbackSpeed = 1.0f;
+                
+                for (int i = 0; i < frameCount; ++i) {
+                    Animation::FrameDef frame;
+                    frame.region.position.x = static_cast<float>(i) * singleFrameWidth;
+                    frame.region.position.y = 0.0f;
+                    frame.region.size.x = singleFrameWidth;
+                    frame.region.size.y = frameHeight;
+                    frame.duration = 0.1f;
+                    forcePodConfig.frames.push_back(frame);
+                }
+                
+                m_forcePodClipId = m_animationModule->CreateClip(forcePodConfig);
+                Core::Logger::Info("[GameState] Created force pod rotation animation clip with {} frames (frame size: {}x{}, texture size: {}x{})", 
+                    frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
+            }
+
             m_animationSystem = std::make_unique<RType::ECS::AnimationSystem>(m_animationModule.get());
 
-            // Initialize effect factory with explosion and shooting clips
             ECS::EffectConfig effectConfig;
             effectConfig.explosionSmall = m_explosionClipId;
             effectConfig.effectsTexture = m_explosionTexture;
@@ -381,6 +417,15 @@ namespace RType {
             effectConfig.shootingAnimation = m_shootingClipId;
             effectConfig.shootingTexture = m_shootingTexture;
             effectConfig.shootingSprite = m_shootingSprite;
+            effectConfig.forcePodAnimation = m_forcePodClipId;
+            effectConfig.forcePodTexture = m_forcePodTexture;
+            effectConfig.forcePodSprite = m_forcePodSprite;
+            
+            if (m_forcePodClipId != Animation::INVALID_CLIP_ID && m_animationModule) {
+                auto firstFrame = m_animationModule->GetFrameAtTime(m_forcePodClipId, 0.0f, true);
+                effectConfig.forcePodFirstFrameRegion = firstFrame.region;
+            }
+            
             m_effectFactory = std::make_unique<RType::ECS::EffectFactory>(effectConfig);
 
             m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
@@ -392,6 +437,7 @@ namespace RType {
                     m_levelData.config.screenWidth,
                     m_levelData.config.screenHeight);
                 m_powerUpSpawnSystem->SetSpawnInterval(m_levelData.config.powerUpSpawnInterval);
+                m_powerUpSpawnSystem->SetEffectFactory(m_effectFactory.get());
                 m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(m_renderer.get());
                 m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
                 m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();

@@ -19,12 +19,16 @@ namespace ECS {
         Animation::AnimationClipId spawnEffect = Animation::INVALID_CLIP_ID;
         Animation::AnimationClipId deathEffect = Animation::INVALID_CLIP_ID;
         Animation::AnimationClipId shootingAnimation = Animation::INVALID_CLIP_ID;
+        Animation::AnimationClipId forcePodAnimation = Animation::INVALID_CLIP_ID;
 
         Renderer::FontId damageFont = Renderer::INVALID_FONT_ID;
         Renderer::TextureId effectsTexture = Renderer::INVALID_TEXTURE_ID;
         Renderer::SpriteId effectsSprite = Renderer::INVALID_SPRITE_ID;
         Renderer::TextureId shootingTexture = Renderer::INVALID_TEXTURE_ID;
         Renderer::SpriteId shootingSprite = Renderer::INVALID_SPRITE_ID;
+        Renderer::TextureId forcePodTexture = Renderer::INVALID_TEXTURE_ID;
+        Renderer::SpriteId forcePodSprite = Renderer::INVALID_SPRITE_ID;
+        Math::Rectangle forcePodFirstFrameRegion{};
 
         EffectConfig() = default;
     };

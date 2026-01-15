@@ -277,6 +277,10 @@ namespace RType {
             Renderer::SpriteId m_shootingSprite = Renderer::INVALID_SPRITE_ID;
             Animation::AnimationClipId m_shootingClipId = Animation::INVALID_CLIP_ID;
 
+            Renderer::TextureId m_forcePodTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_forcePodSprite = Renderer::INVALID_SPRITE_ID;
+            Animation::AnimationClipId m_forcePodClipId = Animation::INVALID_CLIP_ID;
+
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
             Renderer::FontId m_hudFontSmall = Renderer::INVALID_FONT_ID;

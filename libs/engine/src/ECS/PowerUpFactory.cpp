@@ -6,6 +6,8 @@
 */
 
 #include "ECS/PowerUpFactory.hpp"
+#include "ECS/EffectFactory.hpp"
+#include "Animation/AnimationTypes.hpp"
 #include "Core/Logger.hpp"
 #include <array>
 #include <atomic>
@@ -49,7 +51,8 @@ namespace RType {
             Registry& registry,
             PowerUpType type,
             float startX, float startY,
-            Renderer::IRenderer* renderer
+            Renderer::IRenderer* renderer,
+            const EffectFactory* effectFactory
         ) {
             Entity powerup = registry.CreateEntity();
 
@@ -82,8 +85,33 @@ namespace RType {
                     drawable.tint = data.color;
                     float scale = GetPowerUpScale(type);
                     drawable.scale = Math::Vector2(scale, scale);
-                    auto& glow = registry.AddComponent<PowerUpGlow>(powerup);
-                    glow.baseScale = scale;
+
+                    if (type == PowerUpType::FORCE_POD && effectFactory) {
+                        const auto& config = effectFactory->GetConfig();
+                        if (config.forcePodAnimation != Animation::INVALID_CLIP_ID) {
+                            if (config.forcePodSprite != Renderer::INVALID_SPRITE_ID) {
+                                drawable.spriteId = config.forcePodSprite;
+                            }
+
+                            auto& anim = registry.AddComponent<SpriteAnimation>(powerup,
+                                SpriteAnimation(config.forcePodAnimation, true, 1.0f));
+                            anim.looping = true;
+                            
+                            if (config.forcePodFirstFrameRegion.size.x > 0.0f && config.forcePodFirstFrameRegion.size.y > 0.0f) {
+                                anim.currentRegion = config.forcePodFirstFrameRegion;
+                                anim.currentFrameIndex = 0;
+                            }
+                            
+                            auto& animatedSprite = registry.AddComponent<AnimatedSprite>(powerup);
+                            animatedSprite.needsUpdate = true;
+                        } else {
+                            auto& glow = registry.AddComponent<PowerUpGlow>(powerup);
+                            glow.baseScale = scale;
+                        }
+                    } else {
+                        auto& glow = registry.AddComponent<PowerUpGlow>(powerup);
+                        glow.baseScale = scale;
+                    }
                 }
             }
 
@@ -229,7 +257,7 @@ namespace RType {
 
         float PowerUpFactory::GetPowerUpScale(PowerUpType type) {
             if (type == PowerUpType::FORCE_POD) {
-                return 0.33f;
+                return 0.33f * 5.0f;  // 5x scale for force pod (upscaled more)
             }
             return 2.5f;
         }

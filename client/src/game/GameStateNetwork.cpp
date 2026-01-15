@@ -339,8 +339,36 @@ namespace RType {
                             float scale = ECS::PowerUpFactory::GetPowerUpScale(puType);
                             d.scale = {scale, scale};
                             d.tint = powerupColor;
-                            auto& glow = m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
-                            glow.baseScale = scale;
+
+                            if (puType == ECS::PowerUpType::FORCE_POD && m_effectFactory) {
+                                const auto& config = m_effectFactory->GetConfig();
+                                if (config.forcePodAnimation != Animation::INVALID_CLIP_ID) {
+                                    if (config.forcePodSprite != Renderer::INVALID_SPRITE_ID) {
+                                        d.spriteId = config.forcePodSprite;
+                                    }
+
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity,
+                                        ECS::SpriteAnimation(config.forcePodAnimation, true, 1.0f));
+                                    anim.looping = true;
+                                    
+                                    if (config.forcePodFirstFrameRegion.size.x > 0.0f && config.forcePodFirstFrameRegion.size.y > 0.0f) {
+                                        anim.currentRegion = config.forcePodFirstFrameRegion;
+                                        anim.currentFrameIndex = 0;
+                                    } else if (m_animationModule) {
+                                        auto firstFrame = m_animationModule->GetFrameAtTime(config.forcePodAnimation, 0.0f, true);
+                                        anim.currentRegion = firstFrame.region;
+                                        anim.currentFrameIndex = m_animationModule->GetFrameIndexAtTime(config.forcePodAnimation, 0.0f, true);
+                                    }
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                } else {
+                                    auto& glow = m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
+                                    glow.baseScale = scale;
+                                }
+                            } else {
+                                auto& glow = m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
+                                glow.baseScale = scale;
+                            }
                         }
 
                         m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{32.0f, 32.0f});
