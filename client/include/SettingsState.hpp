@@ -36,19 +36,46 @@ namespace RType {
             static bool IsColourBlindModeEnabled();
             static void SetColourBlindMode(bool enabled);
             static void LoadSettingsFromFile();
+            static std::uint32_t GetScreenWidth();
+            static std::uint32_t GetScreenHeight();
+            static bool GetFullscreen();
+            static std::uint32_t GetTargetFramerate();
 
         private:
             void createUI();
+            void createScreenUI();
             void updateAnimations(float dt);
             void updateMenuSelection();
+            void updateScreenMenuSelection();
             void toggleColourBlindMode();
+            void enterScreenMenu();
+            void exitScreenMenu();
+            void changeResolution(int direction);
+            void toggleFullscreen();
+            void changeFrameRate(int direction);
+            void applyScreenSettings();
             void saveSettings();
             void loadSettings();
 
             enum class SettingsItem {
                 COLOUR_BLIND = 0,
-                BACK = 1,
-                COUNT = 2
+                SCREEN = 1,
+                BACK = 2,
+                COUNT = 3
+            };
+
+            enum class ScreenItem {
+                RESOLUTION = 0,
+                FULLSCREEN = 1,
+                FRAME_RATE = 2,
+                BACK = 3,
+                COUNT = 4
+            };
+
+            struct Resolution {
+                std::uint32_t width;
+                std::uint32_t height;
+                std::string name;
             };
 
             GameStateMachine& m_machine;
@@ -70,18 +97,38 @@ namespace RType {
             std::vector<RType::ECS::Entity> m_entities;
             RType::ECS::Entity m_titleEntity = RType::ECS::NULL_ENTITY;
             std::vector<RType::ECS::Entity> m_menuItems;
+            std::vector<RType::ECS::Entity> m_screenMenuItems;
 
             int m_selectedIndex = 0;
+            int m_screenSelectedIndex = 0;
             bool m_upKeyPressed = false;
             bool m_downKeyPressed = false;
+            bool m_leftKeyPressed = false;
+            bool m_rightKeyPressed = false;
             bool m_enterKeyPressed = false;
             bool m_escKeyPressed = false;
 
             float m_animTime = 0.0f;
 
             bool m_colourBlindMode = false;
+            bool m_inScreenMenu = false;
+
+            std::uint32_t m_screenWidth = 1280;
+            std::uint32_t m_screenHeight = 720;
+            bool m_fullscreen = false;
+            std::uint32_t m_targetFramerate = 60;
+            int m_resolutionIndex = 0;
+            int m_framerateIndex = 2;
+
+            static const std::vector<Resolution> RESOLUTIONS;
+            static const std::vector<std::uint32_t> FRAMERATES;
+            static const std::vector<std::string> FRAMERATE_NAMES;
 
             static bool s_colourBlindMode;
+            static std::uint32_t s_screenWidth;
+            static std::uint32_t s_screenHeight;
+            static bool s_fullscreen;
+            static std::uint32_t s_targetFramerate;
             static const std::string SETTINGS_FILE_PATH;
         };
 
