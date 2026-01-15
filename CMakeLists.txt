@@ -98,7 +98,7 @@ if(TARGET rtype_sfml_renderer)
 
     add_executable(breakout
         breakout/src/main.cpp
-        breakout/src/BreakoutCollisionSystem.cpp
+        breakout/src/BreakoutPhysicsSystem.cpp
         breakout/src/BreakoutRenderSystem.cpp
         breakout/src/BallAccelerationSystem.cpp
     )
