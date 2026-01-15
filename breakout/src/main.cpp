@@ -4,11 +4,10 @@
 #include "ECS/MovementSystem.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/InputSystem.hpp"
-#include "ECS/CollisionDetectionSystem.hpp"
 #include "ECS/TextRenderingSystem.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "Renderer/SFMLRenderer.hpp"
-#include "BreakoutCollisionSystem.hpp"
+#include "BreakoutPhysicsSystem.hpp"
 #include "BreakoutRenderSystem.hpp"
 #include "BallAccelerationSystem.hpp"
 #include <iostream>
@@ -164,7 +163,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
     engine->RegisterSystem(std::make_unique<InputSystem>(renderer.get()));
     engine->RegisterSystem(std::make_unique<MovementSystem>());
     engine->RegisterSystem(std::make_unique<BallAccelerationSystem>());
-    engine->RegisterSystem(std::make_unique<BreakoutCollisionSystem>());
+    engine->RegisterSystem(std::make_unique<BreakoutPhysicsSystem>());
     engine->RegisterSystem(std::make_unique<RenderingSystem>(renderer.get()));
     engine->RegisterSystem(std::make_unique<BreakoutRenderSystem>(renderer.get()));
     engine->RegisterSystem(std::make_unique<TextRenderingSystem>(renderer.get()));
