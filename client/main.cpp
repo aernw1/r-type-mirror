@@ -63,7 +63,13 @@ int main(int argc, char* argv[]) {
     context.serverPort = serverPort;
     context.playerName = playerName;
 
-    audio->ConfigureDevice(Audio::AudioConfig{});
+    Audio::AudioConfig audioConfig;
+    audioConfig.masterVolume = RType::Client::SettingsState::GetMasterVolume();
+    audio->ConfigureDevice(audioConfig);
+
+    if (RType::Client::SettingsState::IsMuted()) {
+        audio->SetMasterVolume(0.0f);
+    }
 
     RType::Client::GameStateMachine machine;
 
