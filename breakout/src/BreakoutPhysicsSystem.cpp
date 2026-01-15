@@ -7,7 +7,7 @@
 namespace Breakout {
     namespace ECS {
 
-        void BreakoutPhysicsSystem::Update(RType::ECS::Registry& registry, float /*deltaTime*/) {
+        void BreakoutPhysicsSystem::Update(RType::ECS::Registry& registry, float deltaTime) {
             constexpr float SCREEN_WIDTH = 800.0f;
             constexpr float SCREEN_HEIGHT = 600.0f;
 

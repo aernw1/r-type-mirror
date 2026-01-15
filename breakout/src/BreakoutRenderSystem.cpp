@@ -8,7 +8,7 @@ namespace Breakout {
         BreakoutRenderSystem::BreakoutRenderSystem(Renderer::IRenderer* renderer)
             : m_renderer(renderer) {}
 
-        void BreakoutRenderSystem::Update(RType::ECS::Registry& registry, float /*deltaTime*/) {
+        void BreakoutRenderSystem::Update(RType::ECS::Registry& registry, float deltaTime) {
             if (!m_renderer) {
                 return;
             }

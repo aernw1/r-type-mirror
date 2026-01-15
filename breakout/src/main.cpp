@@ -28,7 +28,7 @@ const Math::Color BRICK_COLORS[] = {
     {0.2f, 1.0f, 1.0f, 1.0f}
 };
 
-Entity CreatePaddle(Registry& registry, float x, float y) {
+Entity CreatePaddle(Registry& registry,o float x, float y) {
     Entity paddle = registry.CreateEntity();
     registry.AddComponent<Position>(paddle, Position{x, y});
     registry.AddComponent<Velocity>(paddle, Velocity{0.0f, 0.0f});
@@ -88,7 +88,7 @@ void CreateBrickWall(Registry& registry, float startX, float startY, int rows, i
     }
 }
 
-int main(int /*argc*/, char* /*argv*/[]) {
+int main() {
     std::cout << "=== Breakout Game - Engine Reusability Demo ===" << std::endl;
 
     auto renderer = std::make_shared<Renderer::SFMLRenderer>();
