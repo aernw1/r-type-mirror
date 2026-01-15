@@ -12,9 +12,11 @@
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include "ECS/PowerUpFactory.hpp"
+#include "Animation/AnimationModule.hpp"
 #include <algorithm>
 
 using namespace RType::ECS;
+using namespace Animation;
 
 namespace RType {
     namespace Client {
@@ -212,6 +214,7 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
                         m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
+                        m_registry.AddComponent<Enemy>(newEntity, Enemy{static_cast<ECS::EnemyType>(enemyType)});
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(enemySprite, 1));
                         drawable.scale = {0.5f, 0.5f};
                         drawable.origin = Math::Vector2(128.0f, 128.0f);
@@ -767,6 +770,35 @@ namespace RType {
                 if (receivedIds.find(it->first) == receivedIds.end()) {
                     auto ecsEntity = it->second;
                     uint32_t networkId = it->first;
+
+                    if (m_effectFactory && m_registry.IsEntityAlive(ecsEntity) &&
+                        m_registry.HasComponent<Enemy>(ecsEntity) &&
+                        m_registry.HasComponent<Position>(ecsEntity)) {
+                        const auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                        auto explosionEntity = m_effectFactory->CreateExplosionSmall(m_registry, pos.x, pos.y);
+                        
+                        if (m_explosionSprite != Renderer::INVALID_SPRITE_ID &&
+                            m_registry.HasComponent<Drawable>(explosionEntity)) {
+                            auto& drawable = m_registry.GetComponent<Drawable>(explosionEntity);
+                            if (drawable.spriteId == Renderer::INVALID_SPRITE_ID) {
+                                drawable.spriteId = m_explosionSprite;
+                            }
+                        }
+                        
+                        if (m_animationSystem && m_registry.HasComponent<ECS::SpriteAnimation>(explosionEntity)) {
+                            auto& anim = m_registry.GetComponent<ECS::SpriteAnimation>(explosionEntity);
+                            if (anim.currentRegion.size.x <= 0.0f || anim.currentRegion.size.y <= 0.0f) {
+                                if (m_animationModule && anim.clipId != Animation::INVALID_CLIP_ID) {
+                                    auto firstFrame = m_animationModule->GetFrameAtTime(anim.clipId, 0.0f, anim.looping);
+                                    anim.currentRegion = firstFrame.region;
+                                    anim.currentFrameIndex = m_animationModule->GetFrameIndexAtTime(anim.clipId, 0.0f, anim.looping);
+                                    if (m_registry.HasComponent<ECS::AnimatedSprite>(explosionEntity)) {
+                                        m_registry.GetComponent<ECS::AnimatedSprite>(explosionEntity).needsUpdate = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     DestroyPlayerNameLabel(ecsEntity);
 
