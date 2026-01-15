@@ -211,7 +211,8 @@ namespace RType {
                         m_networkEntityMap[entityState.entityId] = newEntity;
 
                         m_bossHealthBar.currentHealth = static_cast<int>(entityState.health);
-                        m_bossHealthBar.maxHealth = 1000;
+                        m_bossHealthBar.maxHealth = 100;
+                        m_bossHealthBar.bossNetworkId = entityState.entityId;
                     } else if (type == network::EntityType::BULLET) {
                         auto newEntity = m_registry.CreateEntity();
                         CleanupInvalidComponents(newEntity, network::EntityType::BULLET);
@@ -481,6 +482,7 @@ namespace RType {
                         if (type == network::EntityType::PLAYER) {
                             auto& pos = m_registry.GetComponent<Position>(ecsEntity);
                             UpdatePlayerNameLabelPosition(ecsEntity, pos.x, pos.y);
+                            ApplyPowerUpStateToPlayer(ecsEntity, entityState);
                         }
                     }
 
@@ -592,7 +594,7 @@ namespace RType {
                             }
                         }
 
-                        if (!m_bossHealthBar.active && entityState.x < 1920.0f) {
+                        if (!m_bossHealthBar.active && entityState.x < 1300.0f) {
                             initializeBossHealthBar();
                             m_bossHealthBar.maxHealth = 100;
                             m_bossHealthBar.bossNetworkId = entityState.entityId;
@@ -711,6 +713,18 @@ namespace RType {
 
                     if (m_bossHealthBar.active && networkId == m_bossHealthBar.bossNetworkId) {
                         destroyBossHealthBar();
+                        if (m_context.audio && m_bossMusicPlaying) {
+                            m_context.audio->StopMusic(m_bossMusic);
+                            m_bossMusicPlaying = false;
+                            
+                            if (m_gameMusic != Audio::INVALID_MUSIC_ID && !m_isGameOver) {
+                                Audio::PlaybackOptions opts;
+                                opts.loop = true;
+                                opts.volume = 0.5f;
+                                m_context.audio->PlayMusic(m_gameMusic, opts);
+                                m_gameMusicPlaying = true;
+                            }
+                        }
                     }
 
                     if (m_registry.IsEntityAlive(ecsEntity)) {

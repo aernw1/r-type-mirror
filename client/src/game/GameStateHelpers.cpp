@@ -100,6 +100,22 @@ namespace RType {
             }
             auto& activePowerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
 
+            bool gainedPowerUp = false;
+            bool isLocal = (playerEntity == m_localPlayerEntity);
+
+            if (isLocal) {
+                bool newFireRate = (entityState.powerUpFlags & PowerUpFlags::POWERUP_FIRE_RATE_BOOST) != 0;
+                bool newSpread = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SPREAD_SHOT) != 0;
+                bool newLaser = (entityState.powerUpFlags & PowerUpFlags::POWERUP_LASER_BEAM) != 0;
+                bool newShield = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SHIELD) != 0;
+                
+                if (!activePowerUps.hasFireRateBoost && newFireRate) gainedPowerUp = true;
+                if (!activePowerUps.hasSpreadShot && newSpread) gainedPowerUp = true;
+                if (!activePowerUps.hasLaserBeam && newLaser) gainedPowerUp = true;
+                if (!activePowerUps.hasShield && newShield) gainedPowerUp = true;
+                
+            }
+
             activePowerUps.hasFireRateBoost = (entityState.powerUpFlags & PowerUpFlags::POWERUP_FIRE_RATE_BOOST) != 0;
             activePowerUps.hasSpreadShot = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SPREAD_SHOT) != 0;
             activePowerUps.hasLaserBeam = (entityState.powerUpFlags & PowerUpFlags::POWERUP_LASER_BEAM) != 0;
@@ -114,6 +130,51 @@ namespace RType {
             }
 
             WeaponType weaponType = static_cast<WeaponType>(entityState.weaponType);
+            
+            if (isLocal) {
+                bool hadSpecialWeapon = m_registry.HasComponent<WeaponSlot>(playerEntity);
+                bool hasSpecialWeaponNow = (weaponType != WeaponType::STANDARD);
+                
+                
+                if (!hadSpecialWeapon && hasSpecialWeaponNow) {
+                    std::cout << "[DEBUG] PowerUp: Acquired special weapon!" << std::endl;
+                    gainedPowerUp = true;
+                } else if (hadSpecialWeapon && hasSpecialWeaponNow) {
+                    auto& currentWeapon = m_registry.GetComponent<WeaponSlot>(playerEntity);
+                    if (currentWeapon.type != weaponType) {
+                        std::cout << "[DEBUG] PowerUp: Changed special weapon!" << std::endl;
+                        gainedPowerUp = true;
+                    }
+                }
+                
+                bool newFireRate = (entityState.powerUpFlags & PowerUpFlags::POWERUP_FIRE_RATE_BOOST) != 0;
+                bool newSpread = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SPREAD_SHOT) != 0;
+                if (!activePowerUps.hasFireRateBoost && newFireRate) { 
+                    std::cout << "[DEBUG] PowerUp: FireRate Boost!" << std::endl;
+                    gainedPowerUp = true; 
+                }
+                if (!activePowerUps.hasSpreadShot && newSpread) {
+                    std::cout << "[DEBUG] PowerUp: Spread Shot!" << std::endl;
+                    gainedPowerUp = true;
+                }
+            }
+
+            if (gainedPowerUp) {
+                std::cout << "[DEBUG] PowerUp GAINED! Playing sound..." << std::endl;
+                if (m_context.audio) {
+                    if (m_powerUpMusic != Audio::INVALID_MUSIC_ID) {
+                        Audio::PlaybackOptions opts;
+                        opts.volume = 1.0f;
+                        opts.loop = false;
+                        m_context.audio->PlayMusic(m_powerUpMusic, opts);
+                    } else if (m_powerUpSound != Audio::INVALID_SOUND_ID) {
+                        Audio::PlaybackOptions opts;
+                        opts.volume = 1.0f;
+                        m_context.audio->PlaySound(m_powerUpSound, opts);
+                    }
+                }
+            }
+
             float fireRate = static_cast<float>(entityState.fireRate) / 10.0f;
 
             if (weaponType != WeaponType::STANDARD) {

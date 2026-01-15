@@ -34,9 +34,24 @@ namespace RType {
                 if (m_shootMusic == Audio::INVALID_MUSIC_ID) {
                      m_shootMusic = m_context.audio->LoadMusic("../assets/sounds/players_shoot.flac");
                 }
+
+                m_powerUpSound = m_context.audio->LoadSound("assets/sounds/powerup.flac");
+                if (m_powerUpSound == Audio::INVALID_SOUND_ID) {
+                    m_powerUpSound = m_context.audio->LoadSound("../assets/sounds/powerup.flac");
+                }
+                m_powerUpMusic = m_context.audio->LoadMusic("assets/sounds/powerup.flac");
+                if (m_powerUpMusic == Audio::INVALID_MUSIC_ID) {
+                    m_powerUpMusic = m_context.audio->LoadMusic("../assets/sounds/powerup.flac");
+                }
+
                 m_gameMusic = m_context.audio->LoadMusic("assets/sounds/stage1.flac");
                 if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
                     m_gameMusic = m_context.audio->LoadMusic("../assets/sounds/stage1.flac");
+                }
+
+                m_bossMusic = m_context.audio->LoadMusic("assets/sounds/BOSS.flac");
+                if (m_bossMusic == Audio::INVALID_MUSIC_ID) {
+                    m_bossMusic = m_context.audio->LoadMusic("../assets/sounds/BOSS.flac");
                 }
 
                 m_gameOverMusic = m_context.audio->LoadMusic("assets/sounds/gameover.flac");
@@ -86,6 +101,10 @@ namespace RType {
 
             if (m_shootingSystem && m_playerShootSound != Audio::INVALID_SOUND_ID) {
                 m_shootingSystem->SetShootSound(m_playerShootSound);
+            }
+
+            if (m_powerUpCollisionSystem && m_powerUpSound != Audio::INVALID_SOUND_ID) {
+                m_powerUpCollisionSystem->SetPowerUpSound(m_powerUpSound);
             }
 
             initializeFromLevel();
