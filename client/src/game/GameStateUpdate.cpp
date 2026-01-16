@@ -12,6 +12,7 @@
 #include "Core/Logger.hpp"
 #include "ResultsState.hpp"
 #include "RoomListState.hpp"
+#include "Core/InputMapping.hpp"
 #include <cmath>
 
 using namespace RType::ECS;
@@ -43,37 +44,49 @@ namespace RType {
 
             m_currentInputs = 0;
 
-            if (m_renderer->IsKeyPressed(Renderer::Key::Up)) {
+            Renderer::Key moveUpKey = Core::InputMapping::GetKey("MOVE_UP");
+            Renderer::Key moveDownKey = Core::InputMapping::GetKey("MOVE_DOWN");
+            Renderer::Key moveLeftKey = Core::InputMapping::GetKey("MOVE_LEFT");
+            Renderer::Key moveRightKey = Core::InputMapping::GetKey("MOVE_RIGHT");
+            Renderer::Key shootKey = Core::InputMapping::GetKey("SHOOT");
+
+            if (moveUpKey == Renderer::Key::Unknown) moveUpKey = Renderer::Key::Up;
+            if (moveDownKey == Renderer::Key::Unknown) moveDownKey = Renderer::Key::Down;
+            if (moveLeftKey == Renderer::Key::Unknown) moveLeftKey = Renderer::Key::Left;
+            if (moveRightKey == Renderer::Key::Unknown) moveRightKey = Renderer::Key::Right;
+            if (shootKey == Renderer::Key::Unknown) shootKey = Renderer::Key::Space;
+
+            if (m_renderer->IsKeyPressed(moveUpKey)) {
                 m_currentInputs |= network::InputFlags::UP;
             }
-            if (m_renderer->IsKeyPressed(Renderer::Key::Down)) {
+            if (m_renderer->IsKeyPressed(moveDownKey)) {
                 m_currentInputs |= network::InputFlags::DOWN;
             }
-            if (m_renderer->IsKeyPressed(Renderer::Key::Left)) {
+            if (m_renderer->IsKeyPressed(moveLeftKey)) {
                 m_currentInputs |= network::InputFlags::LEFT;
             }
-            if (m_renderer->IsKeyPressed(Renderer::Key::Right)) {
+            if (m_renderer->IsKeyPressed(moveRightKey)) {
                 m_currentInputs |= network::InputFlags::RIGHT;
             }
-            static bool spacePressedLastFrame = false;
-            bool spacePressed = m_renderer->IsKeyPressed(Renderer::Key::Space);
+            static bool shootPressedLastFrame = false;
+            bool shootPressed = m_renderer->IsKeyPressed(shootKey);
 
-            if (spacePressed) {
+            if (shootPressed) {
                 m_isCharging = true;
-                m_chargeTime += 0.016f; 
+                m_chargeTime += 0.016f;
                 if (m_chargeTime > 2.0f) {
                     m_chargeTime = 2.0f;
                 }
-                
+
             } else {
-                if (spacePressedLastFrame) {
+                if (shootPressedLastFrame) {
                     m_currentInputs |= network::InputFlags::SHOOT;
                     if (m_isNetworkSession) {
                         if (m_shootMusic != Audio::INVALID_MUSIC_ID) {
                              Audio::PlaybackOptions opts;
                              opts.volume = 1.0f;
                              opts.loop = false;
-                             m_context.audio->StopMusic(m_shootMusic); 
+                             m_context.audio->StopMusic(m_shootMusic);
                              m_context.audio->PlayMusic(m_shootMusic, opts);
                         } else if (m_playerShootSound != Audio::INVALID_SOUND_ID) {
                             Audio::PlaybackOptions opts;
@@ -85,9 +98,9 @@ namespace RType {
                 m_isCharging = false;
                 m_chargeTime = 0.0f;
             }
-            spacePressedLastFrame = spacePressed;
-            
-            
+            shootPressedLastFrame = shootPressed;
+
+
 
             if (!m_isNetworkSession &&
                 m_localPlayerEntity != ECS::NULL_ENTITY &&
@@ -487,12 +500,12 @@ namespace RType {
                     m_context.audio->StopMusic(m_gameMusic);
                     m_gameMusicPlaying = false;
                 }
-                
+
                 if (m_bossMusic != Audio::INVALID_MUSIC_ID && m_bossMusicPlaying) {
                     m_context.audio->StopMusic(m_bossMusic);
                     m_bossMusicPlaying = false;
                 }
-                
+
                 if (m_gameOverMusic != Audio::INVALID_MUSIC_ID && !m_gameOverMusicPlaying) {
                     Audio::PlaybackOptions opts;
                     opts.loop = true;
