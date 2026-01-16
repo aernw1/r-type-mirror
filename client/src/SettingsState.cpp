@@ -9,6 +9,7 @@
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
+#include "Core/InputMapping.hpp"
 #include <iostream>
 #include <cmath>
 #include <fstream>
@@ -16,6 +17,72 @@
 
 using namespace RType::ECS;
 using json = nlohmann::json;
+
+namespace {
+    const std::unordered_map<Renderer::Key, std::string> KEY_TO_STRING = {
+        {Renderer::Key::A, "A"}, {Renderer::Key::B, "B"}, {Renderer::Key::C, "C"},
+        {Renderer::Key::D, "D"}, {Renderer::Key::E, "E"}, {Renderer::Key::F, "F"},
+        {Renderer::Key::G, "G"}, {Renderer::Key::H, "H"}, {Renderer::Key::I, "I"},
+        {Renderer::Key::J, "J"}, {Renderer::Key::K, "K"}, {Renderer::Key::L, "L"},
+        {Renderer::Key::M, "M"}, {Renderer::Key::N, "N"}, {Renderer::Key::O, "O"},
+        {Renderer::Key::P, "P"}, {Renderer::Key::Q, "Q"}, {Renderer::Key::R, "R"},
+        {Renderer::Key::S, "S"}, {Renderer::Key::T, "T"}, {Renderer::Key::U, "U"},
+        {Renderer::Key::V, "V"}, {Renderer::Key::W, "W"}, {Renderer::Key::X, "X"},
+        {Renderer::Key::Y, "Y"}, {Renderer::Key::Z, "Z"},
+        {Renderer::Key::Num0, "0"}, {Renderer::Key::Num1, "1"}, {Renderer::Key::Num2, "2"},
+        {Renderer::Key::Num3, "3"}, {Renderer::Key::Num4, "4"}, {Renderer::Key::Num5, "5"},
+        {Renderer::Key::Num6, "6"}, {Renderer::Key::Num7, "7"}, {Renderer::Key::Num8, "8"},
+        {Renderer::Key::Num9, "9"},
+        {Renderer::Key::Space, "SPACE"}, {Renderer::Key::Enter, "ENTER"},
+        {Renderer::Key::Escape, "ESC"}, {Renderer::Key::Tab, "TAB"},
+        {Renderer::Key::Left, "LEFT"}, {Renderer::Key::Right, "RIGHT"},
+        {Renderer::Key::Up, "UP"}, {Renderer::Key::Down, "DOWN"},
+        {Renderer::Key::LShift, "LSHIFT"}, {Renderer::Key::RShift, "RSHIFT"},
+        {Renderer::Key::LControl, "LCTRL"}, {Renderer::Key::RControl, "RCTRL"},
+        {Renderer::Key::LAlt, "LALT"}, {Renderer::Key::RAlt, "RALT"}
+    };
+
+    const std::unordered_map<std::string, Renderer::Key> STRING_TO_KEY = {
+        {"A", Renderer::Key::A}, {"B", Renderer::Key::B}, {"C", Renderer::Key::C},
+        {"D", Renderer::Key::D}, {"E", Renderer::Key::E}, {"F", Renderer::Key::F},
+        {"G", Renderer::Key::G}, {"H", Renderer::Key::H}, {"I", Renderer::Key::I},
+        {"J", Renderer::Key::J}, {"K", Renderer::Key::K}, {"L", Renderer::Key::L},
+        {"M", Renderer::Key::M}, {"N", Renderer::Key::N}, {"O", Renderer::Key::O},
+        {"P", Renderer::Key::P}, {"Q", Renderer::Key::Q}, {"R", Renderer::Key::R},
+        {"S", Renderer::Key::S}, {"T", Renderer::Key::T}, {"U", Renderer::Key::U},
+        {"V", Renderer::Key::V}, {"W", Renderer::Key::W}, {"X", Renderer::Key::X},
+        {"Y", Renderer::Key::Y}, {"Z", Renderer::Key::Z},
+        {"0", Renderer::Key::Num0}, {"1", Renderer::Key::Num1}, {"2", Renderer::Key::Num2},
+        {"3", Renderer::Key::Num3}, {"4", Renderer::Key::Num4}, {"5", Renderer::Key::Num5},
+        {"6", Renderer::Key::Num6}, {"7", Renderer::Key::Num7}, {"8", Renderer::Key::Num8},
+        {"9", Renderer::Key::Num9},
+        {"SPACE", Renderer::Key::Space}, {"ENTER", Renderer::Key::Enter},
+        {"ESC", Renderer::Key::Escape}, {"TAB", Renderer::Key::Tab},
+        {"LEFT", Renderer::Key::Left}, {"RIGHT", Renderer::Key::Right},
+        {"UP", Renderer::Key::Up}, {"DOWN", Renderer::Key::Down},
+        {"LSHIFT", Renderer::Key::LShift}, {"RSHIFT", Renderer::Key::RShift},
+        {"LCTRL", Renderer::Key::LControl}, {"RCTRL", Renderer::Key::RControl},
+        {"LALT", Renderer::Key::LAlt}, {"RALT", Renderer::Key::RAlt}
+    };
+
+    const std::vector<Renderer::Key> REBINDABLE_KEYS = {
+        Renderer::Key::A, Renderer::Key::B, Renderer::Key::C, Renderer::Key::D, Renderer::Key::E,
+        Renderer::Key::F, Renderer::Key::G, Renderer::Key::H, Renderer::Key::I, Renderer::Key::J,
+        Renderer::Key::K, Renderer::Key::L, Renderer::Key::M, Renderer::Key::N, Renderer::Key::O,
+        Renderer::Key::P, Renderer::Key::Q, Renderer::Key::R, Renderer::Key::S, Renderer::Key::T,
+        Renderer::Key::U, Renderer::Key::V, Renderer::Key::W, Renderer::Key::X, Renderer::Key::Y,
+        Renderer::Key::Z,
+        Renderer::Key::Num0, Renderer::Key::Num1, Renderer::Key::Num2, Renderer::Key::Num3,
+        Renderer::Key::Num4, Renderer::Key::Num5, Renderer::Key::Num6, Renderer::Key::Num7,
+        Renderer::Key::Num8, Renderer::Key::Num9,
+        Renderer::Key::Space, Renderer::Key::Enter, Renderer::Key::Escape, Renderer::Key::Tab,
+        Renderer::Key::Left, Renderer::Key::Right, Renderer::Key::Up, Renderer::Key::Down,
+        Renderer::Key::LShift, Renderer::Key::RShift, Renderer::Key::LControl, Renderer::Key::RControl,
+        Renderer::Key::LAlt, Renderer::Key::RAlt
+    };
+
+    const std::vector<std::string> ACTION_KEYS = {"MOVE_UP", "MOVE_DOWN", "MOVE_LEFT", "MOVE_RIGHT", "SHOOT"};
+}
 
 namespace RType {
     namespace Client {
@@ -99,6 +166,8 @@ namespace RType {
         }
 
         void SettingsState::createUI() {
+            m_menuItems.clear();
+
             if (m_bgTexture != Renderer::INVALID_TEXTURE_ID) {
                 Entity bg = m_registry.CreateEntity();
                 m_entities.push_back(bg);
@@ -126,8 +195,8 @@ namespace RType {
             titleLabel.centered = true;
             m_registry.AddComponent(m_titleEntity, std::move(titleLabel));
 
-            float startY = 300.0f;
-            float itemSpacing = 80.0f;
+            float startY = 250.0f;
+            float itemSpacing = 70.0f;
 
             Entity colourBlindItem = m_registry.CreateEntity();
             m_entities.push_back(colourBlindItem);
@@ -157,10 +226,19 @@ namespace RType {
             audioLabel.centered = true;
             m_registry.AddComponent(audioItem, std::move(audioLabel));
 
+            Entity commandsItem = m_registry.CreateEntity();
+            m_entities.push_back(commandsItem);
+            m_menuItems.push_back(commandsItem);
+            m_registry.AddComponent(commandsItem, Position{640.0f, startY + itemSpacing * 3});
+            TextLabel commandsLabel("COMMANDS", m_fontMedium, 24);
+            commandsLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
+            commandsLabel.centered = true;
+            m_registry.AddComponent(commandsItem, std::move(commandsLabel));
+
             Entity backItem = m_registry.CreateEntity();
             m_entities.push_back(backItem);
             m_menuItems.push_back(backItem);
-            m_registry.AddComponent(backItem, Position{640.0f, startY + itemSpacing * 3});
+            m_registry.AddComponent(backItem, Position{640.0f, startY + itemSpacing * 4});
             TextLabel backLabel("BACK", m_fontMedium, 24);
             backLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
             backLabel.centered = true;
@@ -311,6 +389,72 @@ namespace RType {
             m_registry.AddComponent(controlsText, std::move(controlsLabel));
         }
 
+        void SettingsState::createCommandsUI() {
+            for (Entity entity : m_commandsMenuItems) {
+                if (m_registry.IsEntityAlive(entity)) {
+                    m_registry.DestroyEntity(entity);
+                }
+            }
+            m_commandsMenuItems.clear();
+
+            if (m_fontLarge == Renderer::INVALID_FONT_ID)
+                return;
+
+            Entity titleEntity = m_registry.CreateEntity();
+            m_entities.push_back(titleEntity);
+            m_commandsMenuItems.push_back(titleEntity);
+            m_registry.AddComponent(titleEntity, Position{640.0f, 150.0f});
+            TextLabel titleLabel("COMMANDS", m_fontLarge, 72);
+            titleLabel.color = {0.0f, 1.0f, 1.0f, 1.0f};
+            titleLabel.centered = true;
+            m_registry.AddComponent(titleEntity, std::move(titleLabel));
+
+            float startY = 260.0f;
+            float itemSpacing = 55.0f;
+
+            std::vector<std::string> actionNames = {"MOVE UP", "MOVE DOWN", "MOVE LEFT", "MOVE RIGHT", "SHOOT"};
+
+            for (size_t i = 0; i < actionNames.size(); i++) {
+                Entity actionItem = m_registry.CreateEntity();
+                m_entities.push_back(actionItem);
+                m_commandsMenuItems.push_back(actionItem);
+                m_registry.AddComponent(actionItem, Position{640.0f, startY + itemSpacing * i});
+
+                Renderer::Key currentKey = Core::InputMapping::GetKey(ACTION_KEYS[i]);
+                std::string keyName = keyToString(currentKey);
+                std::string actionText = actionNames[i] + ": " + keyName;
+                if (m_waitingForRebind && m_rebindingActionIndex == static_cast<int>(i)) {
+                    actionText = actionNames[i] + ": PRESS A KEY...";
+                }
+
+                TextLabel actionLabel(actionText, m_fontMedium, 24);
+                actionLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
+                actionLabel.centered = true;
+                m_registry.AddComponent(actionItem, std::move(actionLabel));
+            }
+
+            Entity backItem = m_registry.CreateEntity();
+            m_entities.push_back(backItem);
+            m_commandsMenuItems.push_back(backItem);
+            m_registry.AddComponent(backItem, Position{640.0f, startY + itemSpacing * 5});
+            TextLabel backLabel("BACK", m_fontMedium, 24);
+            backLabel.color = {0.7f, 0.7f, 0.7f, 1.0f};
+            backLabel.centered = true;
+            m_registry.AddComponent(backItem, std::move(backLabel));
+
+            Entity controlsText = m_registry.CreateEntity();
+            m_entities.push_back(controlsText);
+            m_commandsMenuItems.push_back(controlsText);
+            m_registry.AddComponent(controlsText, Position{640.0f, 600.0f});
+            std::string controlsTextStr = m_waitingForRebind ?
+                "PRESS ANY KEY TO REBIND  |  ESC TO CANCEL" :
+                "UP/DOWN: NAVIGATE  |  ENTER: REBIND  |  ESC: BACK";
+            TextLabel controlsLabel(controlsTextStr, m_fontSmall, 12);
+            controlsLabel.color = {0.5f, 0.86f, 1.0f, 0.85f};
+            controlsLabel.centered = true;
+            m_registry.AddComponent(controlsText, std::move(controlsLabel));
+        }
+
         void SettingsState::updateAnimations(float dt) {
             m_animTime += dt;
         }
@@ -322,6 +466,10 @@ namespace RType {
             }
             if (m_inAudioMenu) {
                 updateAudioMenuSelection();
+                return;
+            }
+            if (m_inCommandsMenu) {
+                updateCommandsMenuSelection();
                 return;
             }
 
@@ -414,6 +562,40 @@ namespace RType {
                 auto& label = m_registry.GetComponent<TextLabel>(m_audioMenuItems[2]);
                 std::string muteText = "MUTE: " + std::string(m_muted ? "ON" : "OFF");
                 label.text = muteText;
+            }
+        }
+
+        void SettingsState::updateCommandsMenuSelection() {
+            std::vector<std::string> actionNames = {"MOVE UP", "MOVE DOWN", "MOVE LEFT", "MOVE RIGHT", "SHOOT"};
+
+            for (size_t i = 0; i < m_commandsMenuItems.size(); i++) {
+                if (m_registry.IsEntityAlive(m_commandsMenuItems[i])) {
+                    auto& label = m_registry.GetComponent<TextLabel>(m_commandsMenuItems[i]);
+
+                    if (i == 0) {
+                        continue;
+                    }
+
+                    int itemIndex = static_cast<int>(i) - 1;
+                    if (itemIndex == m_commandsSelectedIndex) {
+                        float pulse = std::sin(m_animTime * 4.0f) * 0.3f + 0.7f;
+                        label.color = {1.0f, 0.08f + pulse * 0.5f, 0.58f, 1.0f};
+                    } else {
+                        label.color = {0.7f, 0.7f, 0.7f, 1.0f};
+                    }
+
+                    if (itemIndex >= 0 && itemIndex < static_cast<int>(actionNames.size())) {
+                        Renderer::Key currentKey = Core::InputMapping::GetKey(ACTION_KEYS[itemIndex]);
+                        std::string keyName = keyToString(currentKey);
+                        std::string actionText = actionNames[itemIndex] + ": " + keyName;
+                        if (m_waitingForRebind && m_rebindingActionIndex == itemIndex) {
+                            actionText = actionNames[itemIndex] + ": PRESS A KEY...";
+                        }
+                        label.text = actionText;
+                    } else if (itemIndex == static_cast<int>(actionNames.size())) {
+                        label.text = "BACK";
+                    }
+                }
             }
         }
 
@@ -588,6 +770,56 @@ namespace RType {
                 return;
             }
 
+            if (m_inCommandsMenu) {
+                if (m_waitingForRebind) {
+                    processRebind();
+                    return;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Up) && !m_upKeyPressed) {
+                    m_upKeyPressed = true;
+                    playSelectSound();
+                    m_commandsSelectedIndex--;
+                    if (m_commandsSelectedIndex < 0) {
+                        m_commandsSelectedIndex = static_cast<int>(CommandsItem::COUNT) - 1;
+                    }
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Up)) {
+                    m_upKeyPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Down) && !m_downKeyPressed) {
+                    m_downKeyPressed = true;
+                    playSelectSound();
+                    m_commandsSelectedIndex++;
+                    if (m_commandsSelectedIndex >= static_cast<int>(CommandsItem::COUNT)) {
+                        m_commandsSelectedIndex = 0;
+                    }
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Down)) {
+                    m_downKeyPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_enterKeyPressed) {
+                    m_enterKeyPressed = true;
+                    playSelectSound();
+                    if (static_cast<CommandsItem>(m_commandsSelectedIndex) == CommandsItem::BACK) {
+                        exitSubMenu();
+                    } else if (m_commandsSelectedIndex >= 0 && m_commandsSelectedIndex < 5) {
+                        startRebind(m_commandsSelectedIndex);
+                    }
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
+                    m_enterKeyPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escKeyPressed) {
+                    m_escKeyPressed = true;
+                    playSelectSound();
+                    exitSubMenu();
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
+                    m_escKeyPressed = false;
+                }
+                return;
+            }
+
             if (m_renderer->IsKeyPressed(Renderer::Key::Up) && !m_upKeyPressed) {
                 m_upKeyPressed = true;
                 playSelectSound();
@@ -625,6 +857,10 @@ namespace RType {
 
                     case SettingsItem::AUDIO:
                         enterSubMenu(false);
+                        break;
+
+                    case SettingsItem::COMMANDS:
+                        enterCommandsMenu();
                         break;
 
                     case SettingsItem::BACK:
@@ -682,6 +918,16 @@ namespace RType {
                 j["targetFramerate"] = m_targetFramerate;
                 j["masterVolume"] = m_masterVolume;
                 j["muted"] = m_muted;
+
+                json inputMappings;
+                std::vector<std::string> actionKeys = {"MOVE_UP", "MOVE_DOWN", "MOVE_LEFT", "MOVE_RIGHT", "SHOOT"};
+                for (const auto& action : actionKeys) {
+                    Renderer::Key key = Core::InputMapping::GetKey(action);
+                    if (key != Renderer::Key::Unknown) {
+                        inputMappings[action] = keyToString(key);
+                    }
+                }
+                j["inputMappings"] = inputMappings;
 
                 std::string filePath = SETTINGS_FILE_PATH;
                 std::ofstream file(filePath);
@@ -804,6 +1050,15 @@ namespace RType {
                     s_muted = false;
                 }
 
+                if (j.contains("inputMappings") && j["inputMappings"].is_object()) {
+                    for (auto& [action, keyStr] : j["inputMappings"].items()) {
+                        Renderer::Key key = stringToKey(keyStr.get<std::string>());
+                        if (key != Renderer::Key::Unknown) {
+                            Core::InputMapping::SetKey(action, key);
+                        }
+                    }
+                }
+
                 Core::Logger::Info("[SettingsState] Settings loaded: colourBlindMode={}, resolution={}x{}, fullscreen={}, framerate={}, masterVolume={}, muted={}",
                                    s_colourBlindMode, s_screenWidth, s_screenHeight, s_fullscreen, s_targetFramerate, s_masterVolume, s_muted);
             } catch (const std::exception& e) {
@@ -883,6 +1138,8 @@ namespace RType {
                 menuItems = &m_screenMenuItems;
             } else if (m_inAudioMenu) {
                 menuItems = &m_audioMenuItems;
+            } else if (m_inCommandsMenu) {
+                menuItems = &m_commandsMenuItems;
             }
 
             if (menuItems) {
@@ -896,12 +1153,88 @@ namespace RType {
 
             clearMenuUI();
 
+            int savedSelectedIndex = m_selectedIndex;
+            if (m_inScreenMenu) {
+                savedSelectedIndex = static_cast<int>(SettingsItem::SCREEN);
+            } else if (m_inAudioMenu) {
+                savedSelectedIndex = static_cast<int>(SettingsItem::AUDIO);
+            } else if (m_inCommandsMenu) {
+                savedSelectedIndex = static_cast<int>(SettingsItem::COMMANDS);
+            }
+
             m_inScreenMenu = false;
             m_inAudioMenu = false;
+            m_inCommandsMenu = false;
+            m_waitingForRebind = false;
+            m_rebindingActionIndex = -1;
             m_screenSelectedIndex = 0;
             m_audioSelectedIndex = 0;
+            m_commandsSelectedIndex = 0;
+            m_selectedIndex = savedSelectedIndex;
             createUI();
+            updateMenuSelection();
         }
+
+        void SettingsState::enterCommandsMenu() {
+            clearMenuUI();
+            m_inCommandsMenu = true;
+            m_commandsSelectedIndex = 0;
+            m_waitingForRebind = false;
+            m_rebindingActionIndex = -1;
+            createCommandsUI();
+        }
+
+        void SettingsState::startRebind(int actionIndex) {
+            m_waitingForRebind = true;
+            m_rebindingActionIndex = actionIndex;
+            m_enterKeyPressed = true;
+            createCommandsUI();
+        }
+
+        void SettingsState::processRebind() {
+            if (m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
+                m_enterKeyPressed = true;
+                return;
+            }
+
+            if (m_enterKeyPressed && !m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
+                m_enterKeyPressed = false;
+                return;
+            }
+
+            for (Renderer::Key key : REBINDABLE_KEYS) {
+                if (m_renderer->IsKeyPressed(key)) {
+                    if (key == Renderer::Key::Escape) {
+                        m_waitingForRebind = false;
+                        m_rebindingActionIndex = -1;
+                        m_enterKeyPressed = false;
+                        createCommandsUI();
+                        return;
+                    }
+
+                    if (m_rebindingActionIndex >= 0 && m_rebindingActionIndex < static_cast<int>(ACTION_KEYS.size())) {
+                        Core::InputMapping::SetKey(ACTION_KEYS[m_rebindingActionIndex], key);
+                        saveSettings();
+                        m_waitingForRebind = false;
+                        m_rebindingActionIndex = -1;
+                        m_enterKeyPressed = false;
+                        createCommandsUI();
+                    }
+                    return;
+                }
+            }
+        }
+
+        std::string SettingsState::keyToString(Renderer::Key key) {
+            auto it = KEY_TO_STRING.find(key);
+            return (it != KEY_TO_STRING.end()) ? it->second : "UNKNOWN";
+        }
+
+        Renderer::Key SettingsState::stringToKey(const std::string& str) {
+            auto it = STRING_TO_KEY.find(str);
+            return (it != STRING_TO_KEY.end()) ? it->second : Renderer::Key::Unknown;
+        }
+
 
         void SettingsState::changeResolution(int direction) {
             m_resolutionIndex += direction;

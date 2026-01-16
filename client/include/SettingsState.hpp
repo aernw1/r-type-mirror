@@ -18,6 +18,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 namespace RType {
     namespace Client {
@@ -47,29 +48,37 @@ namespace RType {
             void createUI();
             void createScreenUI();
             void createAudioUI();
+            void createCommandsUI();
             void updateAnimations(float dt);
             void updateMenuSelection();
             void updateScreenMenuSelection();
             void updateAudioMenuSelection();
+            void updateCommandsMenuSelection();
             void toggleColourBlindMode();
             void enterSubMenu(bool screen);
+            void enterCommandsMenu();
             void exitSubMenu();
             void changeResolution(int direction);
             void toggleFullscreen();
             void changeFrameRate(int direction);
             void changeMasterVolume(int direction);
             void toggleMute();
+            void startRebind(int actionIndex);
+            void processRebind();
             void applyScreenSettings();
             void saveSettings();
             void loadSettings();
             void clearMenuUI();
+            static std::string keyToString(Renderer::Key key);
+            static Renderer::Key stringToKey(const std::string& str);
 
             enum class SettingsItem {
                 COLOUR_BLIND = 0,
                 SCREEN = 1,
                 AUDIO = 2,
-                BACK = 3,
-                COUNT = 4
+                COMMANDS = 3,
+                BACK = 4,
+                COUNT = 5
             };
 
             enum class ScreenItem {
@@ -85,6 +94,16 @@ namespace RType {
                 MUTE = 1,
                 BACK = 2,
                 COUNT = 3
+            };
+
+            enum class CommandsItem {
+                MOVE_UP = 0,
+                MOVE_DOWN = 1,
+                MOVE_LEFT = 2,
+                MOVE_RIGHT = 3,
+                SHOOT = 4,
+                BACK = 5,
+                COUNT = 6
             };
 
             struct Resolution {
@@ -114,10 +133,12 @@ namespace RType {
             std::vector<RType::ECS::Entity> m_menuItems;
             std::vector<RType::ECS::Entity> m_screenMenuItems;
             std::vector<RType::ECS::Entity> m_audioMenuItems;
+            std::vector<RType::ECS::Entity> m_commandsMenuItems;
 
             int m_selectedIndex = 0;
             int m_screenSelectedIndex = 0;
             int m_audioSelectedIndex = 0;
+            int m_commandsSelectedIndex = 0;
             bool m_upKeyPressed = false;
             bool m_downKeyPressed = false;
             bool m_leftKeyPressed = false;
@@ -130,6 +151,9 @@ namespace RType {
             bool m_colourBlindMode = false;
             bool m_inScreenMenu = false;
             bool m_inAudioMenu = false;
+            bool m_inCommandsMenu = false;
+            bool m_waitingForRebind = false;
+            int m_rebindingActionIndex = -1;
 
             std::uint32_t m_screenWidth = 1280;
             std::uint32_t m_screenHeight = 720;
