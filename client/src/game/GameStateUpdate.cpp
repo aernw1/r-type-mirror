@@ -116,6 +116,8 @@ namespace RType {
         }
 
         void InGameState::Update(float dt) {
+            UpdateLevelTransition(dt);
+
             if (m_context.networkClient) {
                 m_context.networkClient->ReceivePackets();
             } else {

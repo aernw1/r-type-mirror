@@ -11,3 +11,4 @@
 #include "game/GameStateNetwork.cpp"
 #include "game/GameStateUpdate.cpp"
 #include "game/GameStateHelpers.cpp"
+#include "game/GameStateTransition.cpp"

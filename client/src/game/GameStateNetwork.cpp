@@ -6,7 +6,6 @@
 */
 
 #include "../../include/GameState.hpp"
-#include "../../include/LevelTransitionState.hpp"
 
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
@@ -816,31 +815,19 @@ namespace RType {
         }
 
         void InGameState::OnLevelComplete(uint8_t completedLevel, uint8_t nextLevel) {
-            Core::Logger::Info("[InGameState] Level {} complete! Next level: {}",
+            Core::Logger::Info("[InGameState] Level {} complete! Starting transition to level {}",
                               static_cast<int>(completedLevel),
                               static_cast<int>(nextLevel));
 
+            m_levelProgress.transitionPhase = TransitionPhase::FADE_OUT;
+            m_levelProgress.transitionTimer = 0.0f;
+            m_levelProgress.fadeAlpha = 0.0f;
             m_levelProgress.levelComplete = true;
             m_levelProgress.bossDefeated = true;
+            m_levelProgress.currentLevelNumber = static_cast<int>(completedLevel);
+            m_levelProgress.nextLevelNumber = static_cast<int>(nextLevel);
 
-            if (m_context.networkClient) {
-                Core::Logger::Info("[InGameState] Stopping network client for transition");
-                m_context.networkClient->Stop();
-            }
-
-            std::string nextLevelPath = "";
-            if (nextLevel > 0) {
-                nextLevelPath = "assets/levels/level" + std::to_string(nextLevel) + ".json";
-            }
-
-            Core::Logger::Info("[InGameState] Transitioning to level transition screen");
-            m_machine.ChangeState(std::make_unique<LevelTransitionState>(
-                m_machine,
-                m_context,
-                static_cast<int>(completedLevel),
-                m_playerScore,
-                nextLevelPath
-            ));
+            Core::Logger::Info("[InGameState] Transition started - staying in GameState, network stays active");
         }
 
     }
