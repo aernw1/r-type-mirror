@@ -1,4 +1,5 @@
 #include "Core/Engine.hpp"
+#include "Core/ColorFilter.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/MovementSystem.hpp"
@@ -13,6 +14,8 @@
 #include <iostream>
 #include <memory>
 #include <random>
+#include <fstream>
+#include <string>
 
 using namespace RType;
 using namespace RType::ECS;
@@ -170,6 +173,25 @@ int main() {
 
     int score = 0;
     bool running = true;
+    bool cKeyPressed = false;
+    bool colourBlindMode = false;
+
+    std::ifstream settingsFile("breakout_settings.json");
+    if (!settingsFile.is_open()) {
+        settingsFile.open("../breakout_settings.json");
+    }
+    if (settingsFile.is_open()) {
+        std::string line;
+        while (std::getline(settingsFile, line)) {
+            if (line.find("colourBlindMode=") == 0) {
+                std::string value = line.substr(17);
+                colourBlindMode = (value == "true" || value == "1");
+                Core::ColorFilter::SetColourBlindMode(colourBlindMode);
+                break;
+            }
+        }
+        settingsFile.close();
+    }
 
     while (renderer->IsWindowOpen() && running) {
         float deltaTime = renderer->GetDeltaTime();
@@ -211,47 +233,65 @@ int main() {
 
         static bool winMessageShown = false;
         if (remainingBricks == 0 && !winMessageShown) {
-            std::cout << "You won! All bricks destroyed!" << std::endl;
+                std::cout << "You won! All bricks destroyed!" << std::endl;
 
-            if (registry.IsEntityAlive(paddle)) {
-                registry.DestroyEntity(paddle);
-            }
-            if (registry.IsEntityAlive(ball)) {
-                registry.DestroyEntity(ball);
-            }
+                if (registry.IsEntityAlive(paddle)) {
+                    registry.DestroyEntity(paddle);
+                }
+                if (registry.IsEntityAlive(ball)) {
+                    registry.DestroyEntity(ball);
+                }
 
-            const float WIN_Y = SCREEN_HEIGHT / 2.0f - 50.0f;
-            const float LETTER_SPACING = 120.0f;
-            const float WIN_START_X = SCREEN_WIDTH / 2.0f - LETTER_SPACING;
+                const float WIN_Y = SCREEN_HEIGHT / 2.0f - 50.0f;
+                const float LETTER_SPACING = 120.0f;
+                const float WIN_START_X = SCREEN_WIDTH / 2.0f - LETTER_SPACING;
 
-            winWEntity = registry.CreateEntity();
-            registry.AddComponent<Position>(winWEntity, Position{WIN_START_X, WIN_Y});
-            TextLabel wLabel("W", winFont, 80);
+                winWEntity = registry.CreateEntity();
+                registry.AddComponent<Position>(winWEntity, Position{WIN_START_X, WIN_Y});
+                TextLabel wLabel("W", winFont, 80);
             wLabel.color = {1.0f, 0.2f, 0.2f, 1.0f};
-            wLabel.centered = true;
-            registry.AddComponent<TextLabel>(winWEntity, std::move(wLabel));
+                wLabel.centered = true;
+                registry.AddComponent<TextLabel>(winWEntity, std::move(wLabel));
 
-            winIEntity = registry.CreateEntity();
-            registry.AddComponent<Position>(winIEntity, Position{WIN_START_X + LETTER_SPACING, WIN_Y});
-            TextLabel iLabel("I", winFont, 80);
+                winIEntity = registry.CreateEntity();
+                registry.AddComponent<Position>(winIEntity, Position{WIN_START_X + LETTER_SPACING, WIN_Y});
+                TextLabel iLabel("I", winFont, 80);
             iLabel.color = {1.0f, 0.5f, 0.2f, 1.0f};
-            iLabel.centered = true;
-            registry.AddComponent<TextLabel>(winIEntity, std::move(iLabel));
+                iLabel.centered = true;
+                registry.AddComponent<TextLabel>(winIEntity, std::move(iLabel));
 
-            winNEntity = registry.CreateEntity();
-            registry.AddComponent<Position>(winNEntity, Position{WIN_START_X + LETTER_SPACING * 2, WIN_Y});
-            TextLabel nLabel("N", winFont, 80);
+                winNEntity = registry.CreateEntity();
+                registry.AddComponent<Position>(winNEntity, Position{WIN_START_X + LETTER_SPACING * 2, WIN_Y});
+                TextLabel nLabel("N", winFont, 80);
             nLabel.color = {1.0f, 1.0f, 0.2f, 1.0f};
-            nLabel.centered = true;
-            registry.AddComponent<TextLabel>(winNEntity, std::move(nLabel));
+                nLabel.centered = true;
+                registry.AddComponent<TextLabel>(winNEntity, std::move(nLabel));
 
-            winMessageShown = true;
+                winMessageShown = true;
         }
 
         renderer->EndFrame();
 
         if (renderer->IsKeyPressed(Renderer::Key::Escape)) {
             running = false;
+        }
+
+        if (renderer->IsKeyPressed(Renderer::Key::C) && !cKeyPressed) {
+            cKeyPressed = true;
+            colourBlindMode = !colourBlindMode;
+            Core::ColorFilter::SetColourBlindMode(colourBlindMode);
+            std::cout << "Colour-blind mode: " << (colourBlindMode ? "ON" : "OFF") << std::endl;
+
+            std::ofstream outFile("breakout_settings.json");
+            if (!outFile.is_open()) {
+                outFile.open("../breakout_settings.json");
+            }
+            if (outFile.is_open()) {
+                outFile << "colourBlindMode=" << (colourBlindMode ? "true" : "false") << std::endl;
+                outFile.close();
+            }
+        } else if (!renderer->IsKeyPressed(Renderer::Key::C)) {
+            cKeyPressed = false;
         }
     }
 

@@ -1,6 +1,7 @@
 #include "BreakoutRenderSystem.hpp"
 #include "ECS/Registry.hpp"
 #include "ECS/Component.hpp"
+#include "Core/ColorFilter.hpp"
 
 namespace Breakout {
     namespace ECS {
@@ -31,7 +32,11 @@ namespace Breakout {
                     Renderer::Rectangle rect;
                     rect.position = Renderer::Vector2(pos.x - collider.width / 2.0f, pos.y - collider.height / 2.0f);
                     rect.size = Renderer::Vector2(collider.width, collider.height);
-                    m_renderer->DrawRectangle(rect, drawable.tint);
+                    Math::Color finalColor = drawable.tint;
+                    if (RType::Core::ColorFilter::IsColourBlindModeEnabled()) {
+                        finalColor = RType::Core::ColorFilter::ApplyColourBlindFilter(drawable.tint);
+                    }
+                    m_renderer->DrawRectangle(rect, finalColor);
                 }
             }
 
@@ -54,7 +59,11 @@ namespace Breakout {
                     Renderer::Rectangle rect;
                     rect.position = Renderer::Vector2(pos.x - radius, pos.y - radius);
                     rect.size = Renderer::Vector2(radius * 2.0f, radius * 2.0f);
-                    m_renderer->DrawRectangle(rect, drawable.tint);
+                    Math::Color finalColor = drawable.tint;
+                    if (RType::Core::ColorFilter::IsColourBlindModeEnabled()) {
+                        finalColor = RType::Core::ColorFilter::ApplyColourBlindFilter(drawable.tint);
+                    }
+                    m_renderer->DrawRectangle(rect, finalColor);
                 }
             }
         }
