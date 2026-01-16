@@ -179,6 +179,12 @@ namespace RType {
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
                         m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
                         m_registry.AddComponent<Enemy>(newEntity, Enemy{static_cast<ECS::EnemyType>(enemyType)});
+
+                        // Add collision components for hit effect detection
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(64.0f, 64.0f));
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
+
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(enemySprite, 1));
                         drawable.scale = {0.5f, 0.5f};
                         drawable.origin = Math::Vector2(128.0f, 128.0f);
@@ -203,6 +209,12 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
                         m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 1000});
+                        m_registry.AddComponent<Boss>(newEntity, Boss{});
+
+                        // Add collision components for hit effect detection
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(200.0f, 200.0f));
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
 
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(bossSprite, 5));
                         drawable.scale = {3.0f, 3.0f};
@@ -289,15 +301,9 @@ namespace RType {
 
                         bool isPlayerBullet = (entityState.flags < 10);
 
-                        // Add Bullet component for collision response system
                         m_registry.AddComponent<Bullet>(newEntity, Bullet(m_localPlayerEntity));
-
-                        // Add BoxCollider for collision detection (enables hit effects)
-                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(10.0f, 5.0f));
-
-                        // Add Damage component (required for collision response)
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(20.0f, 10.0f));
                         m_registry.AddComponent<Damage>(newEntity, Damage(25));
-
                         m_registry.AddComponent<CollisionLayer>(newEntity,
                             CollisionLayer(CollisionLayers::PLAYER_BULLET,
                                            CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
@@ -711,6 +717,18 @@ namespace RType {
                                     m_registry.GetComponent<ECS::AnimatedSprite>(explosionEntity).needsUpdate = true;
                                 }
                             }
+                        }
+                    }
+
+                    // Create hit effect when player bullets are destroyed (server-side collision)
+                    auto bulletFlagsIt = m_bulletFlagsMap.find(networkId);
+                    if (bulletFlagsIt != m_bulletFlagsMap.end() && bulletFlagsIt->second < 10) {
+                        // Player bullet was destroyed - create hit effect at last position
+                        if (m_effectFactory && m_registry.IsEntityAlive(ecsEntity) &&
+                            m_registry.HasComponent<Position>(ecsEntity)) {
+                            const auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                            m_effectFactory->CreateHitEffect(m_registry, pos.x, pos.y);
+                            Core::Logger::Info("[Network] Created hit effect for destroyed bullet at ({}, {})", pos.x, pos.y);
                         }
                     }
 
