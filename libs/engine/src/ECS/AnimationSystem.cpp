@@ -43,7 +43,6 @@ namespace ECS {
                 continue;
             }
 
-            // Initialize region if not set
             bool regionUninitialized = (anim.currentRegion.size.x <= 0.0f || anim.currentRegion.size.y <= 0.0f);
             if (regionUninitialized && anim.currentTime == 0.0f) {
                 auto firstFrame = m_animation->GetFrameAtTime(anim.clipId, 0.0f, anim.looping);
@@ -74,7 +73,6 @@ namespace ECS {
             std::size_t newFrameIndex = m_animation->GetFrameIndexAtTime(
                 anim.clipId, anim.currentTime, anim.looping);
             
-            // Update region and frame index
             bool frameChanged = (newFrameIndex != anim.currentFrameIndex);
             if (frameChanged || frame.region.size.x > 0.0f) {
                 anim.currentRegion = frame.region;
@@ -85,7 +83,6 @@ namespace ECS {
                     events.PushEvent(frame.eventName.c_str());
                 }
                 
-                // Mark for update whenever region changes
                 if (registry.HasComponent<AnimatedSprite>(entity)) {
                     registry.GetComponent<AnimatedSprite>(entity).needsUpdate = true;
                 }

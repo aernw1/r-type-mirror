@@ -102,11 +102,9 @@ namespace RType {
                     
                     health.current -= actualDamage;
 
-                    // Create hit effect at collision point
                     if (m_effectFactory && registry.HasComponent<Position>(bullet) && !isBeam) {
                         const auto& bulletPos = registry.GetComponent<Position>(bullet);
-                        Entity hitEntity = m_effectFactory->CreateHitEffect(registry, bulletPos.x, bulletPos.y);
-                        Core::Logger::Info("[BulletCollision] Created hit effect at ({}, {})", bulletPos.x, bulletPos.y);
+                        m_effectFactory->CreateHitEffect(registry, bulletPos.x, bulletPos.y);
                     }
 
                     if (health.current <= 0) {
@@ -173,8 +171,7 @@ namespace RType {
                         
                         if (m_effectFactory && registry.HasComponent<Position>(bullet) && !isBeam) {
                             const auto& bulletPos = registry.GetComponent<Position>(bullet);
-                            Entity hitEntity = m_effectFactory->CreateHitEffect(registry, bulletPos.x, bulletPos.y);
-                            Core::Logger::Info("[BulletCollision] Created hit effect on obstacle at ({}, {})", bulletPos.x, bulletPos.y);
+                            m_effectFactory->CreateHitEffect(registry, bulletPos.x, bulletPos.y);
                         }
                     }
                 }

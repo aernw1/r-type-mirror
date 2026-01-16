@@ -270,21 +270,18 @@ namespace ECS {
         drawable.origin = Math::Vector2(12.5f, 12.5f);
         drawable.spriteId = spriteId;
 
-        if (m_config.shootingAnimation != Animation::INVALID_CLIP_ID) {
-            auto& anim = registry.AddComponent<SpriteAnimation>(entity,
-                SpriteAnimation(m_config.shootingAnimation, false, 1.5f));
-            anim.destroyOnComplete = true;
-            anim.playbackSpeed = 1.5f;
-            
-            if (m_config.shootingFirstFrameRegion.size.x > 0.0f && 
-                m_config.shootingFirstFrameRegion.size.y > 0.0f) {
-                anim.currentRegion = m_config.shootingFirstFrameRegion;
-                anim.currentFrameIndex = 0;
-            }
-            
-            auto& animatedSprite = registry.AddComponent<AnimatedSprite>(entity);
-            animatedSprite.needsUpdate = true;
+        auto& anim = registry.AddComponent<SpriteAnimation>(entity,
+            SpriteAnimation(m_config.shootingAnimation, false, 1.5f));
+        anim.destroyOnComplete = true;
+        
+        if (m_config.shootingFirstFrameRegion.size.x > 0.0f && 
+            m_config.shootingFirstFrameRegion.size.y > 0.0f) {
+            anim.currentRegion = m_config.shootingFirstFrameRegion;
+            anim.currentFrameIndex = 0;
         }
+        
+        auto& animatedSprite = registry.AddComponent<AnimatedSprite>(entity);
+        animatedSprite.needsUpdate = true;
 
         return entity;
     }
@@ -363,12 +360,7 @@ namespace ECS {
     }
 
     Entity EffectFactory::CreateHitEffect(Registry& registry, float x, float y) {
-        Core::Logger::Info("[EffectFactory] CreateHitEffect at ({}, {}) - hitAnim={}, hitSprite={}, firstFrameSize=({},{})",
-            x, y, m_config.hitAnimation, m_config.hitSprite,
-            m_config.hitFirstFrameRegion.size.x, m_config.hitFirstFrameRegion.size.y);
-
         if (m_config.hitAnimation == Animation::INVALID_CLIP_ID) {
-            Core::Logger::Warning("[EffectFactory] hitAnimation is INVALID, returning empty entity");
             return registry.CreateEntity();
         }
 
@@ -383,11 +375,8 @@ namespace ECS {
         }
 
         if (spriteId == Renderer::INVALID_SPRITE_ID) {
-            Core::Logger::Warning("[EffectFactory] spriteId is INVALID, returning entity without drawable");
             return entity;
         }
-
-        Core::Logger::Info("[EffectFactory] Created hit effect entity {} with spriteId {}", entity, spriteId);
 
         auto& drawable = registry.AddComponent<Drawable>(entity, Drawable());
         drawable.layer = 99;
@@ -402,13 +391,8 @@ namespace ECS {
         if (m_config.hitAnimation != Animation::INVALID_CLIP_ID) {
             auto& anim = registry.AddComponent<SpriteAnimation>(entity,
                 SpriteAnimation(m_config.hitAnimation, false, 1.0f));
-            anim.playing = true;
-            anim.looping = false;
             anim.destroyOnComplete = true;
-            anim.currentTime = 0.0f;
-            anim.playbackSpeed = 1.0f;
             
-            // Initialize with first frame region
             if (m_config.hitFirstFrameRegion.size.x > 0.0f && 
                 m_config.hitFirstFrameRegion.size.y > 0.0f) {
                 anim.currentRegion = m_config.hitFirstFrameRegion;
