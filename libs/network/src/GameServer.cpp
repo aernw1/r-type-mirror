@@ -1216,13 +1216,14 @@ namespace network {
 
         auto killedBosses = m_registry.GetEntitiesWithComponent<RType::ECS::BossKilled>();
 
-        if (!killedBosses.empty()) {
+        if (!killedBosses.empty() && !m_waitingForLevelTransition) {
             m_bossDefeated = true;
             m_levelComplete = true;
+            m_waitingForLevelTransition = true;
+            m_levelTransitionTimer = 0.0f;
 
             std::cout << "[GameServer] Boss defeated! Level complete - broadcasting to clients" << std::endl;
 
-            // CRITICAL: Destroy the boss entity immediately to prevent score farming
             for (auto bossEntity : killedBosses) {
                 std::cout << "[GameServer] Destroying boss entity " << bossEntity << std::endl;
                 m_registry.DestroyEntity(bossEntity);
@@ -1239,44 +1240,101 @@ namespace network {
     }
 
     void GameServer::LoadNextLevelIfNeeded() {
-        if (m_levelComplete && m_connectedPlayers.empty()) {
-            m_currentLevel++;
-            std::string nextLevelPath = "assets/levels/level" + std::to_string(m_currentLevel) + ".json";
+        if (m_waitingForLevelTransition) {
+            m_levelTransitionTimer += (1.0f / 60.0f);
 
-            std::cout << "[GameServer] All players disconnected after level complete. Loading next level: " << nextLevelPath << std::endl;
+            const float TRANSITION_DELAY = 0.1f;
+            if (m_levelTransitionTimer >= TRANSITION_DELAY) {
+                std::cout << "[GameServer] Transition delay complete - loading next level" << std::endl;
+                m_waitingForLevelTransition = false;
 
-            auto positionEntities = m_registry.GetEntitiesWithComponent<RType::ECS::Position>();
-            std::vector<RType::ECS::Entity> toDestroy(positionEntities.begin(), positionEntities.end());
+                m_currentLevel++;
+                std::string nextLevelPath = "assets/levels/level" + std::to_string(m_currentLevel) + ".json";
 
-            for (RType::ECS::Entity entity : toDestroy) {
-                m_registry.DestroyEntity(entity);
-            }
+                std::cout << "[GameServer] Loading next level: " << nextLevelPath << std::endl;
+                std::cout << "[GameServer] Entity count before cleanup: " << m_registry.GetEntityCount() << std::endl;
 
-            m_entities.clear();
-            m_nextEntityId = 1;
+                std::vector<RType::ECS::Entity> toDestroy;
 
-            // Reset level state
-            m_bossDefeated = false;
-            m_levelComplete = false;
-            m_scrollOffset = 0.0f;
-            m_enemyShootCooldowns.clear();
-            m_enemyBulletTypes.clear();
+                auto positionEntities = m_registry.GetEntitiesWithComponent<RType::ECS::Position>();
+                std::cout << "[GameServer] Found " << positionEntities.size() << " entities with Position" << std::endl;
 
-            // Load new level
-            m_levelPath = nextLevelPath;
-            try {
-                auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
-                std::cout << "[GameServer] Level " << m_currentLevel << " loaded" << std::endl;
+                auto colliderEntities = m_registry.GetEntitiesWithComponent<RType::ECS::BoxCollider>();
+                std::cout << "[GameServer] Found " << colliderEntities.size() << " entities with BoxCollider" << std::endl;
 
-                auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
-                std::cout << "[GameServer] Level entities created: "
-                          << createdEntities.obstacleColliders.size() << " obstacles, "
-                          << createdEntities.enemies.size() << " enemies, "
-                          << "boss: " << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "YES" : "NO")
-                          << std::endl;
+                auto drawableEntities = m_registry.GetEntitiesWithComponent<RType::ECS::Drawable>();
+                std::cout << "[GameServer] Found " << drawableEntities.size() << " entities with Drawable" << std::endl;
 
-            } catch (const std::exception& e) {
-                std::cerr << "[GameServer] Failed to load level " << m_currentLevel << ": " << e.what() << std::endl;
+                std::unordered_set<RType::ECS::Entity> entitySet;
+
+                for (auto entity : positionEntities) {
+                    if (!m_registry.HasComponent<RType::ECS::Player>(entity)) {
+                        entitySet.insert(entity);
+                    }
+                }
+
+                for (auto entity : colliderEntities) {
+                    if (!m_registry.HasComponent<RType::ECS::Player>(entity)) {
+                        entitySet.insert(entity);
+                    }
+                }
+
+                for (auto entity : drawableEntities) {
+                    if (!m_registry.HasComponent<RType::ECS::Player>(entity)) {
+                        entitySet.insert(entity);
+                    }
+                }
+
+                toDestroy.assign(entitySet.begin(), entitySet.end());
+
+                std::cout << "[GameServer] Total unique entities to destroy: " << toDestroy.size() << std::endl;
+
+                auto playerEntitiesVec = m_registry.GetEntitiesWithComponent<RType::ECS::Player>();
+                std::cout << "[GameServer] Preserving " << playerEntitiesVec.size() << " player entities:" << std::endl;
+                for (auto entity : playerEntitiesVec) {
+                    std::cout << "  - Player entity " << entity << std::endl;
+                }
+
+                for (RType::ECS::Entity entity : toDestroy) {
+                    m_registry.DestroyEntity(entity);
+                }
+
+                std::cout << "[GameServer] Destroyed " << toDestroy.size() << " non-player entities (preserved " << playerEntitiesVec.size() << " players)" << std::endl;
+                std::cout << "[GameServer] Entity count after cleanup: " << m_registry.GetEntityCount() << std::endl;
+
+                std::vector<GameEntity> playerEntities;
+                for (const auto& ge : m_entities) {
+                    if (ge.type == EntityType::PLAYER) {
+                        playerEntities.push_back(ge);
+                    }
+                }
+                m_entities = playerEntities;
+
+                std::cout << "[GameServer] Kept " << m_entities.size() << " player GameEntity entries" << std::endl;
+
+                // Reset level state
+                m_bossDefeated = false;
+                m_levelComplete = false;
+                m_scrollOffset = 0.0f;
+                m_enemyShootCooldowns.clear();
+                m_enemyBulletTypes.clear();
+
+                // Load new level
+                m_levelPath = nextLevelPath;
+                try {
+                    auto levelData = RType::ECS::LevelLoader::LoadFromFile(m_levelPath);
+                    std::cout << "[GameServer] Level " << m_currentLevel << " loaded" << std::endl;
+
+                    auto createdEntities = RType::ECS::LevelLoader::CreateServerEntities(m_registry, levelData);
+                    std::cout << "[GameServer] Level entities created: "
+                              << createdEntities.obstacleColliders.size() << " obstacles, "
+                              << createdEntities.enemies.size() << " enemies, "
+                              << "boss: " << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "YES" : "NO")
+                              << std::endl;
+
+                } catch (const std::exception& e) {
+                    std::cerr << "[GameServer] Failed to load level " << m_currentLevel << ": " << e.what() << std::endl;
+                }
             }
         }
     }
