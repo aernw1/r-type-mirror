@@ -76,6 +76,7 @@ namespace RType {
             Core::Logger::Info("[Transition] Loading level {}...", m_levelProgress.nextLevelNumber);
 
             std::unordered_set<ECS::Entity> hudEntities;
+
             for (size_t i = 0; i < MAX_PLAYERS; i++) {
                 if (m_playersHUD[i].scoreEntity != ECS::NULL_ENTITY) {
                     hudEntities.insert(m_playersHUD[i].scoreEntity);
@@ -92,6 +93,42 @@ namespace RType {
                 if (m_playersHUD[i].powerupShieldEntity != ECS::NULL_ENTITY) {
                     hudEntities.insert(m_playersHUD[i].powerupShieldEntity);
                 }
+            }
+
+            if (m_bossHealthBar.titleEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_bossHealthBar.titleEntity);
+            }
+            if (m_bossHealthBar.barBackgroundEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_bossHealthBar.barBackgroundEntity);
+            }
+            if (m_bossHealthBar.barForegroundEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_bossHealthBar.barForegroundEntity);
+            }
+
+            for (const auto& pair : m_playerNameLabels) {
+                if (pair.second != ECS::NULL_ENTITY) {
+                    hudEntities.insert(pair.second);
+                }
+            }
+
+            if (m_gameOverTitleEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_gameOverTitleEntity);
+            }
+            if (m_gameOverScoreEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_gameOverScoreEntity);
+            }
+            if (m_gameOverHintEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_gameOverHintEntity);
+            }
+
+            if (m_victoryTitleEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_victoryTitleEntity);
+            }
+            if (m_victoryScoreEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_victoryScoreEntity);
+            }
+            if (m_victoryHintEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_victoryHintEntity);
             }
 
             std::vector<ECS::Entity> toDestroy;
@@ -142,12 +179,22 @@ namespace RType {
             Core::Logger::Info("[Transition] Destroyed {} entities (preserved player + {} HUD entities)",
                               toDestroy.size(), hudEntities.size());
 
-            m_networkEntityMap.clear();
+            std::vector<uint32_t> networkIdsToRemove;
+            for (const auto& [networkId, localEntity] : m_networkEntityMap) {
+                if (!m_registry.IsEntityAlive(localEntity)) {
+                    networkIdsToRemove.push_back(networkId);
+                }
+            }
+            for (uint32_t networkId : networkIdsToRemove) {
+                m_networkEntityMap.erase(networkId);
+            }
+            Core::Logger::Info("[Transition] Cleaned network map: removed {} dead entities, kept {} alive",
+                              networkIdsToRemove.size(), m_networkEntityMap.size());
+
             m_obstacleColliderEntities.clear();
             m_obstacleSpriteEntities.clear();
             m_obstacleIdToCollider.clear();
             m_backgroundEntities.clear();
-            m_playerNameLabels.clear();
 
             m_serverScrollOffset = 0.0f;
             m_localScrollOffset = 0.0f;
@@ -155,6 +202,7 @@ namespace RType {
             m_bossHealthBar.bossNetworkId = 0;
             m_bossHealthBar.currentHealth = 0;
             m_bossHealthBar.maxHealth = 0;
+            m_bossHealthBar.active = false;
 
             std::string levelPath = "assets/levels/level" + std::to_string(m_levelProgress.nextLevelNumber) + ".json";
             m_currentLevelPath = levelPath;

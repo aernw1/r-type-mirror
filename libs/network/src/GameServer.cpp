@@ -1332,6 +1332,33 @@ namespace network {
                               << "boss: " << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "YES" : "NO")
                               << std::endl;
 
+                    auto playerEntities = m_registry.GetEntitiesWithComponent<RType::ECS::Player>();
+                    std::cout << "[GameServer] Repositioning " << playerEntities.size() << " players to spawn points" << std::endl;
+
+                    size_t spawnIndex = 0;
+                    for (auto playerEntity : playerEntities) {
+                        if (spawnIndex < levelData.playerSpawns.size()) {
+                            const auto& spawn = levelData.playerSpawns[spawnIndex];
+
+                            if (m_registry.HasComponent<RType::ECS::Position>(playerEntity)) {
+                                auto& pos = m_registry.GetComponent<RType::ECS::Position>(playerEntity);
+                                pos.x = spawn.x;
+                                pos.y = spawn.y;
+                                std::cout << "[GameServer] Player " << playerEntity << " repositioned to ("
+                                          << spawn.x << ", " << spawn.y << ")" << std::endl;
+                            }
+
+                            if (m_registry.HasComponent<RType::ECS::Health>(playerEntity)) {
+                                auto& health = m_registry.GetComponent<RType::ECS::Health>(playerEntity);
+                                health.current = health.max;
+                                std::cout << "[GameServer] Player " << playerEntity << " health reset to "
+                                          << health.max << std::endl;
+                            }
+
+                            spawnIndex++;
+                        }
+                    }
+
                 } catch (const std::exception& e) {
                     std::cerr << "[GameServer] Failed to load level " << m_currentLevel << ": " << e.what() << std::endl;
                 }
