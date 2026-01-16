@@ -14,6 +14,8 @@
 namespace RType {
     namespace ECS {
 
+        class EffectFactory;
+
         class PowerUpSpawnSystem : public ISystem {
         public:
             explicit PowerUpSpawnSystem(
@@ -30,6 +32,7 @@ namespace RType {
             static void DestroyPowerUpsOffScreen(Registry& registry);
 
             void SetSpawnInterval(float interval) { m_spawnInterval = interval; }
+            void SetEffectFactory(const EffectFactory* effectFactory) { m_effectFactory = effectFactory; }
 
         private:
             Renderer::IRenderer* m_renderer;
@@ -37,6 +40,7 @@ namespace RType {
             float m_screenHeight;
             float m_spawnTimer = 0.0f;
             float m_spawnInterval = 5.0f;
+            const EffectFactory* m_effectFactory = nullptr;
             std::mt19937 m_rng;
         };
 

@@ -42,11 +42,14 @@ target_include_directories(rtype_network PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libs/engine/include>
 )
 
+find_package(lz4 CONFIG REQUIRED)
+
 target_link_libraries(rtype_network PUBLIC
     asio
     Threads::Threads
     nlohmann_json::nlohmann_json
     rtype_ecs
+    lz4::lz4
 )
 
 if(WIN32)

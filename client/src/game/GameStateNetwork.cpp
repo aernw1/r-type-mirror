@@ -183,6 +183,12 @@ namespace RType {
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
                         m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
                         m_registry.AddComponent<Enemy>(newEntity, Enemy{static_cast<ECS::EnemyType>(enemyType)});
+
+                        // Add collision components for hit effect detection
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(64.0f, 64.0f));
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
+
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(enemySprite, 1));
                         drawable.scale = {0.5f, 0.5f};
                         drawable.origin = Math::Vector2(128.0f, 128.0f);
@@ -207,6 +213,12 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
                         m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 1000});
+                        m_registry.AddComponent<Boss>(newEntity, Boss{});
+
+                        // Add collision components for hit effect detection
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(200.0f, 200.0f));
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
 
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(bossSprite, 5));
                         drawable.scale = {3.0f, 3.0f};
@@ -291,6 +303,30 @@ namespace RType {
                             }
                         }
 
+                        bool isPlayerBullet = (entityState.flags < 10);
+
+                        m_registry.AddComponent<Bullet>(newEntity, Bullet(m_localPlayerEntity));
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(20.0f, 10.0f));
+                        m_registry.AddComponent<Damage>(newEntity, Damage(25));
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                           CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+
+                        if (isPlayerBullet && m_localPlayerEntity != ECS::NULL_ENTITY && 
+                            m_registry.IsEntityAlive(m_localPlayerEntity) && m_effectFactory &&
+                            m_registry.HasComponent<Position>(m_localPlayerEntity)) {
+                            const auto& playerPos = m_registry.GetComponent<Position>(m_localPlayerEntity);
+                            float bulletX = entityState.x;
+                            float bulletY = entityState.y;
+                            float dx = bulletX - playerPos.x;
+                            float dy = bulletY - playerPos.y;
+                            float distance = std::sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 80.0f && dx > 0 && std::abs(dy) < 40.0f && entityState.vx > 400.0f) {
+                                m_effectFactory->CreateShootingEffect(m_registry, playerPos.x, playerPos.y, m_localPlayerEntity);
+                            }
+                        }
+
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         m_bulletFlagsMap[entityState.entityId] = entityState.flags;
                     } else if (type == network::EntityType::POWERUP) {
@@ -306,26 +342,52 @@ namespace RType {
                         Math::Color powerupColor = ECS::PowerUpFactory::GetPowerUpColor(puType);
                         Renderer::SpriteId powerupSprite = Renderer::INVALID_SPRITE_ID;
                         
-                        if (puType == ECS::PowerUpType::FORCE_POD) {
+                        powerupSprite = GetPowerUpSprite(puType);
+                        
+                        if (powerupSprite == Renderer::INVALID_SPRITE_ID && puType == ECS::PowerUpType::FORCE_POD) {
                             auto textureIt = m_levelAssets.textures.find("powerup-force-pod");
                             if (textureIt != m_levelAssets.textures.end()) {
-                                powerupSprite = m_renderer->CreateSprite(textureIt->second, Renderer::Rectangle{{0.0f, 0.0f}, {128.0f, 128.0f}});
+                                powerupSprite = m_renderer->CreateSprite(textureIt->second, {});
                             } else {
-                                powerupSprite = GetPowerUpSprite(puType);
+                                powerupSprite = GetPowerUpSprite(ECS::PowerUpType::LASER_BEAM);
                             }
-                        } else {
-                            powerupSprite = GetPowerUpSprite(puType);
                         }
 
                         if (powerupSprite != Renderer::INVALID_SPRITE_ID) {
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(powerupSprite, 5));
-                            if (puType == ECS::PowerUpType::FORCE_POD) {
-                                d.scale = {0.25f, 0.25f};
-                            } else {
-                                d.scale = {2.5f, 2.5f};
-                            }
+                            float scale = ECS::PowerUpFactory::GetPowerUpScale(puType);
+                            d.scale = {scale, scale};
                             d.tint = powerupColor;
-                            m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
+
+                            if (puType == ECS::PowerUpType::FORCE_POD && m_effectFactory) {
+                                const auto& config = m_effectFactory->GetConfig();
+                                if (config.forcePodAnimation != Animation::INVALID_CLIP_ID) {
+                                    if (config.forcePodSprite != Renderer::INVALID_SPRITE_ID) {
+                                        d.spriteId = config.forcePodSprite;
+                                    }
+
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity,
+                                        ECS::SpriteAnimation(config.forcePodAnimation, true, 1.0f));
+                                    anim.looping = true;
+                                    
+                                    if (config.forcePodFirstFrameRegion.size.x > 0.0f && config.forcePodFirstFrameRegion.size.y > 0.0f) {
+                                        anim.currentRegion = config.forcePodFirstFrameRegion;
+                                        anim.currentFrameIndex = 0;
+                                    } else if (m_animationModule) {
+                                        auto firstFrame = m_animationModule->GetFrameAtTime(config.forcePodAnimation, 0.0f, true);
+                                        anim.currentRegion = firstFrame.region;
+                                        anim.currentFrameIndex = m_animationModule->GetFrameIndexAtTime(config.forcePodAnimation, 0.0f, true);
+                                    }
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                } else {
+                                    auto& glow = m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
+                                    glow.baseScale = scale;
+                                }
+                            } else {
+                                auto& glow = m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
+                                glow.baseScale = scale;
+                            }
                         }
 
                         m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{32.0f, 32.0f});
@@ -642,18 +704,30 @@ namespace RType {
                             }
                         }
                         
-                        if (m_animationSystem && m_registry.HasComponent<ECS::SpriteAnimation>(explosionEntity)) {
+                        if (m_effectFactory && m_registry.HasComponent<ECS::SpriteAnimation>(explosionEntity)) {
+                            const auto& config = m_effectFactory->GetConfig();
                             auto& anim = m_registry.GetComponent<ECS::SpriteAnimation>(explosionEntity);
-                            if (anim.currentRegion.size.x <= 0.0f || anim.currentRegion.size.y <= 0.0f) {
-                                if (m_animationModule && anim.clipId != Animation::INVALID_CLIP_ID) {
-                                    auto firstFrame = m_animationModule->GetFrameAtTime(anim.clipId, 0.0f, anim.looping);
-                                    anim.currentRegion = firstFrame.region;
-                                    anim.currentFrameIndex = m_animationModule->GetFrameIndexAtTime(anim.clipId, 0.0f, anim.looping);
-                                    if (m_registry.HasComponent<ECS::AnimatedSprite>(explosionEntity)) {
-                                        m_registry.GetComponent<ECS::AnimatedSprite>(explosionEntity).needsUpdate = true;
-                                    }
+                            if (anim.clipId == config.explosionSmall && 
+                                config.explosionFirstFrameRegion.size.x > 0.0f && 
+                                config.explosionFirstFrameRegion.size.y > 0.0f) {
+                                anim.currentRegion = config.explosionFirstFrameRegion;
+                                anim.currentFrameIndex = 0;
+                                if (m_registry.HasComponent<ECS::AnimatedSprite>(explosionEntity)) {
+                                    m_registry.GetComponent<ECS::AnimatedSprite>(explosionEntity).needsUpdate = true;
                                 }
                             }
+                        }
+                    }
+
+                    // Create hit effect when player bullets are destroyed (server-side collision)
+                    auto bulletFlagsIt = m_bulletFlagsMap.find(networkId);
+                    if (bulletFlagsIt != m_bulletFlagsMap.end() && bulletFlagsIt->second < 10) {
+                        // Player bullet was destroyed - create hit effect at last position
+                        if (m_effectFactory && m_registry.IsEntityAlive(ecsEntity) &&
+                            m_registry.HasComponent<Position>(ecsEntity)) {
+                            const auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                            m_effectFactory->CreateHitEffect(m_registry, pos.x, pos.y);
+                            Core::Logger::Info("[Network] Created hit effect for destroyed bullet at ({}, {})", pos.x, pos.y);
                         }
                     }
 

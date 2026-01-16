@@ -513,10 +513,15 @@ namespace RType {
             Animation::EffectType type = Animation::EffectType::EXPLOSION_SMALL;
             float lifetime = 0.0f;
             float maxLifetime = 1.0f;
+            Entity owner = NULL_ENTITY;
+            float offsetX = 0.0f;
+            float offsetY = 0.0f;
 
             VisualEffect() = default;
             VisualEffect(Animation::EffectType t, float duration)
                 : type(t), maxLifetime(duration) {}
+            VisualEffect(Animation::EffectType t, float duration, Entity ownerEntity, float offX, float offY)
+                : type(t), maxLifetime(duration), owner(ownerEntity), offsetX(offX), offsetY(offY) {}
         };
 
         struct FloatingText : public IComponent {
