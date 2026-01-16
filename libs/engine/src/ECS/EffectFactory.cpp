@@ -299,6 +299,22 @@ namespace ECS {
         registry.AddComponent<Position>(entity, Position(x, y));
         registry.AddComponent<Velocity>(entity, Velocity(0.0f, 0.0f));
 
+        // Calculate offsets from owner's shooter component
+        float offsetX = 0.0f;
+        float offsetY = 0.0f;
+        if (owner != NULL_ENTITY && registry.IsEntityAlive(owner) &&
+            registry.HasComponent<Shooter>(owner)) {
+            const auto& shooterComp = registry.GetComponent<Shooter>(owner);
+            offsetX = shooterComp.offsetX;
+            offsetY = shooterComp.offsetY;
+        }
+
+        // Add VisualEffect component to make the beam follow the player
+        if (owner != NULL_ENTITY) {
+            registry.AddComponent<VisualEffect>(entity, 
+                VisualEffect(Animation::EffectType::CUSTOM, 10.0f, owner, offsetX, offsetY));
+        }
+
         float frameWidth = 200.0f;
         float frameHeight = beamHeight;
         if (m_config.beamFirstFrameRegion.size.x > 0.0f && m_config.beamFirstFrameRegion.size.y > 0.0f) {
@@ -342,6 +358,66 @@ namespace ECS {
         registry.AddComponent<CollisionLayer>(entity,
             CollisionLayer(CollisionLayers::PLAYER_BULLET,
                           CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+
+        return entity;
+    }
+
+    Entity EffectFactory::CreateHitEffect(Registry& registry, float x, float y) {
+        Core::Logger::Info("[EffectFactory] CreateHitEffect at ({}, {}) - hitAnim={}, hitSprite={}, firstFrameSize=({},{})",
+            x, y, m_config.hitAnimation, m_config.hitSprite,
+            m_config.hitFirstFrameRegion.size.x, m_config.hitFirstFrameRegion.size.y);
+
+        if (m_config.hitAnimation == Animation::INVALID_CLIP_ID) {
+            Core::Logger::Warning("[EffectFactory] hitAnimation is INVALID, returning empty entity");
+            return registry.CreateEntity();
+        }
+
+        Entity entity = CreateBaseEffect(registry, x, y,
+                                         Animation::EffectType::BULLET_IMPACT, 0.5f);
+
+        Renderer::SpriteId spriteId = Renderer::INVALID_SPRITE_ID;
+        if (m_config.hitSprite != Renderer::INVALID_SPRITE_ID) {
+            spriteId = m_config.hitSprite;
+        } else if (m_config.effectsSprite != Renderer::INVALID_SPRITE_ID) {
+            spriteId = m_config.effectsSprite;
+        }
+
+        if (spriteId == Renderer::INVALID_SPRITE_ID) {
+            Core::Logger::Warning("[EffectFactory] spriteId is INVALID, returning entity without drawable");
+            return entity;
+        }
+
+        Core::Logger::Info("[EffectFactory] Created hit effect entity {} with spriteId {}", entity, spriteId);
+
+        auto& drawable = registry.AddComponent<Drawable>(entity, Drawable());
+        drawable.layer = 99;
+        drawable.scale = Math::Vector2(2.0f, 2.0f);
+        if (m_config.hitFirstFrameRegion.size.x > 0.0f && m_config.hitFirstFrameRegion.size.y > 0.0f) {
+            drawable.origin = Math::Vector2(m_config.hitFirstFrameRegion.size.x * 0.5f, m_config.hitFirstFrameRegion.size.y * 0.5f);
+        } else {
+            drawable.origin = Math::Vector2(0.0f, 0.0f);
+        }
+        drawable.spriteId = spriteId;
+
+        if (m_config.hitAnimation != Animation::INVALID_CLIP_ID) {
+            auto& anim = registry.AddComponent<SpriteAnimation>(entity,
+                SpriteAnimation(m_config.hitAnimation, false, 1.0f));
+            anim.playing = true;
+            anim.looping = false;
+            anim.destroyOnComplete = true;
+            anim.currentTime = 0.0f;
+            anim.playbackSpeed = 1.0f;
+            
+            // Initialize with first frame region
+            if (m_config.hitFirstFrameRegion.size.x > 0.0f && 
+                m_config.hitFirstFrameRegion.size.y > 0.0f) {
+                anim.currentRegion = m_config.hitFirstFrameRegion;
+                anim.currentFrameIndex = 0;
+            }
+            
+            auto& animatedSprite = registry.AddComponent<AnimatedSprite>(entity);
+            animatedSprite.needsUpdate = true;
+        }
 
         return entity;
     }

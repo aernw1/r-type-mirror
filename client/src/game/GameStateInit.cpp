@@ -449,6 +449,46 @@ namespace RType {
                     frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
             }
 
+            m_hitTexture = m_renderer->LoadTexture("assets/SFX/hit.png");
+            if (m_hitTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_hitTexture = m_renderer->LoadTexture("../assets/SFX/hit.png");
+            }
+            if (m_hitTexture != Renderer::INVALID_TEXTURE_ID) {
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_hitTexture);
+                m_hitSprite = m_renderer->CreateSprite(m_hitTexture, Renderer::Rectangle{{0.0f, 0.0f}, {textureSize.x, textureSize.y}});
+                Core::Logger::Info("[GameState] Hit animation spritesheet loaded (texture size: {}x{})", textureSize.x, textureSize.y);
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load hit animation spritesheet");
+            }
+
+            if (m_hitTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
+                const int frameCount = 5;
+                
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_hitTexture);
+                float singleFrameWidth = textureSize.x / static_cast<float>(frameCount);
+                float frameHeight = textureSize.y;
+                
+                Animation::AnimationClipConfig hitConfig;
+                hitConfig.name = "hit_animation";
+                hitConfig.texturePath = "assets/SFX/hit.png";
+                hitConfig.looping = false;
+                hitConfig.playbackSpeed = 1.0f;
+                
+                for (int i = 0; i < frameCount; ++i) {
+                    Animation::FrameDef frame;
+                    frame.region.position.x = static_cast<float>(i) * singleFrameWidth;
+                    frame.region.position.y = 0.0f;
+                    frame.region.size.x = singleFrameWidth;
+                    frame.region.size.y = frameHeight;
+                    frame.duration = 0.1f;
+                    hitConfig.frames.push_back(frame);
+                }
+                
+                m_hitClipId = m_animationModule->CreateClip(hitConfig);
+                Core::Logger::Info("[GameState] Created hit animation clip with {} frames (frame size: {}x{}, texture size: {}x{})", 
+                    frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
+            }
+
             m_animationSystem = std::make_unique<RType::ECS::AnimationSystem>(m_animationModule.get());
 
             ECS::EffectConfig effectConfig;
@@ -464,6 +504,9 @@ namespace RType {
             effectConfig.beamAnimation = m_beamClipId;
             effectConfig.beamTexture = m_beamTexture;
             effectConfig.beamSprite = m_beamSprite;
+            effectConfig.hitAnimation = m_hitClipId;
+            effectConfig.hitTexture = m_hitTexture;
+            effectConfig.hitSprite = m_hitSprite;
             
             if (m_animationModule) {
                 if (m_explosionClipId != Animation::INVALID_CLIP_ID) {
@@ -484,6 +527,11 @@ namespace RType {
                 if (m_beamClipId != Animation::INVALID_CLIP_ID) {
                     auto beamFirstFrame = m_animationModule->GetFrameAtTime(m_beamClipId, 0.0f, true);
                     effectConfig.beamFirstFrameRegion = beamFirstFrame.region;
+                }
+                
+                if (m_hitClipId != Animation::INVALID_CLIP_ID) {
+                    auto hitFirstFrame = m_animationModule->GetFrameAtTime(m_hitClipId, 0.0f, false);
+                    effectConfig.hitFirstFrameRegion = hitFirstFrame.region;
                 }
             }
             
@@ -506,19 +554,22 @@ namespace RType {
                 m_shootingSystem->SetEffectFactory(m_effectFactory.get());
                 m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
                 m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
-                m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
+                m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>(m_effectFactory.get());
                 m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
                 m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
                 m_scoreSystem = std::make_unique<RType::ECS::ScoreSystem>();
             } else {
+                // In network sessions, we still need collision systems for visual effects
+                m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
+                m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>(m_effectFactory.get());
+                
+                // These systems are server-authoritative, so we don't need them on client
                 m_powerUpSpawnSystem.reset();
                 m_powerUpCollisionSystem.reset();
-                m_collisionDetectionSystem.reset();
                 m_playerResponseSystem.reset();
                 m_shootingSystem.reset();
                 m_movementSystem.reset();
                 m_inputSystem.reset();
-                m_bulletResponseSystem.reset();
                 m_obstacleResponseSystem.reset();
                 m_healthSystem.reset();
                 m_scoreSystem.reset();

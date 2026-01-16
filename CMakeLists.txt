@@ -115,6 +115,18 @@ if(TARGET rtype_sfml_renderer)
     )
     message(STATUS "test_background will be built")
 
+    add_executable(test_hit_animation tests/test_hit_animation.cpp)
+    target_link_libraries(test_hit_animation PRIVATE
+        rtype_core
+        rtype_ecs
+        rtype_animation
+        rtype_sfml_renderer
+    )
+    target_include_directories(test_hit_animation PRIVATE
+        ${CMAKE_SOURCE_DIR}/libs/engine/include
+    )
+    message(STATUS "test_hit_animation will be built")
+
     add_executable(breakout
         breakout/src/main.cpp
         breakout/src/BreakoutPhysicsSystem.cpp

@@ -288,7 +288,16 @@ namespace RType {
                         }
 
                         bool isPlayerBullet = (entityState.flags < 10);
-                        
+
+                        // Add Bullet component for collision response system
+                        m_registry.AddComponent<Bullet>(newEntity, Bullet(m_localPlayerEntity));
+
+                        // Add BoxCollider for collision detection (enables hit effects)
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(10.0f, 5.0f));
+
+                        // Add Damage component (required for collision response)
+                        m_registry.AddComponent<Damage>(newEntity, Damage(25));
+
                         m_registry.AddComponent<CollisionLayer>(newEntity,
                             CollisionLayer(CollisionLayers::PLAYER_BULLET,
                                            CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));

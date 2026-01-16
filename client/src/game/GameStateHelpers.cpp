@@ -265,6 +265,61 @@ namespace RType {
                 return;
             }
 
+            // Update beam width dynamically as player moves
+            if (m_registry.HasComponent<ECS::Position>(m_beamEntity)) {
+                const auto& beamPos = m_registry.GetComponent<ECS::Position>(m_beamEntity);
+                
+                float screenWidth = 1280.0f;
+                if (m_levelData.config.screenWidth > 0.0f) {
+                    screenWidth = m_levelData.config.screenWidth;
+                }
+
+                // Get frame width from config or use default
+                float frameWidth = 200.0f;
+                if (m_effectFactory) {
+                    const auto& config = m_effectFactory->GetConfig();
+                    if (config.beamFirstFrameRegion.size.x > 0.0f) {
+                        frameWidth = config.beamFirstFrameRegion.size.x;
+                    }
+                }
+
+                // Calculate new beam width (extend from current position to screen edge)
+                float newBeamWidth = screenWidth - beamPos.x;
+                if (newBeamWidth < frameWidth) {
+                    newBeamWidth = frameWidth;
+                }
+
+                // Update Drawable scale if it exists
+                if (m_registry.HasComponent<ECS::Drawable>(m_beamEntity)) {
+                    auto& drawable = m_registry.GetComponent<ECS::Drawable>(m_beamEntity);
+                    float newScaleX = newBeamWidth / frameWidth;
+                    // Preserve the Y scale
+                    drawable.scale.x = newScaleX;
+                }
+
+                // Update BoxCollider width if it exists
+                if (m_registry.HasComponent<ECS::BoxCollider>(m_beamEntity)) {
+                    auto& collider = m_registry.GetComponent<ECS::BoxCollider>(m_beamEntity);
+                    // Get frame height to calculate the scaled height
+                    float frameHeight = 64.0f;
+                    if (m_effectFactory) {
+                        const auto& config = m_effectFactory->GetConfig();
+                        if (config.beamFirstFrameRegion.size.y > 0.0f) {
+                            frameHeight = config.beamFirstFrameRegion.size.y;
+                        }
+                    }
+                    
+                    // Get current scale Y from drawable or use default
+                    float scaleY = 1.0f;
+                    if (m_registry.HasComponent<ECS::Drawable>(m_beamEntity)) {
+                        scaleY = m_registry.GetComponent<ECS::Drawable>(m_beamEntity).scale.y;
+                    }
+                    
+                    collider.width = newBeamWidth;
+                    collider.height = frameHeight * scaleY;
+                }
+            }
+
             if (m_registry.HasComponent<ECS::SpriteAnimation>(m_beamEntity)) {
                 auto& anim = m_registry.GetComponent<ECS::SpriteAnimation>(m_beamEntity);
                 if (anim.looping && m_animationSystem) {

@@ -6,6 +6,8 @@
 */
 
 #include "ECS/BulletCollisionResponseSystem.hpp"
+#include "ECS/EffectFactory.hpp"
+#include "Core/Logger.hpp"
 #include <unordered_map>
 #include <cstdint>
 
@@ -90,6 +92,13 @@ namespace RType {
                     
                     health.current -= actualDamage;
 
+                    // Create hit effect at collision point
+                    if (m_effectFactory && registry.HasComponent<Position>(bullet) && !isBeam) {
+                        const auto& bulletPos = registry.GetComponent<Position>(bullet);
+                        Entity hitEntity = m_effectFactory->CreateHitEffect(registry, bulletPos.x, bulletPos.y);
+                        Core::Logger::Info("[BulletCollision] Created hit effect at ({}, {})", bulletPos.x, bulletPos.y);
+                    }
+
                     if (health.current <= 0) {
                         const auto& enemyComp = registry.GetComponent<Enemy>(other);
                         const auto& bulletComp = registry.GetComponent<Bullet>(bullet);
@@ -151,6 +160,12 @@ namespace RType {
                     const auto& obstacle = registry.GetComponent<Obstacle>(other);
                     if (obstacle.blocking) {
                         shouldDestroy = true;
+                        
+                        if (m_effectFactory && registry.HasComponent<Position>(bullet) && !isBeam) {
+                            const auto& bulletPos = registry.GetComponent<Position>(bullet);
+                            Entity hitEntity = m_effectFactory->CreateHitEffect(registry, bulletPos.x, bulletPos.y);
+                            Core::Logger::Info("[BulletCollision] Created hit effect on obstacle at ({}, {})", bulletPos.x, bulletPos.y);
+                        }
                     }
                 }
 
