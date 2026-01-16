@@ -96,14 +96,14 @@ namespace RType {
                 m_playerScore = scoreComp.points;
             }
 
-            if (m_hudScoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudScoreEntity)) {
+            if (m_hudScoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudScoreEntity) && m_registry.HasComponent<TextLabel>(m_hudScoreEntity)) {
                 auto& scoreLabel = m_registry.GetComponent<TextLabel>(m_hudScoreEntity);
                 std::ostringstream ss;
                 ss << std::setw(8) << std::setfill('0') << m_playerScore;
                 scoreLabel.text = ss.str();
             }
 
-            if (m_hudLivesEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudLivesEntity)) {
+            if (m_hudLivesEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_hudLivesEntity) && m_registry.HasComponent<TextLabel>(m_hudLivesEntity)) {
                 auto& livesLabel = m_registry.GetComponent<TextLabel>(m_hudLivesEntity);
                 livesLabel.text = "LIVES x" + std::to_string(m_playerLives);
 
@@ -130,7 +130,8 @@ namespace RType {
 
             for (size_t i = 0; i < MAX_PLAYERS; i++) {
                 if (m_playersHUD[i].scoreEntity == NULL_ENTITY ||
-                    !m_registry.IsEntityAlive(m_playersHUD[i].scoreEntity)) {
+                    !m_registry.IsEntityAlive(m_playersHUD[i].scoreEntity) ||
+                    !m_registry.HasComponent<TextLabel>(m_playersHUD[i].scoreEntity)) {
                     continue;
                 }
 
@@ -319,6 +320,7 @@ namespace RType {
             renderHealthBars();
             renderBossHealthBar();
             renderGameOverOverlay();
+            renderLevelTransition();
         }
 
         void InGameState::renderChargeBar() {
@@ -519,6 +521,26 @@ namespace RType {
             float red = 1.0f - (healthPercent * 0.5f);
             float green = healthPercent * 0.8f;
             m_renderer->DrawRectangle(fgRect, Renderer::Color(red, green, 0.0f, 1.0f));
+        }
+
+        void InGameState::renderLevelTransition() {
+            if (m_levelProgress.transitionPhase == TransitionPhase::NONE) {
+                return;
+            }
+
+            if (m_levelProgress.fadeAlpha > 0.0f) {
+                Renderer::Rectangle fadeOverlay;
+                fadeOverlay.position = Renderer::Vector2(0.0f, 0.0f);
+                fadeOverlay.size = Renderer::Vector2(1280.0f, 720.0f);
+                m_renderer->DrawRectangle(fadeOverlay, Renderer::Color(0.0f, 0.0f, 0.0f, m_levelProgress.fadeAlpha));
+            }
+
+            if (m_levelProgress.transitionPhase == TransitionPhase::LOADING) {
+                Renderer::Rectangle fullScreen;
+                fullScreen.position = Renderer::Vector2(0.0f, 0.0f);
+                fullScreen.size = Renderer::Vector2(1280.0f, 720.0f);
+                m_renderer->DrawRectangle(fullScreen, Renderer::Color(0.0f, 0.0f, 0.0f, 1.0f));
+            }
         }
 
     }
