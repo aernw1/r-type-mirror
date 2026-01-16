@@ -47,7 +47,7 @@
     },
     "obstacles": [
         {
-            "texture": "obstacle6",
+            "texture": "obstacle7",
             "position": { "x": 1000.0, "y": 0.0 },
             "scaleWidth": 441.0,
             "scaleHeight": 100.0,
@@ -966,7 +966,7 @@
     ],
     "boss": {
         "texture": "boss_dragon",
-        "position": { "x": 14000.0, "y": 200.0 },
+        "position": { "x": 1000.0, "y": 200.0 },
         "width": 384.0,
         "height": 564.0,
         "health": 1000,
