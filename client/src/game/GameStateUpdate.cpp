@@ -64,21 +64,32 @@ namespace RType {
                 if (m_chargeTime > 2.0f) {
                     m_chargeTime = 2.0f;
                 }
-                
             } else {
                 if (spacePressedLastFrame) {
-                    m_currentInputs |= network::InputFlags::SHOOT;
-                    if (m_isNetworkSession) {
-                        if (m_shootMusic != Audio::INVALID_MUSIC_ID) {
-                             Audio::PlaybackOptions opts;
-                             opts.volume = 1.0f;
-                             opts.loop = false;
-                             m_context.audio->StopMusic(m_shootMusic); 
-                             m_context.audio->PlayMusic(m_shootMusic, opts);
-                        } else if (m_playerShootSound != Audio::INVALID_SOUND_ID) {
-                            Audio::PlaybackOptions opts;
-                            opts.volume = 1.0f;
-                            m_context.audio->PlaySound(m_playerShootSound, opts);
+                    float savedChargeTime = m_chargeTime;
+                    
+                    if (savedChargeTime >= 2.0f) {
+                        if (m_localPlayerEntity != ECS::NULL_ENTITY &&
+                            m_registry.IsEntityAlive(m_localPlayerEntity) &&
+                            m_registry.HasComponent<ECS::Position>(m_localPlayerEntity) &&
+                            m_registry.HasComponent<ECS::Shooter>(m_localPlayerEntity)) {
+                            createBeamEntity();
+                            m_beamDuration = 2.0f;
+                        }
+                    } else {
+                        m_currentInputs |= network::InputFlags::SHOOT;
+                        if (m_isNetworkSession) {
+                            if (m_shootMusic != Audio::INVALID_MUSIC_ID) {
+                                 Audio::PlaybackOptions opts;
+                                 opts.volume = 1.0f;
+                                 opts.loop = false;
+                                 m_context.audio->StopMusic(m_shootMusic); 
+                                 m_context.audio->PlayMusic(m_shootMusic, opts);
+                            } else if (m_playerShootSound != Audio::INVALID_SOUND_ID) {
+                                Audio::PlaybackOptions opts;
+                                opts.volume = 1.0f;
+                                m_context.audio->PlaySound(m_playerShootSound, opts);
+                            }
                         }
                     }
                 }
@@ -130,6 +141,8 @@ namespace RType {
             if (m_shootSfxCooldown > 0.0f) {
                 m_shootSfxCooldown -= dt;
             }
+
+            updateBeam(dt);
 
             triggerGameOverIfNeeded();
             if (m_isGameOver) {
@@ -626,6 +639,11 @@ namespace RType {
                 }
             }
             m_playerNameLabels.clear();
+
+            if (m_beamEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(m_beamEntity)) {
+                m_registry.DestroyEntity(m_beamEntity);
+                m_beamEntity = ECS::NULL_ENTITY;
+            }
         }
 
         void InGameState::enterResultsScreen() {

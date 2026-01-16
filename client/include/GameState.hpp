@@ -115,6 +115,8 @@ namespace RType {
             void renderGameOverOverlay();
             void triggerGameOverIfNeeded();
             void enterResultsScreen();
+            void createBeamEntity();
+            void updateBeam(float dt);
 
             // Level progression
             void checkBossDefeated();
@@ -280,6 +282,9 @@ namespace RType {
             Renderer::TextureId m_forcePodTexture = Renderer::INVALID_TEXTURE_ID;
             Renderer::SpriteId m_forcePodSprite = Renderer::INVALID_SPRITE_ID;
             Animation::AnimationClipId m_forcePodClipId = Animation::INVALID_CLIP_ID;
+            Renderer::TextureId m_beamTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_beamSprite = Renderer::INVALID_SPRITE_ID;
+            Animation::AnimationClipId m_beamClipId = Animation::INVALID_CLIP_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
@@ -312,6 +317,8 @@ namespace RType {
 
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;
+            RType::ECS::Entity m_beamEntity = RType::ECS::NULL_ENTITY;
+            float m_beamDuration = 0.0f;
             static constexpr float MAX_CHARGE_TIME = 2.0f; // 2 seconds for full charge
 
             bool m_isNetworkSession = false;

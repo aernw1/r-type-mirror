@@ -289,5 +289,62 @@ namespace ECS {
         return entity;
     }
 
+    Entity EffectFactory::CreateBeam(Registry& registry, float x, float y, Entity owner, float chargeTime, float screenWidth, float beamHeight) {
+        if (m_config.beamAnimation == Animation::INVALID_CLIP_ID) {
+            return registry.CreateEntity();
+        }
+
+        Entity entity = registry.CreateEntity();
+
+        registry.AddComponent<Position>(entity, Position(x, y));
+        registry.AddComponent<Velocity>(entity, Velocity(0.0f, 0.0f));
+
+        float frameWidth = 200.0f;
+        float frameHeight = beamHeight;
+        if (m_config.beamFirstFrameRegion.size.x > 0.0f && m_config.beamFirstFrameRegion.size.y > 0.0f) {
+            frameWidth = m_config.beamFirstFrameRegion.size.x;
+            frameHeight = m_config.beamFirstFrameRegion.size.y;
+        }
+
+        float beamWidth = screenWidth - x;
+        if (beamWidth < frameWidth) {
+            beamWidth = frameWidth;
+        }
+
+        float scaleX = beamWidth / frameWidth;
+        float scaleY = beamHeight / frameHeight;
+
+        if (m_config.beamSprite != Renderer::INVALID_SPRITE_ID) {
+            auto& drawable = registry.AddComponent<Drawable>(entity, Drawable(m_config.beamSprite, 12));
+            drawable.scale = Math::Vector2(scaleX, scaleY);
+            drawable.origin = Math::Vector2(0.0f, frameHeight * 0.5f);
+        }
+
+        if (m_config.beamAnimation != Animation::INVALID_CLIP_ID) {
+            auto& anim = registry.AddComponent<SpriteAnimation>(entity,
+                SpriteAnimation(m_config.beamAnimation, true, 1.0f));
+            anim.looping = true;
+            
+            if (m_config.beamFirstFrameRegion.size.x > 0.0f && 
+                m_config.beamFirstFrameRegion.size.y > 0.0f) {
+                anim.currentRegion = m_config.beamFirstFrameRegion;
+                anim.currentFrameIndex = 0;
+            }
+            
+            auto& animatedSprite = registry.AddComponent<AnimatedSprite>(entity);
+            animatedSprite.needsUpdate = true;
+        }
+
+        int beamDamage = static_cast<int>(50 + (chargeTime / 2.0f) * 100);
+        registry.AddComponent<Damage>(entity, Damage(beamDamage));
+        registry.AddComponent<Bullet>(entity, Bullet(owner));
+        registry.AddComponent<BoxCollider>(entity, BoxCollider(beamWidth, frameHeight * scaleY));
+        registry.AddComponent<CollisionLayer>(entity,
+            CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                          CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+
+        return entity;
+    }
+
 }
 }

@@ -155,6 +155,17 @@ namespace RType {
                 Core::Logger::Warning("[GameState] Failed to load force pod animation spritesheet");
             }
 
+            m_beamTexture = m_renderer->LoadTexture("assets/SFX/beam.png");
+            if (m_beamTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_beamTexture = m_renderer->LoadTexture("../assets/SFX/beam.png");
+            }
+            if (m_beamTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_beamSprite = m_renderer->CreateSprite(m_beamTexture, {});
+                Core::Logger::Info("[GameState] Beam animation spritesheet loaded");
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load beam animation spritesheet");
+            }
+
             m_enemyBulletGreenTexture = m_renderer->LoadTexture("assets/projectiles/bullet-green.png");
             if (m_enemyBulletGreenTexture == Renderer::INVALID_TEXTURE_ID) {
                 m_enemyBulletGreenTexture = m_renderer->LoadTexture("../assets/projectiles/bullet-green.png");
@@ -410,6 +421,34 @@ namespace RType {
                     frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
             }
 
+            if (m_beamTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
+                const int frameCount = 5;
+                
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_beamTexture);
+                float singleFrameWidth = textureSize.x / static_cast<float>(frameCount);
+                float frameHeight = textureSize.y;
+                
+                Animation::AnimationClipConfig beamConfig;
+                beamConfig.name = "beam_animation";
+                beamConfig.texturePath = "assets/SFX/beam.png";
+                beamConfig.looping = true;
+                beamConfig.playbackSpeed = 1.0f;
+                
+                for (int i = 0; i < frameCount; ++i) {
+                    Animation::FrameDef frame;
+                    frame.region.position.x = static_cast<float>(i) * singleFrameWidth;
+                    frame.region.position.y = 0.0f;
+                    frame.region.size.x = singleFrameWidth;
+                    frame.region.size.y = frameHeight;
+                    frame.duration = 0.1f;
+                    beamConfig.frames.push_back(frame);
+                }
+                
+                m_beamClipId = m_animationModule->CreateClip(beamConfig);
+                Core::Logger::Info("[GameState] Created beam animation clip with {} frames (frame size: {}x{}, texture size: {}x{})", 
+                    frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
+            }
+
             m_animationSystem = std::make_unique<RType::ECS::AnimationSystem>(m_animationModule.get());
 
             ECS::EffectConfig effectConfig;
@@ -422,6 +461,9 @@ namespace RType {
             effectConfig.forcePodAnimation = m_forcePodClipId;
             effectConfig.forcePodTexture = m_forcePodTexture;
             effectConfig.forcePodSprite = m_forcePodSprite;
+            effectConfig.beamAnimation = m_beamClipId;
+            effectConfig.beamTexture = m_beamTexture;
+            effectConfig.beamSprite = m_beamSprite;
             
             if (m_animationModule) {
                 if (m_explosionClipId != Animation::INVALID_CLIP_ID) {
@@ -437,6 +479,11 @@ namespace RType {
                 if (m_forcePodClipId != Animation::INVALID_CLIP_ID) {
                     auto forcePodFirstFrame = m_animationModule->GetFrameAtTime(m_forcePodClipId, 0.0f, true);
                     effectConfig.forcePodFirstFrameRegion = forcePodFirstFrame.region;
+                }
+                
+                if (m_beamClipId != Animation::INVALID_CLIP_ID) {
+                    auto beamFirstFrame = m_animationModule->GetFrameAtTime(m_beamClipId, 0.0f, true);
+                    effectConfig.beamFirstFrameRegion = beamFirstFrame.region;
                 }
             }
             

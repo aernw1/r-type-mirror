@@ -223,6 +223,65 @@ namespace RType {
 
         }
 
+        void InGameState::createBeamEntity() {
+            if (m_localPlayerEntity == ECS::NULL_ENTITY || !m_registry.IsEntityAlive(m_localPlayerEntity)) {
+                return;
+            }
+
+            if (!m_registry.HasComponent<ECS::Position>(m_localPlayerEntity) ||
+                !m_registry.HasComponent<ECS::Shooter>(m_localPlayerEntity) ||
+                !m_effectFactory) {
+                return;
+            }
+
+            const auto& playerPos = m_registry.GetComponent<ECS::Position>(m_localPlayerEntity);
+            const auto& shooter = m_registry.GetComponent<ECS::Shooter>(m_localPlayerEntity);
+
+            float beamX = playerPos.x + shooter.offsetX;
+            float beamY = playerPos.y + shooter.offsetY;
+
+            float screenWidth = 1280.0f;
+            if (m_levelData.config.screenWidth > 0.0f) {
+                screenWidth = m_levelData.config.screenWidth;
+            }
+
+            float beamHeight = 40.0f;
+            if (m_registry.HasComponent<ECS::Drawable>(m_localPlayerEntity)) {
+                const auto& playerDrawable = m_registry.GetComponent<ECS::Drawable>(m_localPlayerEntity);
+                beamHeight = 80.0f * playerDrawable.scale.y;
+            }
+
+            float savedChargeTime = m_chargeTime;
+            m_beamEntity = m_effectFactory->CreateBeam(m_registry, beamX, beamY, m_localPlayerEntity, savedChargeTime, screenWidth, beamHeight);
+        }
+
+        void InGameState::updateBeam(float dt) {
+            if (m_beamEntity == ECS::NULL_ENTITY) {
+                return;
+            }
+
+            if (!m_registry.IsEntityAlive(m_beamEntity)) {
+                m_beamEntity = ECS::NULL_ENTITY;
+                return;
+            }
+
+            if (m_registry.HasComponent<ECS::SpriteAnimation>(m_beamEntity)) {
+                auto& anim = m_registry.GetComponent<ECS::SpriteAnimation>(m_beamEntity);
+                if (anim.looping && m_animationSystem) {
+                    anim.destroyOnComplete = false;
+                }
+            }
+
+            m_beamDuration -= dt;
+            if (m_beamDuration <= 0.0f) {
+                if (m_registry.IsEntityAlive(m_beamEntity)) {
+                    m_registry.DestroyEntity(m_beamEntity);
+                }
+                m_beamEntity = ECS::NULL_ENTITY;
+                m_beamDuration = 0.0f;
+            }
+        }
+
         std::pair<std::string, uint8_t> InGameState::FindPlayerNameAndNumber(uint64_t ownerHash, const std::unordered_set<uint8_t>& assignedNumbers) const {
             std::string playerName = "Player";
             uint8_t playerNum = 0;
