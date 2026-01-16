@@ -47,7 +47,16 @@ namespace ECS {
             auto& anim = registry.AddComponent<SpriteAnimation>(entity,
                 SpriteAnimation(clipId, false, 1.5f));
             anim.destroyOnComplete = true;
-            registry.AddComponent<AnimatedSprite>(entity);
+            
+            if (clipId == m_config.explosionSmall && 
+                m_config.explosionFirstFrameRegion.size.x > 0.0f && 
+                m_config.explosionFirstFrameRegion.size.y > 0.0f) {
+                anim.currentRegion = m_config.explosionFirstFrameRegion;
+                anim.currentFrameIndex = 0;
+            }
+            
+            auto& animatedSprite = registry.AddComponent<AnimatedSprite>(entity);
+            animatedSprite.needsUpdate = true;
         }
 
         auto& drawable = registry.AddComponent<Drawable>(entity, Drawable());
@@ -266,7 +275,15 @@ namespace ECS {
                 SpriteAnimation(m_config.shootingAnimation, false, 1.5f));
             anim.destroyOnComplete = true;
             anim.playbackSpeed = 1.5f;
-            registry.AddComponent<AnimatedSprite>(entity);
+            
+            if (m_config.shootingFirstFrameRegion.size.x > 0.0f && 
+                m_config.shootingFirstFrameRegion.size.y > 0.0f) {
+                anim.currentRegion = m_config.shootingFirstFrameRegion;
+                anim.currentFrameIndex = 0;
+            }
+            
+            auto& animatedSprite = registry.AddComponent<AnimatedSprite>(entity);
+            animatedSprite.needsUpdate = true;
         }
 
         return entity;

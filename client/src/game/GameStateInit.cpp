@@ -336,8 +336,7 @@ namespace RType {
             // Initialize animation module and system
             m_animationModule = std::make_unique<Animation::AnimationModule>();
 
-            // Create explosion animation clip (11 frames, 32x32 each, horizontal strip)
-            if (m_explosionTexture != Renderer::INVALID_TEXTURE_ID) {
+            if (m_explosionTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
                 Animation::GridLayout layout;
                 layout.columns = 11;
                 layout.rows = 1;
@@ -354,10 +353,12 @@ namespace RType {
                 Core::Logger::Info("[GameState] Created explosion animation clip with {} frames", 11);
             }
 
-            if (m_shootingTexture != Renderer::INVALID_TEXTURE_ID) {
-                const int frameCount = 10;
-                const float frameWidth = 25.0f;
-                const float frameHeight = 25.0f;
+            if (m_shootingTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
+                const int frameCount = 8;
+                
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_shootingTexture);
+                float singleFrameWidth = textureSize.x / static_cast<float>(frameCount);
+                float frameHeight = textureSize.y;
                 
                 Animation::AnimationClipConfig shootingConfig;
                 shootingConfig.name = "shooting_animation";
@@ -367,16 +368,17 @@ namespace RType {
                 
                 for (int i = frameCount - 1; i >= 0; --i) {
                     Animation::FrameDef frame;
-                    frame.region.position.x = static_cast<float>(i) * frameWidth;
+                    frame.region.position.x = static_cast<float>(i) * singleFrameWidth;
                     frame.region.position.y = 0.0f;
-                    frame.region.size.x = frameWidth;
+                    frame.region.size.x = singleFrameWidth;
                     frame.region.size.y = frameHeight;
                     frame.duration = 0.05f;
                     shootingConfig.frames.push_back(frame);
                 }
                 
                 m_shootingClipId = m_animationModule->CreateClip(shootingConfig);
-                Core::Logger::Info("[GameState] Created shooting animation clip with {} frames (reversed for right-to-left)", frameCount);
+                Core::Logger::Info("[GameState] Created shooting animation clip with {} frames (frame size: {}x{}, texture size: {}x{}, reversed for right-to-left)", 
+                    frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
             }
 
             if (m_forcePodTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
@@ -421,9 +423,21 @@ namespace RType {
             effectConfig.forcePodTexture = m_forcePodTexture;
             effectConfig.forcePodSprite = m_forcePodSprite;
             
-            if (m_forcePodClipId != Animation::INVALID_CLIP_ID && m_animationModule) {
-                auto firstFrame = m_animationModule->GetFrameAtTime(m_forcePodClipId, 0.0f, true);
-                effectConfig.forcePodFirstFrameRegion = firstFrame.region;
+            if (m_animationModule) {
+                if (m_explosionClipId != Animation::INVALID_CLIP_ID) {
+                    auto explosionFirstFrame = m_animationModule->GetFrameAtTime(m_explosionClipId, 0.0f, false);
+                    effectConfig.explosionFirstFrameRegion = explosionFirstFrame.region;
+                }
+                
+                if (m_shootingClipId != Animation::INVALID_CLIP_ID) {
+                    auto shootingFirstFrame = m_animationModule->GetFrameAtTime(m_shootingClipId, 0.0f, false);
+                    effectConfig.shootingFirstFrameRegion = shootingFirstFrame.region;
+                }
+                
+                if (m_forcePodClipId != Animation::INVALID_CLIP_ID) {
+                    auto forcePodFirstFrame = m_animationModule->GetFrameAtTime(m_forcePodClipId, 0.0f, true);
+                    effectConfig.forcePodFirstFrameRegion = forcePodFirstFrame.region;
+                }
             }
             
             m_effectFactory = std::make_unique<RType::ECS::EffectFactory>(effectConfig);

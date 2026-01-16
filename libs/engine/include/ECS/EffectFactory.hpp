@@ -29,6 +29,8 @@ namespace ECS {
         Renderer::TextureId forcePodTexture = Renderer::INVALID_TEXTURE_ID;
         Renderer::SpriteId forcePodSprite = Renderer::INVALID_SPRITE_ID;
         Math::Rectangle forcePodFirstFrameRegion{};
+        Math::Rectangle shootingFirstFrameRegion{};
+        Math::Rectangle explosionFirstFrameRegion{};
 
         EffectConfig() = default;
     };

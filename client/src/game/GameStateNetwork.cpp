@@ -690,16 +690,16 @@ namespace RType {
                             }
                         }
                         
-                        if (m_animationSystem && m_registry.HasComponent<ECS::SpriteAnimation>(explosionEntity)) {
+                        if (m_effectFactory && m_registry.HasComponent<ECS::SpriteAnimation>(explosionEntity)) {
+                            const auto& config = m_effectFactory->GetConfig();
                             auto& anim = m_registry.GetComponent<ECS::SpriteAnimation>(explosionEntity);
-                            if (anim.currentRegion.size.x <= 0.0f || anim.currentRegion.size.y <= 0.0f) {
-                                if (m_animationModule && anim.clipId != Animation::INVALID_CLIP_ID) {
-                                    auto firstFrame = m_animationModule->GetFrameAtTime(anim.clipId, 0.0f, anim.looping);
-                                    anim.currentRegion = firstFrame.region;
-                                    anim.currentFrameIndex = m_animationModule->GetFrameIndexAtTime(anim.clipId, 0.0f, anim.looping);
-                                    if (m_registry.HasComponent<ECS::AnimatedSprite>(explosionEntity)) {
-                                        m_registry.GetComponent<ECS::AnimatedSprite>(explosionEntity).needsUpdate = true;
-                                    }
+                            if (anim.clipId == config.explosionSmall && 
+                                config.explosionFirstFrameRegion.size.x > 0.0f && 
+                                config.explosionFirstFrameRegion.size.y > 0.0f) {
+                                anim.currentRegion = config.explosionFirstFrameRegion;
+                                anim.currentFrameIndex = 0;
+                                if (m_registry.HasComponent<ECS::AnimatedSprite>(explosionEntity)) {
+                                    m_registry.GetComponent<ECS::AnimatedSprite>(explosionEntity).needsUpdate = true;
                                 }
                             }
                         }
