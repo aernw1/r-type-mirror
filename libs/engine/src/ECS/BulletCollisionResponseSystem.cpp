@@ -61,6 +61,16 @@ namespace RType {
                 bool hitPlayer = registry.HasComponent<Player>(other);
                 bool hitObstacle = registry.HasComponent<Obstacle>(other);
 
+                bool isEnemyBullet = false;
+                if (registry.HasComponent<CollisionLayer>(bullet)) {
+                    const auto& bulletLayer = registry.GetComponent<CollisionLayer>(bullet);
+                    isEnemyBullet = (bulletLayer.layer == CollisionLayers::ENEMY_BULLET);
+                }
+
+                if (isEnemyBullet && (hitEnemy || hitBoss)) {
+                    continue;
+                }
+
                 bool shouldApplyDamage = true;
                 constexpr float BEAM_DAMAGE_TICK_INTERVAL = 0.1f;
                 
