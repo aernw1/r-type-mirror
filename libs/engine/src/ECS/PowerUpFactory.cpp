@@ -6,6 +6,8 @@
 */
 
 #include "ECS/PowerUpFactory.hpp"
+#include "ECS/EffectFactory.hpp"
+#include "Animation/AnimationTypes.hpp"
 #include "Core/Logger.hpp"
 #include <array>
 #include <atomic>
@@ -49,7 +51,8 @@ namespace RType {
             Registry& registry,
             PowerUpType type,
             float startX, float startY,
-            Renderer::IRenderer* renderer
+            Renderer::IRenderer* renderer,
+            const EffectFactory* effectFactory
         ) {
             Entity powerup = registry.CreateEntity();
 
@@ -80,8 +83,35 @@ namespace RType {
 
                     auto& drawable = registry.AddComponent<Drawable>(powerup, Drawable(spriteId, 5));
                     drawable.tint = data.color;
-                    drawable.scale = Math::Vector2(2.5f, 2.5f);
-                    registry.AddComponent<PowerUpGlow>(powerup);
+                    float scale = GetPowerUpScale(type);
+                    drawable.scale = Math::Vector2(scale, scale);
+
+                    if (type == PowerUpType::FORCE_POD && effectFactory) {
+                        const auto& config = effectFactory->GetConfig();
+                        if (config.forcePodAnimation != Animation::INVALID_CLIP_ID) {
+                            if (config.forcePodSprite != Renderer::INVALID_SPRITE_ID) {
+                                drawable.spriteId = config.forcePodSprite;
+                            }
+
+                            auto& anim = registry.AddComponent<SpriteAnimation>(powerup,
+                                SpriteAnimation(config.forcePodAnimation, true, 1.0f));
+                            anim.looping = true;
+                            
+                            if (config.forcePodFirstFrameRegion.size.x > 0.0f && config.forcePodFirstFrameRegion.size.y > 0.0f) {
+                                anim.currentRegion = config.forcePodFirstFrameRegion;
+                                anim.currentFrameIndex = 0;
+                            }
+                            
+                            auto& animatedSprite = registry.AddComponent<AnimatedSprite>(powerup);
+                            animatedSprite.needsUpdate = true;
+                        } else {
+                            auto& glow = registry.AddComponent<PowerUpGlow>(powerup);
+                            glow.baseScale = scale;
+                        }
+                    } else {
+                        auto& glow = registry.AddComponent<PowerUpGlow>(powerup);
+                        glow.baseScale = scale;
+                    }
                 }
             }
 
@@ -200,12 +230,13 @@ namespace RType {
                 if (textureId != Renderer::INVALID_TEXTURE_ID) {
                     Renderer::SpriteId spriteId = renderer->CreateSprite(
                         textureId,
-                        Renderer::Rectangle{{0.0f, 0.0f}, {128.0f, 128.0f}}
+                        Renderer::Rectangle{{0.0f, 0.0f}, {96.0f, 96.0f}}
                     );
 
                     auto& drawable = registry.AddComponent<Drawable>(forcePod, Drawable(spriteId, 9));
                     drawable.tint = Math::Color(1.0f, 0.6f, 0.0f, 1.0f);
-                    drawable.scale = Math::Vector2(0.4f, 0.4f);
+                    float scale = GetPowerUpScale(PowerUpType::FORCE_POD);
+                    drawable.scale = Math::Vector2(scale, scale);
                 }
             }
 
@@ -222,6 +253,13 @@ namespace RType {
 
         const char* PowerUpFactory::GetPowerUpName(PowerUpType type) {
             return POWERUP_DATA_TABLE[static_cast<size_t>(type)].name;
+        }
+
+        float PowerUpFactory::GetPowerUpScale(PowerUpType type) {
+            if (type == PowerUpType::FORCE_POD) {
+                return 0.33f * 5.0f;  // 5x scale for force pod (upscaled more)
+            }
+            return 2.5f;
         }
     }
 }

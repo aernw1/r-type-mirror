@@ -19,12 +19,26 @@ namespace ECS {
         Animation::AnimationClipId spawnEffect = Animation::INVALID_CLIP_ID;
         Animation::AnimationClipId deathEffect = Animation::INVALID_CLIP_ID;
         Animation::AnimationClipId shootingAnimation = Animation::INVALID_CLIP_ID;
+        Animation::AnimationClipId forcePodAnimation = Animation::INVALID_CLIP_ID;
+        Animation::AnimationClipId beamAnimation = Animation::INVALID_CLIP_ID;
+        Animation::AnimationClipId hitAnimation = Animation::INVALID_CLIP_ID;
 
         Renderer::FontId damageFont = Renderer::INVALID_FONT_ID;
         Renderer::TextureId effectsTexture = Renderer::INVALID_TEXTURE_ID;
         Renderer::SpriteId effectsSprite = Renderer::INVALID_SPRITE_ID;
         Renderer::TextureId shootingTexture = Renderer::INVALID_TEXTURE_ID;
         Renderer::SpriteId shootingSprite = Renderer::INVALID_SPRITE_ID;
+        Renderer::TextureId forcePodTexture = Renderer::INVALID_TEXTURE_ID;
+        Renderer::SpriteId forcePodSprite = Renderer::INVALID_SPRITE_ID;
+        Renderer::TextureId beamTexture = Renderer::INVALID_TEXTURE_ID;
+        Renderer::SpriteId beamSprite = Renderer::INVALID_SPRITE_ID;
+        Renderer::TextureId hitTexture = Renderer::INVALID_TEXTURE_ID;
+        Renderer::SpriteId hitSprite = Renderer::INVALID_SPRITE_ID;
+        Math::Rectangle forcePodFirstFrameRegion{};
+        Math::Rectangle shootingFirstFrameRegion{};
+        Math::Rectangle explosionFirstFrameRegion{};
+        Math::Rectangle beamFirstFrameRegion{};
+        Math::Rectangle hitFirstFrameRegion{};
 
         EffectConfig() = default;
     };
@@ -74,6 +88,10 @@ namespace ECS {
         Entity CreateDeathEffect(Registry& registry, float x, float y);
 
         Entity CreateShootingEffect(Registry& registry, float x, float y, Entity owner = NULL_ENTITY);
+
+        Entity CreateBeam(Registry& registry, float x, float y, Entity owner, float chargeTime, float screenWidth = 1280.0f, float beamHeight = 64.0f);
+
+        Entity CreateHitEffect(Registry& registry, float x, float y);
 
         void CreateHitMarker(Registry& registry, Entity target, int damage);
 

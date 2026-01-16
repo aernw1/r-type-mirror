@@ -15,6 +15,12 @@
 
 namespace RType {
     namespace ECS {
+        class EffectFactory;
+    }
+}
+
+namespace RType {
+    namespace ECS {
 
         class PowerUpFactory {
         public:
@@ -24,7 +30,8 @@ namespace RType {
                 PowerUpType type,
                 float startX,
                 float startY,
-                Renderer::IRenderer* renderer
+                Renderer::IRenderer* renderer,
+                const EffectFactory* effectFactory = nullptr
             );
 
             // Apply powerup effect to player
@@ -35,7 +42,6 @@ namespace RType {
                 Renderer::IRenderer* renderer
             );
 
-            // Create force pod entity (separate from powerup pickup)
             static Entity CreateForcePod(
                 Registry& registry,
                 Entity owner,
@@ -46,6 +52,7 @@ namespace RType {
             static Math::Color GetPowerUpColor(PowerUpType type);
             static const char* GetPowerUpSpritePath(PowerUpType type);
             static const char* GetPowerUpName(PowerUpType type);
+            static float GetPowerUpScale(PowerUpType type);
         };
 
     }
