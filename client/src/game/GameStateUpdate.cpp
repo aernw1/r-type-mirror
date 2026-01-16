@@ -12,6 +12,7 @@
 #include "Core/Logger.hpp"
 #include "ResultsState.hpp"
 #include "RoomListState.hpp"
+#include "MenuState.hpp"
 #include <cmath>
 
 using namespace RType::ECS;
@@ -20,6 +21,27 @@ namespace RType {
     namespace Client {
 
         void InGameState::HandleInput() {
+            if (m_levelProgress.allLevelsComplete) {
+                if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_gameOverEnterPressed) {
+                    m_gameOverEnterPressed = true;
+                    enterResultsScreen();
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
+                    m_gameOverEnterPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_gameOverEscapePressed) {
+                    m_gameOverEscapePressed = true;
+                    if (m_context.networkClient) {
+                        m_context.networkClient->Stop();
+                        m_context.networkClient.reset();
+                    }
+                    m_machine.ChangeState(std::make_unique<MenuState>(m_machine, m_context));
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
+                    m_gameOverEscapePressed = false;
+                }
+                return;
+            }
+
             if (m_isGameOver) {
                 if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_gameOverEnterPressed) {
                     m_gameOverEnterPressed = true;
@@ -136,6 +158,13 @@ namespace RType {
             triggerGameOverIfNeeded();
             if (m_isGameOver) {
                 m_gameOverElapsed += dt;
+                updateHUD();
+                return;
+            }
+
+            triggerVictoryIfNeeded();
+            if (m_levelProgress.allLevelsComplete) {
+                m_levelProgress.victoryElapsed += dt;
                 updateHUD();
                 return;
             }
@@ -489,12 +518,12 @@ namespace RType {
                     m_context.audio->StopMusic(m_gameMusic);
                     m_gameMusicPlaying = false;
                 }
-                
+
                 if (m_bossMusic != Audio::INVALID_MUSIC_ID && m_bossMusicPlaying) {
                     m_context.audio->StopMusic(m_bossMusic);
                     m_bossMusicPlaying = false;
                 }
-                
+
                 if (m_gameOverMusic != Audio::INVALID_MUSIC_ID && !m_gameOverMusicPlaying) {
                     Audio::PlaybackOptions opts;
                     opts.loop = true;
@@ -533,6 +562,44 @@ namespace RType {
 
             if (m_gameOverScoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_gameOverScoreEntity)) {
                 auto& label = m_registry.GetComponent<TextLabel>(m_gameOverScoreEntity);
+                label.text = "SCORE " + std::to_string(m_playerScore);
+            }
+        }
+
+        void InGameState::triggerVictoryIfNeeded() {
+            if (!m_levelProgress.allLevelsComplete) {
+                return;
+            }
+
+            if (m_victoryTitleEntity == NULL_ENTITY && m_gameOverFontLarge != Renderer::INVALID_FONT_ID) {
+                m_victoryTitleEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(m_victoryTitleEntity, Position{640.0f, 260.0f});
+                TextLabel title("VICTORY!", m_gameOverFontLarge, 56);
+                title.centered = true;
+                title.color = {0.2f, 1.0f, 0.2f, 1.0f};
+                m_registry.AddComponent<TextLabel>(m_victoryTitleEntity, std::move(title));
+            }
+
+            if (m_victoryScoreEntity == NULL_ENTITY && m_gameOverFontMedium != Renderer::INVALID_FONT_ID) {
+                m_victoryScoreEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(m_victoryScoreEntity, Position{640.0f, 360.0f});
+                TextLabel score("", m_gameOverFontMedium, 22);
+                score.centered = true;
+                score.color = {0.5f, 1.0f, 0.5f, 0.95f};
+                m_registry.AddComponent<TextLabel>(m_victoryScoreEntity, std::move(score));
+            }
+
+            if (m_victoryHintEntity == NULL_ENTITY && m_hudFontSmall != Renderer::INVALID_FONT_ID) {
+                m_victoryHintEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(m_victoryHintEntity, Position{640.0f, 430.0f});
+                TextLabel hint("Press ENTER to view results  |  ESC to return to menu", m_hudFontSmall, 14);
+                hint.centered = true;
+                hint.color = {0.5f, 1.0f, 0.5f, 0.85f};
+                m_registry.AddComponent<TextLabel>(m_victoryHintEntity, std::move(hint));
+            }
+
+            if (m_victoryScoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_victoryScoreEntity)) {
+                auto& label = m_registry.GetComponent<TextLabel>(m_victoryScoreEntity);
                 label.text = "SCORE " + std::to_string(m_playerScore);
             }
         }

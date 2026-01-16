@@ -37,11 +37,18 @@ namespace RType {
                     const float LOADING_DURATION = 2.0f;
 
                     if (m_levelProgress.transitionTimer >= LOADING_DURATION) {
-                        LoadNextLevel();
+                        if (m_levelProgress.currentLevelNumber >= m_levelProgress.totalLevels) {
+                            m_levelProgress.allLevelsComplete = true;
+                            m_levelProgress.transitionPhase = TransitionPhase::NONE;
+                            m_levelProgress.fadeAlpha = 0.0f;
+                            Core::Logger::Info("[Transition] ALL LEVELS COMPLETE! Victory!");
+                        } else {
+                            LoadNextLevel();
 
-                        m_levelProgress.transitionPhase = TransitionPhase::FADE_IN;
-                        m_levelProgress.transitionTimer = 0.0f;
-                        Core::Logger::Info("[Transition] LOADING complete, entering FADE_IN");
+                            m_levelProgress.transitionPhase = TransitionPhase::FADE_IN;
+                            m_levelProgress.transitionTimer = 0.0f;
+                            Core::Logger::Info("[Transition] LOADING complete, entering FADE_IN");
+                        }
                     }
                     break;
                 }

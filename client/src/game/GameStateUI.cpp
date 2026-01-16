@@ -320,6 +320,7 @@ namespace RType {
             renderHealthBars();
             renderBossHealthBar();
             renderGameOverOverlay();
+            renderVictoryOverlay();
             renderLevelTransition();
         }
 
@@ -446,6 +447,17 @@ namespace RType {
             rect.position = Renderer::Vector2(0.0f, 0.0f);
             rect.size = Renderer::Vector2(1280.0f, 720.0f);
             m_renderer->DrawRectangle(rect, Renderer::Color(0.0f, 0.0f, 0.0f, 0.45f));
+        }
+
+        void InGameState::renderVictoryOverlay() {
+            if (!m_levelProgress.allLevelsComplete) {
+                return;
+            }
+
+            Renderer::Rectangle bgRect;
+            bgRect.position = Renderer::Vector2(0.0f, 0.0f);
+            bgRect.size = Renderer::Vector2(1280.0f, 720.0f);
+            m_renderer->DrawRectangle(bgRect, Renderer::Color(0.0f, 0.0f, 0.0f, 0.45f));
         }
 
         void InGameState::initializeBossHealthBar() {

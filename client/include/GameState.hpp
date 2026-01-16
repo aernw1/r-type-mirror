@@ -113,8 +113,10 @@ namespace RType {
             void initializeBossHealthBar();
             void destroyBossHealthBar();
             void renderGameOverOverlay();
+            void renderVictoryOverlay();
             void renderLevelTransition();
             void triggerGameOverIfNeeded();
+            void triggerVictoryIfNeeded();
             void enterResultsScreen();
 
             // Level progression
@@ -253,7 +255,9 @@ namespace RType {
             struct LevelProgressionState {
                 bool bossDefeated = false;
                 bool levelComplete = false;
+                bool allLevelsComplete = false;
                 float transitionTimer = 0.0f;
+                float victoryElapsed = 0.0f;
                 int currentLevelNumber = 1;
                 int nextLevelNumber = 2;
                 int totalLevels = 3;
@@ -318,6 +322,10 @@ namespace RType {
             RType::ECS::Entity m_gameOverTitleEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity m_gameOverScoreEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity m_gameOverHintEntity = RType::ECS::NULL_ENTITY;
+
+            RType::ECS::Entity m_victoryTitleEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_victoryScoreEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_victoryHintEntity = RType::ECS::NULL_ENTITY;
 
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;
