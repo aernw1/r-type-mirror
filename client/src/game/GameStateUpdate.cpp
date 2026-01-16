@@ -80,7 +80,7 @@ namespace RType {
             } else {
                 if (shootPressedLastFrame) {
                     float savedChargeTime = m_chargeTime;
-                    
+
                     if (savedChargeTime >= 2.0f) {
                         if (m_localPlayerEntity != ECS::NULL_ENTITY &&
                             m_registry.IsEntityAlive(m_localPlayerEntity) &&
@@ -96,7 +96,7 @@ namespace RType {
                                  Audio::PlaybackOptions opts;
                                  opts.volume = 1.0f;
                                  opts.loop = false;
-                                 m_context.audio->StopMusic(m_shootMusic); 
+                                 m_context.audio->StopMusic(m_shootMusic);
                                  m_context.audio->PlayMusic(m_shootMusic, opts);
                             } else if (m_playerShootSound != Audio::INVALID_SOUND_ID) {
                                 Audio::PlaybackOptions opts;
