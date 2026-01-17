@@ -8,6 +8,11 @@
 #include "ECS/BossSystem.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
+#include <cmath>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 namespace RType {
     namespace ECS {
@@ -54,7 +59,34 @@ namespace RType {
                     StopScrollingAndFixPosition(registry, bossEntity, 900.0f);
                 }
 
-                // Update damage flash timer
+                if (registry.HasComponent<BossMovementPattern>(bossEntity) &&
+                    !registry.HasComponent<Scrollable>(bossEntity) &&
+                    registry.HasComponent<Position>(bossEntity)) {
+
+                    auto& movement = registry.GetComponent<BossMovementPattern>(bossEntity);
+                    auto& pos = registry.GetComponent<Position>(bossEntity);
+
+                    movement.timer += deltaTime;
+
+                    const float pi = 3.14159265358979323846f;
+
+                    // Vertical movement
+                    float timeY = movement.timer * movement.frequencyY * 2.0f * pi;
+                    float newY = movement.centerY + movement.amplitudeY * std::sin(static_cast<double>(timeY));
+
+                    // Horizontal oscillation
+                    float timeX = movement.timer * movement.frequencyX * 2.0f * pi;
+                    float newX = movement.centerX + movement.amplitudeX * std::sin(static_cast<double>(timeX * 2.0));
+
+                    const float minY = 100.0f;
+                    const float maxY = 620.0f;
+                    const float minX = 800.0f;
+                    const float maxX = 1000.0f;
+
+                    pos.y = std::max(minY, std::min(maxY, newY));
+                    pos.x = std::max(minX, std::min(maxX, newX));
+                }
+
                 if (registry.HasComponent<DamageFlash>(bossEntity)) {
                     auto& flash = registry.GetComponent<DamageFlash>(bossEntity);
                     if (flash.isActive) {
