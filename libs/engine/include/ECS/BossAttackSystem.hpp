@@ -28,6 +28,9 @@ namespace RType {
             void CreateBossBullet(Registry& registry, float x, float y, float angle, float speed);
             void CreateBlackOrb(Registry& registry, Entity bossEntity, float bossX, float bossY);
             void CreateThirdBullet(Registry& registry, Entity bossEntity, float bossX, float bossY);
+
+            void CreateAnimatedOrb(Registry& registry, Entity bossEntity, float bossX, float bossY);
+            void CreateSecondAttackSpray(Registry& registry, Entity bossEntity, float bossX, float bossY);
         };
 
     }
