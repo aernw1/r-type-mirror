@@ -197,12 +197,19 @@ namespace RType {
                         m_networkEntityMap[entityState.entityId] = newEntity;
                     } else if (type == network::EntityType::BOSS) {
                         Renderer::SpriteId bossSprite = Renderer::INVALID_SPRITE_ID;
-                        auto spriteIt = m_levelAssets.sprites.find("boss_dragon");
-                        if (spriteIt != m_levelAssets.sprites.end()) {
-                            bossSprite = spriteIt->second;
+
+                        std::vector<std::string> bossNames = {"boss_2", "boss_dragon", "boss"};
+                        for (const auto& bossName : bossNames) {
+                            auto spriteIt = m_levelAssets.sprites.find(bossName);
+                            if (spriteIt != m_levelAssets.sprites.end()) {
+                                bossSprite = spriteIt->second;
+                                Core::Logger::Info("[GameState] Using boss sprite: {}", bossName);
+                                break;
+                            }
                         }
 
                         if (bossSprite == Renderer::INVALID_SPRITE_ID) {
+                            Core::Logger::Warning("[GameState] No boss sprite found in level assets");
                             continue;
                         }
 
@@ -254,6 +261,35 @@ namespace RType {
                                 d.origin = Math::Vector2(20.0f, 20.0f);
                             } else {
                                 Core::Logger::Warning("[GameState] Missing black orb sprite (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags == 16) {
+                            auto waveAttackSpriteIt = m_levelAssets.sprites.find("wave_attack");
+                            if (waveAttackSpriteIt != m_levelAssets.sprites.end() &&
+                                m_waveAttackClipId != Animation::INVALID_CLIP_ID) {
+
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(waveAttackSpriteIt->second, 12));
+                                d.scale = {3.0f, 3.0f};
+                                d.origin = Math::Vector2(15.0f, 20.0f);
+
+                                if (m_animationModule) {
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity, ECS::SpriteAnimation{m_waveAttackClipId, true, 1.0f});
+                                    auto firstFrame = m_animationModule->GetFrameAtTime(m_waveAttackClipId, 0.0f, true);
+                                    anim.currentRegion = firstFrame.region;
+                                    anim.currentFrameIndex = 0;
+
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                }
+
+                                m_registry.AddComponent<Bullet>(newEntity, Bullet(ECS::NULL_ENTITY));
+                                m_registry.AddComponent<CircleCollider>(newEntity, CircleCollider(45.0f)); 
+                                m_registry.AddComponent<Damage>(newEntity, Damage(10));
+                                m_registry.AddComponent<CollisionLayer>(newEntity,
+                                    CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER));
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing wave_attack sprite or animation (entity {})", entityState.entityId);
                                 m_registry.DestroyEntity(newEntity);
                                 continue;
                             }
