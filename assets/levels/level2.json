@@ -27,7 +27,8 @@
             "powerup-speed": "assets/powerups/speed.png",
             "powerup-shield": "assets/powerups/shield.png",
             "boss_2": "assets/boss/boss_2.png",
-            "wave_attack": "assets/boss/attacks/boss 2/wave_attack.png"
+            "wave_attack": "assets/boss/attacks/boss_2/wave_attack.png",
+            "second_attack": "assets/boss/attacks/boss_2/second_attack_boss2.png"
         },
         "fonts": {
             "main": {

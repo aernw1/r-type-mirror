@@ -50,7 +50,6 @@ namespace RType {
                     attack.timeSinceLastAttack = 0.0f;
 
                     if (boss.bossId == 1) {
-                        // Boss 1
                         switch (attack.currentPattern) {
                             case BossAttackPattern::FAN_SPRAY:
                                 CreateFanSpray(registry, bossEntity, pos.x, pos.y);
@@ -68,8 +67,20 @@ namespace RType {
                                 break;
                         }
                     } else if (boss.bossId == 2) {
-                        // Boss 2
-                        CreateAnimatedOrb(registry, bossEntity, pos.x, pos.y);
+                        switch (attack.currentPattern) {
+                            case BossAttackPattern::ANIMATED_ORB:
+                                CreateAnimatedOrb(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;  // Switch to second attack
+                                break;
+                            case BossAttackPattern::SPIRAL_WAVE:
+                                CreateSecondAttackSpray(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::ANIMATED_ORB;  // Switch back to first attack
+                                break;
+                            default:
+                                CreateAnimatedOrb(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;
+                                break;
+                        }
                     }
                 }
             }
@@ -252,10 +263,54 @@ namespace RType {
                 registry.AddComponent<CircleCollider>(orb, CircleCollider{15.0f});
                 registry.AddComponent<CollisionLayer>(orb,
                     CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER));
-                registry.AddComponent<Damage>(orb, Damage{8});
+                registry.AddComponent<Damage>(orb, Damage{20});
             }
 
             Core::Logger::Info("[BossAttackSystem] Boss 2 created wave attack burst with {} orbs", orbCount);
+        }
+
+        void BossAttackSystem::CreateSecondAttackSpray(Registry& registry, Entity bossEntity, float bossX, float bossY) {
+            const int orbCount = 30;
+            const float baseSpeed = 300.0f;
+
+            const float spawnX = bossX + 114.0f;
+            const float spawnY = bossY + 94.0f;
+
+            const float fullCircle = 2.0f * M_PI;
+            const float angleStep = fullCircle / orbCount;
+
+            for (int i = 0; i < orbCount; i++) {
+                Entity orb = registry.CreateEntity();
+
+                if (registry.HasComponent<Obstacle>(orb)) {
+                    registry.RemoveComponent<Obstacle>(orb);
+                }
+                if (registry.HasComponent<ObstacleMetadata>(orb)) {
+                    registry.RemoveComponent<ObstacleMetadata>(orb);
+                }
+
+                registry.AddComponent<Position>(orb, Position{spawnX, spawnY});
+
+                float angle = i * angleStep;
+
+                float speedVariation = baseSpeed + (std::sin(i * 0.5f) * 50.0f);
+
+                float vx = std::cos(angle) * speedVariation;
+                float vy = std::sin(angle) * speedVariation;
+
+                registry.AddComponent<Velocity>(orb, Velocity{vx, vy});
+
+                registry.AddComponent<Bullet>(orb, Bullet{bossEntity});
+                registry.AddComponent<BossBullet>(orb, BossBullet{});
+                registry.AddComponent<SecondAttack>(orb, SecondAttack{});
+
+                registry.AddComponent<CircleCollider>(orb, CircleCollider{20.0f});
+                registry.AddComponent<CollisionLayer>(orb,
+                    CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER));
+                registry.AddComponent<Damage>(orb, Damage{10});
+            }
+
+            Core::Logger::Info("[BossAttackSystem] Boss 2 created massive 360° spray with {} orbs", orbCount);
         }
 
     }

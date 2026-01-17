@@ -162,6 +162,10 @@ namespace RType {
             WaveAttack() = default;
         };
 
+        struct SecondAttack : public IComponent {
+            SecondAttack() = default;
+        };
+
         struct BlackOrb : public IComponent {
             float attractionRadius = 200.0f;
             float absorptionRadius = 30.0f;

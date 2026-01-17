@@ -30,6 +30,7 @@ namespace RType {
             void CreateThirdBullet(Registry& registry, Entity bossEntity, float bossX, float bossY);
 
             void CreateAnimatedOrb(Registry& registry, Entity bossEntity, float bossX, float bossY);
+            void CreateSecondAttackSpray(Registry& registry, Entity bossEntity, float bossX, float bossY);
         };
 
     }
