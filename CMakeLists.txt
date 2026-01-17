@@ -49,7 +49,6 @@ add_executable(r-type_client
     client/src/GameState.cpp
     client/src/ResultsState.cpp
     client/src/EditorState.cpp
-    client/src/level_transition/LevelTransitionState.cpp
     client/src/editor/EditorCanvasManager.cpp
     client/src/editor/EditorAssetLibrary.cpp
     client/src/editor/EditorUIManager.cpp

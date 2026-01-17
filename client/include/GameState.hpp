@@ -113,7 +113,10 @@ namespace RType {
             void initializeBossHealthBar();
             void destroyBossHealthBar();
             void renderGameOverOverlay();
+            void renderVictoryOverlay();
+            void renderLevelTransition();
             void triggerGameOverIfNeeded();
+            void triggerVictoryIfNeeded();
             void enterResultsScreen();
             void createBeamEntity();
             void updateBeam(float dt);
@@ -154,6 +157,10 @@ namespace RType {
             void CreatePlayerNameLabel(RType::ECS::Entity playerEntity, const std::string& playerName, float x, float y);
             void UpdatePlayerNameLabelPosition(RType::ECS::Entity playerEntity, float x, float y);
             void DestroyPlayerNameLabel(RType::ECS::Entity playerEntity);
+
+            // Level transition
+            void UpdateLevelTransition(float dt);
+            void LoadNextLevel();
         private:
             GameStateMachine& m_machine;
             GameContext& m_context;
@@ -239,14 +246,25 @@ namespace RType {
             std::unordered_map<uint32_t, uint8_t> m_bulletFlagsMap; // Track bullet flags to detect type changes
             RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player entity mirrored from server
 
-            // Level progression tracking
+            // Level progression tracking with visual transition
+            enum class TransitionPhase {
+                NONE,
+                FADE_OUT,
+                LOADING,
+                FADE_IN
+            };
+
             struct LevelProgressionState {
-                bool bossSpawned = false;
                 bool bossDefeated = false;
                 bool levelComplete = false;
+                bool allLevelsComplete = false;
                 float transitionTimer = 0.0f;
+                float victoryElapsed = 0.0f;
                 int currentLevelNumber = 1;
+                int nextLevelNumber = 2;
                 int totalLevels = 3;
+                TransitionPhase transitionPhase = TransitionPhase::NONE;
+                float fadeAlpha = 0.0f;
             };
             LevelProgressionState m_levelProgress;
 
@@ -319,6 +337,10 @@ namespace RType {
             RType::ECS::Entity m_gameOverTitleEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity m_gameOverScoreEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity m_gameOverHintEntity = RType::ECS::NULL_ENTITY;
+
+            RType::ECS::Entity m_victoryTitleEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_victoryScoreEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_victoryHintEntity = RType::ECS::NULL_ENTITY;
 
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;

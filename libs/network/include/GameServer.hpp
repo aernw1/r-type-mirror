@@ -209,6 +209,8 @@ namespace network {
         bool m_bossDefeated = false;
         bool m_levelComplete = false;
         int m_currentLevel = 1;
+        float m_levelTransitionTimer = 0.0f;
+        bool m_waitingForLevelTransition = false;
 
         uint32_t m_stateSequence = 0;
         std::unordered_map<uint32_t, EntityState> m_lastSentState;
