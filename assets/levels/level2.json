@@ -26,7 +26,8 @@
             "powerup-force-pod": "assets/powerups/force_pod.png",
             "powerup-speed": "assets/powerups/speed.png",
             "powerup-shield": "assets/powerups/shield.png",
-            "boss_dragon": "assets/boss/boss_dragon.png"
+            "boss_2": "assets/boss/boss_2.png",
+            "wave_attack": "assets/boss/attacks/boss 2/wave_attack.png"
         },
         "fonts": {
             "main": {
@@ -965,13 +966,14 @@
         }
     ],
     "boss": {
-        "texture": "boss_dragon",
+        "texture": "boss_2",
         "position": { "x": 1000.0, "y": 200.0 },
-        "width": 384.0,
-        "height": 564.0,
+        "width": 228.0,
+        "height": 188.0,
         "health": 1000,
         "scrollSpeed": -75.0,
-        "attackPattern": 1
+        "attackPattern": 1,
+        "bossId": 2
     },
     "enemies": [],
     "playerSpawns": [

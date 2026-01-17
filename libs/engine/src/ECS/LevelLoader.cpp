@@ -159,6 +159,7 @@ namespace RType {
                     boss.health = bossJson.value("health", 1000);
                     boss.scrollSpeed = bossJson.value("scrollSpeed", -300.0f);
                     boss.attackPattern = bossJson.value("attackPattern", 1);
+                    boss.bossId = bossJson.value("bossId", static_cast<uint8_t>(1));
 
                     level.boss = boss;
                 }
@@ -432,7 +433,7 @@ namespace RType {
 
             Entity bossEntity = registry.CreateEntity();
 
-            registry.AddComponent<Boss>(bossEntity, Boss{});
+            registry.AddComponent<Boss>(bossEntity, Boss{boss.bossId});
 
             registry.AddComponent<Position>(bossEntity, Position{boss.x, boss.y});
 
@@ -445,7 +446,11 @@ namespace RType {
             registry.AddComponent<Scrollable>(bossEntity, Scrollable{boss.scrollSpeed});
 
             auto& bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{3.0f});
-            bossAttack.currentPattern = static_cast<BossAttackPattern>(boss.attackPattern);
+            if (boss.bossId == 2) {
+                bossAttack.currentPattern = BossAttackPattern::ANIMATED_ORB;
+            } else {
+                bossAttack.currentPattern = static_cast<BossAttackPattern>(boss.attackPattern);
+            }
 
             registry.AddComponent<DamageFlash>(bossEntity, DamageFlash{0.1f});
 

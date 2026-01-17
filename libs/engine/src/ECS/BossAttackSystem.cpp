@@ -35,33 +35,41 @@ namespace RType {
                 }
 
                 if (!registry.HasComponent<BossAttack>(bossEntity) ||
-                    !registry.HasComponent<Position>(bossEntity)) {
+                    !registry.HasComponent<Position>(bossEntity) ||
+                    !registry.HasComponent<Boss>(bossEntity)) {
                     continue;
                 }
 
                 auto& attack = registry.GetComponent<BossAttack>(bossEntity);
                 const auto& pos = registry.GetComponent<Position>(bossEntity);
+                const auto& boss = registry.GetComponent<Boss>(bossEntity);
 
                 attack.timeSinceLastAttack += deltaTime;
 
                 if (attack.timeSinceLastAttack >= attack.attackCooldown) {
                     attack.timeSinceLastAttack = 0.0f;
 
-                    switch (attack.currentPattern) {
-                        case BossAttackPattern::FAN_SPRAY:
-                            CreateFanSpray(registry, bossEntity, pos.x, pos.y);
-                            attack.currentPattern = BossAttackPattern::THIRD_BULLET;
-                            break;
-                        case BossAttackPattern::THIRD_BULLET:
-                            CreateThirdBullet(registry, bossEntity, pos.x, pos.y);
-                            attack.currentPattern = BossAttackPattern::BLACK_ORB;
-                            break;
-                        case BossAttackPattern::BLACK_ORB:
-                            CreateBlackOrb(registry, bossEntity, pos.x, pos.y);
-                            attack.currentPattern = BossAttackPattern::FAN_SPRAY;
-                            break;
-                        default:
-                            break;
+                    if (boss.bossId == 1) {
+                        // Boss 1
+                        switch (attack.currentPattern) {
+                            case BossAttackPattern::FAN_SPRAY:
+                                CreateFanSpray(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::THIRD_BULLET;
+                                break;
+                            case BossAttackPattern::THIRD_BULLET:
+                                CreateThirdBullet(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::BLACK_ORB;
+                                break;
+                            case BossAttackPattern::BLACK_ORB:
+                                CreateBlackOrb(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::FAN_SPRAY;
+                                break;
+                            default:
+                                break;
+                        }
+                    } else if (boss.bossId == 2) {
+                        // Boss 2
+                        CreateAnimatedOrb(registry, bossEntity, pos.x, pos.y);
                     }
                 }
             }
@@ -207,6 +215,47 @@ namespace RType {
             registry.AddComponent<BossBullet>(thirdBullet, BossBullet{});
 
             Core::Logger::Info("[BossAttackSystem] Created Third Bullet at ({}, {})", spawnX, spawnY);
+        }
+
+        void BossAttackSystem::CreateAnimatedOrb(Registry& registry, Entity bossEntity, float bossX, float bossY) {
+            const int orbCount = 4;
+            const float orbSpacing = 100.0f;
+            const float baseSpeed = 350.0f;
+
+            const float spawnX = bossX + 50.0f;
+            const float startY = bossY + 50.0f;
+
+            for (int i = 0; i < orbCount; i++) {
+                Entity orb = registry.CreateEntity();
+
+                if (registry.HasComponent<Obstacle>(orb)) {
+                    registry.RemoveComponent<Obstacle>(orb);
+                }
+                if (registry.HasComponent<ObstacleMetadata>(orb)) {
+                    registry.RemoveComponent<ObstacleMetadata>(orb);
+                }
+
+                float orbY = startY + (i * orbSpacing);
+                registry.AddComponent<Position>(orb, Position{spawnX, orbY});
+
+                float speedVariation = baseSpeed + (i * 10.0f);
+                float angle = -M_PI + (i * 0.1f);
+                float vx = std::cos(angle) * speedVariation;
+                float vy = std::sin(angle) * speedVariation * 0.3f;
+
+                registry.AddComponent<Velocity>(orb, Velocity{vx, vy});
+
+                registry.AddComponent<Bullet>(orb, Bullet{bossEntity});
+                registry.AddComponent<BossBullet>(orb, BossBullet{});
+                registry.AddComponent<WaveAttack>(orb, WaveAttack{});
+
+                registry.AddComponent<CircleCollider>(orb, CircleCollider{15.0f});
+                registry.AddComponent<CollisionLayer>(orb,
+                    CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER));
+                registry.AddComponent<Damage>(orb, Damage{8});
+            }
+
+            Core::Logger::Info("[BossAttackSystem] Boss 2 created wave attack burst with {} orbs", orbCount);
         }
 
     }
