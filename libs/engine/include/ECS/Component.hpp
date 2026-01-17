@@ -115,7 +115,10 @@ namespace RType {
         };
 
         struct Boss : public IComponent {
+            uint8_t bossId = 1;
+
             Boss() = default;
+            Boss(uint8_t id) : bossId(id) {}
         };
 
         struct BossKilled : public IComponent {
@@ -130,11 +133,16 @@ namespace RType {
 
         enum class BossAttackPattern {
             IDLE = 0,
+            // Boss 1 
             FAN_SPRAY = 1,
             DIRECT_SHOT = 2,
             CIRCLE = 3,
             BLACK_ORB = 4,
-            THIRD_BULLET = 5
+            THIRD_BULLET = 5,
+            // Boss 2
+            SPIRAL_WAVE = 6,
+            ANIMATED_ORB = 7,
+            LASER_BEAM = 8
         };
 
         struct BossAttack : public IComponent {
@@ -148,6 +156,10 @@ namespace RType {
 
         struct BossBullet : public IComponent {
             BossBullet() = default;
+        };
+
+        struct WaveAttack : public IComponent {
+            WaveAttack() = default;
         };
 
         struct BlackOrb : public IComponent {
