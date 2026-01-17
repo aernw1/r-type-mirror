@@ -339,6 +339,7 @@ namespace RType {
             renderGameOverOverlay();
             renderVictoryOverlay();
             renderLevelTransition();
+            renderBossWarning();
         }
 
         void InGameState::renderChargeBar() {
@@ -575,6 +576,26 @@ namespace RType {
                 fullScreen.position = Renderer::Vector2(0.0f, 0.0f);
                 fullScreen.size = Renderer::Vector2(1280.0f, 720.0f);
                 m_renderer->DrawRectangle(fullScreen, Renderer::Color(0.0f, 0.0f, 0.0f, 1.0f));
+            }
+        }
+
+        void InGameState::renderBossWarning() {
+            if (!m_bossWarningActive) {
+                return;
+            }
+
+            if (!m_bossWarningFlashState) {
+                return;
+            }
+
+            if (m_gameOverFontLarge != Renderer::INVALID_FONT_ID) {
+                Renderer::TextParams textParams;
+                textParams.position = Renderer::Vector2(440.0f, 300.0f);
+                textParams.color = Renderer::Color(1.0f, 0.0f, 0.0f, 1.0f);
+                textParams.scale = 1.0f;
+                m_renderer->DrawText(m_gameOverFontLarge, "WARNING !!", textParams);
+            } else {
+                 Core::Logger::Error("[GameState] Cannot render boss warning - Invalid Font ID");
             }
         }
 

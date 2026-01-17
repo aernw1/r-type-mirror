@@ -499,6 +499,10 @@ namespace RType {
             m_bossHealthBar.barBackgroundEntity = NULL_ENTITY;
             m_bossHealthBar.barForegroundEntity = NULL_ENTITY;
 
+            m_bossWarningActive = false;
+            m_bossWarningTriggered = false;
+            m_bossWarningTimer = 0.0f;
+
             m_isGameOver = false;
             m_localScrollOffset = 0.0f;
 
