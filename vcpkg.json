@@ -8,7 +8,8 @@
   "dependencies": [
     "sfml",
     "asio",
-    "nlohmann-json"
+    "nlohmann-json",
+    "lz4"
   ],
   "overrides": [
     {

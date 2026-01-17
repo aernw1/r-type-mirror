@@ -6,6 +6,7 @@
 */
 
 #include "GameClient.hpp"
+#include "Compression.hpp"
 #include <iostream>
 #include <cstring>
 #include <random>
@@ -170,6 +171,9 @@ namespace network {
         case GamePacket::STATE:
             HandleState(data);
             break;
+        case GamePacket::STATE_DELTA:
+            HandleStateDelta(data);
+            break;
         case GamePacket::PONG:
             HandlePong(data);
             break;
@@ -199,6 +203,7 @@ namespace network {
         const StatePacketHeader* header = reinterpret_cast<const StatePacketHeader*>(data.data());
         m_lastServerTick = header->tick;
         m_lastScrollOffset = header->scrollOffset;
+        m_lastReceivedStateSeq = header->stateSequence;
 
         size_t offset = sizeof(StatePacketHeader);
 
@@ -214,6 +219,8 @@ namespace network {
         }
 
         std::vector<EntityState> entities;
+        m_entityStates.clear();
+
         for (uint16_t i = 0; i < header->entityCount; i++) {
             if (offset + sizeof(EntityState) > data.size())
                 break;
@@ -221,13 +228,179 @@ namespace network {
             EntityState entity;
             std::memcpy(&entity, data.data() + offset, sizeof(EntityState));
             entities.push_back(entity);
+            m_entityStates[entity.entityId] = entity;
 
             offset += sizeof(EntityState);
+        }
+
+        if (m_lastReceivedStateSeq - m_lastAckedStateSeq >= STATE_ACK_INTERVAL) {
+            SendStateAck(m_lastReceivedStateSeq);
+            m_lastAckedStateSeq = m_lastReceivedStateSeq;
         }
 
         if (m_stateCallback) {
             m_stateCallback(header->tick, entities, inputAcks);
         }
+    }
+
+    void GameClient::HandleStateDelta(const std::vector<uint8_t>& data) {
+        if (data.size() < sizeof(StateDeltaHeader))
+            return;
+
+        const StateDeltaHeader* header = reinterpret_cast<const StateDeltaHeader*>(data.data());
+        m_lastServerTick = header->tick;
+        m_lastScrollOffset = header->scrollOffset;
+        m_lastReceivedStateSeq = header->stateSequence;
+
+        const uint8_t* payloadData = data.data() + sizeof(StateDeltaHeader);
+        size_t payloadSize = data.size() - sizeof(StateDeltaHeader);
+
+        std::vector<uint8_t> decompressedPayload;
+        if (header->compressionFlags == CompressionFlags::COMPRESSION_LZ4) {
+            if (header->uncompressedSize == 0) {
+                return;
+            }
+            decompressedPayload = Compression::DecompressLZ4(payloadData, payloadSize, header->uncompressedSize);
+            if (decompressedPayload.empty()) {
+                std::cerr << "[CLIENT] LZ4 decompression failed!" << std::endl;
+                return;
+            }
+            payloadData = decompressedPayload.data();
+            payloadSize = decompressedPayload.size();
+        }
+
+        size_t offset = 0;
+
+        std::vector<InputAck> inputAcks;
+        for (uint8_t i = 0; i < header->inputAckCount; i++) {
+            if (offset + sizeof(InputAck) > payloadSize)
+                break;
+
+            InputAck ack;
+            std::memcpy(&ack, payloadData + offset, sizeof(InputAck));
+            inputAcks.push_back(ack);
+            offset += sizeof(InputAck);
+        }
+
+        for (uint16_t i = 0; i < header->destroyedCount; i++) {
+            if (offset + sizeof(uint32_t) > payloadSize)
+                break;
+
+            uint32_t destroyedId;
+            std::memcpy(&destroyedId, payloadData + offset, sizeof(uint32_t));
+            m_entityStates.erase(destroyedId);
+            offset += sizeof(uint32_t);
+        }
+
+        for (uint16_t i = 0; i < header->newEntityCount; i++) {
+            if (offset + sizeof(EntityState) > payloadSize)
+                break;
+
+            EntityState entity;
+            std::memcpy(&entity, payloadData + offset, sizeof(EntityState));
+            m_entityStates[entity.entityId] = entity;
+            offset += sizeof(EntityState);
+        }
+
+        std::vector<DeltaEntityHeader> deltaHeaders;
+        for (uint16_t i = 0; i < header->deltaEntityCount; i++) {
+            if (offset + sizeof(DeltaEntityHeader) > payloadSize)
+                break;
+
+            DeltaEntityHeader deh;
+            std::memcpy(&deh, payloadData + offset, sizeof(DeltaEntityHeader));
+            deltaHeaders.push_back(deh);
+            offset += sizeof(DeltaEntityHeader);
+        }
+
+        for (const auto& deh : deltaHeaders) {
+            auto it = m_entityStates.find(deh.entityId);
+            if (it == m_entityStates.end()) {
+                if (deh.deltaFlags & DeltaFlags::DELTA_POSITION) offset += sizeof(float) * 2;
+                if (deh.deltaFlags & DeltaFlags::DELTA_VELOCITY) offset += sizeof(float) * 2;
+                if (deh.deltaFlags & DeltaFlags::DELTA_HEALTH) offset += sizeof(uint16_t);
+                if (deh.deltaFlags & DeltaFlags::DELTA_FLAGS) offset += sizeof(uint8_t);
+                if (deh.deltaFlags & DeltaFlags::DELTA_SCORE) offset += sizeof(uint32_t);
+                if (deh.deltaFlags & DeltaFlags::DELTA_POWERUP) offset += sizeof(uint8_t) * 2;
+                if (deh.deltaFlags & DeltaFlags::DELTA_WEAPON) offset += sizeof(uint8_t) * 2;
+                continue;
+            }
+
+            EntityState& state = it->second;
+
+            if (deh.deltaFlags & DeltaFlags::DELTA_POSITION) {
+                if (offset + sizeof(float) * 2 <= payloadSize) {
+                    std::memcpy(&state.x, payloadData + offset, sizeof(float));
+                    offset += sizeof(float);
+                    std::memcpy(&state.y, payloadData + offset, sizeof(float));
+                    offset += sizeof(float);
+                }
+            }
+            if (deh.deltaFlags & DeltaFlags::DELTA_VELOCITY) {
+                if (offset + sizeof(float) * 2 <= payloadSize) {
+                    std::memcpy(&state.vx, payloadData + offset, sizeof(float));
+                    offset += sizeof(float);
+                    std::memcpy(&state.vy, payloadData + offset, sizeof(float));
+                    offset += sizeof(float);
+                }
+            }
+            if (deh.deltaFlags & DeltaFlags::DELTA_HEALTH) {
+                if (offset + sizeof(uint16_t) <= payloadSize) {
+                    std::memcpy(&state.health, payloadData + offset, sizeof(uint16_t));
+                    offset += sizeof(uint16_t);
+                }
+            }
+            if (deh.deltaFlags & DeltaFlags::DELTA_FLAGS) {
+                if (offset + sizeof(uint8_t) <= payloadSize) {
+                    state.flags = payloadData[offset++];
+                }
+            }
+            if (deh.deltaFlags & DeltaFlags::DELTA_SCORE) {
+                if (offset + sizeof(uint32_t) <= payloadSize) {
+                    std::memcpy(&state.score, payloadData + offset, sizeof(uint32_t));
+                    offset += sizeof(uint32_t);
+                }
+            }
+            if (deh.deltaFlags & DeltaFlags::DELTA_POWERUP) {
+                if (offset + sizeof(uint8_t) * 2 <= payloadSize) {
+                    state.powerUpFlags = payloadData[offset++];
+                    state.speedMultiplier = payloadData[offset++];
+                }
+            }
+            if (deh.deltaFlags & DeltaFlags::DELTA_WEAPON) {
+                if (offset + sizeof(uint8_t) * 2 <= payloadSize) {
+                    state.weaponType = payloadData[offset++];
+                    state.fireRate = payloadData[offset++];
+                }
+            }
+        }
+
+        if (m_lastReceivedStateSeq - m_lastAckedStateSeq >= STATE_ACK_INTERVAL) {
+            SendStateAck(m_lastReceivedStateSeq);
+            m_lastAckedStateSeq = m_lastReceivedStateSeq;
+        }
+
+        std::vector<EntityState> entities;
+        entities.reserve(m_entityStates.size());
+        for (const auto& [id, state] : m_entityStates) {
+            entities.push_back(state);
+        }
+
+        if (m_stateCallback) {
+            m_stateCallback(header->tick, entities, inputAcks);
+        }
+    }
+
+    void GameClient::SendStateAck(uint32_t stateSequence) {
+        StateAckPacket ack;
+        ack.playerHash = m_localPlayer.hash;
+        ack.lastReceivedSeq = stateSequence;
+
+        std::vector<uint8_t> packet(sizeof(StateAckPacket));
+        std::memcpy(packet.data(), &ack, sizeof(StateAckPacket));
+
+        m_network->SendUdp(m_udpSocket, packet, m_serverEndpoint);
+        m_packetsSent++;
     }
 
     void GameClient::HandlePong(const std::vector<uint8_t>& data) {

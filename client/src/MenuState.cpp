@@ -8,11 +8,12 @@
 #include "MenuState.hpp"
 #include "LobbyState.hpp"
 #include "EditorState.hpp"
-#include "editor/EditorCanvasManager.hpp"
 #include "RoomListState.hpp"
+#include "SettingsState.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/AudioSystem.hpp"
+#include "Core/Logger.hpp"
 #include <iostream>
 #include <cmath>
 
@@ -22,7 +23,6 @@ namespace RType {
     namespace Client {
 
         MenuState::MenuState(GameStateMachine& machine, GameContext& context) : m_machine(machine), m_context(context) {
-
             m_renderer = context.renderer;
             m_renderingSystem = std::make_unique<RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<TextRenderingSystem>(m_renderer.get());
@@ -30,6 +30,7 @@ namespace RType {
 
         void MenuState::Init() {
             std::cout << "[MenuState] Initializing modern UI..." << std::endl;
+            m_ignoreInputFrames = 1;
 
             if (m_context.audio) {
                 m_audioSystem = std::make_unique<RType::ECS::AudioSystem>(m_context.audio.get());
@@ -187,6 +188,19 @@ namespace RType {
         }
 
         void MenuState::HandleInput() {
+            if (m_ignoreInputFrames == 0 && m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escKeyPressed) {
+                m_ignoreInputFrames = 1;
+            }
+
+            if (m_ignoreInputFrames > 0) {
+                m_upKeyPressed = m_renderer->IsKeyPressed(Renderer::Key::Up);
+                m_downKeyPressed = m_renderer->IsKeyPressed(Renderer::Key::Down);
+                m_enterKeyPressed = m_renderer->IsKeyPressed(Renderer::Key::Enter);
+                m_escKeyPressed = m_renderer->IsKeyPressed(Renderer::Key::Escape);
+                m_ignoreInputFrames--;
+                return;
+            }
+
             auto playSelectSound = [this]() {
                 if (m_context.audio && m_selectMusic != Audio::INVALID_MUSIC_ID) {
                     m_context.audio->StopMusic(m_selectMusic);
@@ -223,26 +237,29 @@ namespace RType {
                 m_enterKeyPressed = true;
                 playSelectSound();
 
-                if (m_context.audio && m_menuMusic != Audio::INVALID_MUSIC_ID) {
-                    m_context.audio->StopMusic(m_menuMusic);
-                    m_menuMusicPlaying = false;
-                }
-
                 switch (static_cast<MenuItem>(m_selectedIndex)) {
                     case MenuItem::PLAY:
                         std::cout << "[MenuState] Starting game... Transitioning to Room Selection" << std::endl;
                         std::cout << "[MenuState] Connecting to " << m_context.serverIp << ":" << m_context.serverPort << " as '" << m_context.playerName << "'" << std::endl;
+                        if (m_context.audio && m_menuMusic != Audio::INVALID_MUSIC_ID) {
+                            m_context.audio->StopMusic(m_menuMusic);
+                            m_menuMusicPlaying = false;
+                        }
                         m_machine.PushState(std::make_unique<RoomListState>(m_machine, m_context));
                         break;
 
                     case MenuItem::EDITOR:
                         std::cout << "[MenuState] Opening Level Editor..." << std::endl;
+                        if (m_context.audio && m_menuMusic != Audio::INVALID_MUSIC_ID) {
+                            m_context.audio->StopMusic(m_menuMusic);
+                            m_menuMusicPlaying = false;
+                        }
                         m_machine.PushState(std::make_unique<EditorState>(m_machine, m_context));
                         break;
 
                     case MenuItem::SETTINGS:
-                        std::cout << "[MenuState] Settings not yet implemented" << std::endl;
-                        // TODO: Implement settings state
+                        std::cout << "[MenuState] Opening Settings..." << std::endl;
+                        m_machine.PushState(std::make_unique<SettingsState>(m_machine, m_context));
                         break;
 
                     case MenuItem::QUIT:
@@ -257,12 +274,12 @@ namespace RType {
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
                 m_enterKeyPressed = false;
             }
-            
+
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escKeyPressed) {
-                 m_escKeyPressed = true;
-                 playSelectSound();
-                 std::cout << "[MenuState] Escape pressed. Quitting..." << std::endl;
-                 m_machine.PopState();
+                m_escKeyPressed = true;
+                playSelectSound();
+                Core::Logger::Info("[MenuState] Escape pressed. Quitting...");
+                m_machine.PopState();
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
                 m_escKeyPressed = false;
             }

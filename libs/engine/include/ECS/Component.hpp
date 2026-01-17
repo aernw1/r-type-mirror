@@ -90,10 +90,11 @@ namespace RType {
             uint8_t playerNumber = 0;
             uint64_t playerHash = 0;
             bool isLocalPlayer = false;
+            uint8_t lives = 3;
 
             Player() = default;
-            Player(uint8_t number, uint64_t hash, bool local = false)
-                : playerNumber(number), playerHash(hash), isLocalPlayer(local) {}
+            Player(uint8_t number, uint64_t hash, bool local = false, uint8_t startLives = 3)
+                : playerNumber(number), playerHash(hash), isLocalPlayer(local), lives(startLives) {}
         };
 
         enum class EnemyType : uint8_t {
@@ -512,10 +513,15 @@ namespace RType {
             Animation::EffectType type = Animation::EffectType::EXPLOSION_SMALL;
             float lifetime = 0.0f;
             float maxLifetime = 1.0f;
+            Entity owner = NULL_ENTITY;
+            float offsetX = 0.0f;
+            float offsetY = 0.0f;
 
             VisualEffect() = default;
             VisualEffect(Animation::EffectType t, float duration)
                 : type(t), maxLifetime(duration) {}
+            VisualEffect(Animation::EffectType t, float duration, Entity ownerEntity, float offX, float offY)
+                : type(t), maxLifetime(duration), owner(ownerEntity), offsetX(offX), offsetY(offY) {}
         };
 
         struct FloatingText : public IComponent {

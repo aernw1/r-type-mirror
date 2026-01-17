@@ -10,6 +10,7 @@
 #include "Protocol.hpp"
 #include "INetworkModule.hpp"
 #include <vector>
+#include <unordered_map>
 #include <chrono>
 #include <atomic>
 #include <functional>
@@ -47,8 +48,10 @@ namespace network {
         void HandlePacket(const std::vector<uint8_t>& data);
         void HandleWelcome(const std::vector<uint8_t>& data);
         void HandleState(const std::vector<uint8_t>& data);
+        void HandleStateDelta(const std::vector<uint8_t>& data);
         void HandlePong(const std::vector<uint8_t>& data);
         void HandleLevelComplete(const std::vector<uint8_t>& data);
+        void SendStateAck(uint32_t stateSequence);
 
         uint8_t GenerateRandomInputs();
 
@@ -66,10 +69,15 @@ namespace network {
 
         std::function<uint8_t()> m_inputGenerator;
         std::function<void(uint32_t, const std::vector<EntityState>&, const std::vector<InputAck>&)> m_stateCallback;
-        std::function<void(uint8_t, uint8_t)> m_levelCompleteCallback; // (completedLevel, nextLevel)
+        std::function<void(uint8_t, uint8_t)> m_levelCompleteCallback;
 
         std::atomic<uint64_t> m_packetsSent{0};
         std::atomic<uint64_t> m_packetsReceived{0};
+
+        std::unordered_map<uint32_t, EntityState> m_entityStates;
+        uint32_t m_lastReceivedStateSeq = 0;
+        uint32_t m_lastAckedStateSeq = 0;
+        static constexpr uint32_t STATE_ACK_INTERVAL = 5;
     };
 
 }

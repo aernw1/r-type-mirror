@@ -1,5 +1,6 @@
 #include "ECS/RenderingSystem.hpp"
 #include "ECS/Component.hpp"
+#include "Core/ColorFilter.hpp"
 #include <algorithm>
 
 namespace RType {
@@ -44,10 +45,9 @@ namespace RType {
                 if (registry.HasComponent<AnimatedSprite>(entity) && registry.HasComponent<SpriteAnimation>(entity)) {
                     auto& animatedSprite = registry.GetComponent<AnimatedSprite>(entity);
                     const auto& anim = registry.GetComponent<SpriteAnimation>(entity);
-                    
-                    if (animatedSprite.needsUpdate || 
-                        (anim.currentRegion.size.x > 0 && anim.currentRegion.size.y > 0)) {
-                        if (anim.currentRegion.size.x > 0 && anim.currentRegion.size.y > 0) {
+
+                    if (anim.currentRegion.size.x > 0 && anim.currentRegion.size.y > 0) {
+                        if (animatedSprite.needsUpdate) {
                             m_renderer->SetSpriteRegion(drawable.spriteId, anim.currentRegion);
                             animatedSprite.needsUpdate = false;
                         }
@@ -60,7 +60,12 @@ namespace RType {
                 transform.rotation = drawable.rotation;
                 transform.origin = drawable.origin;
 
-                m_renderer->DrawSprite(drawable.spriteId, transform, drawable.tint);
+                Math::Color finalColor = drawable.tint;
+                if (RType::Core::ColorFilter::IsColourBlindModeEnabled()) {
+                    finalColor = RType::Core::ColorFilter::ApplyColourBlindFilter(drawable.tint);
+                }
+
+                m_renderer->DrawSprite(drawable.spriteId, transform, finalColor);
             }
         }
     }

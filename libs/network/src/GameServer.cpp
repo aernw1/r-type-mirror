@@ -6,9 +6,11 @@
 */
 
 #include "GameServer.hpp"
+#include "Compression.hpp"
 #include "ECS/BossSystem.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <cstring>
 #include <algorithm>
@@ -21,9 +23,6 @@ namespace network {
 
     uint32_t GameServer::GetOrAssignNetworkId(RType::ECS::Entity entity)
     {
-        // CRITICAL: ECS entity IDs are recycled, sometimes within the same tick.
-        // Therefore, network IDs must be stored on the entity itself (as a component),
-        // not in a map keyed only by the raw ECS entity ID.
         if (m_registry.HasComponent<RType::ECS::NetworkId>(entity)) {
             return m_registry.GetComponent<RType::ECS::NetworkId>(entity).id;
         }
@@ -98,18 +97,15 @@ namespace network {
         m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
         m_scoreSystem = std::make_unique<RType::ECS::ScoreSystem>();
         m_powerUpSpawnSystem = std::make_unique<RType::ECS::PowerUpSpawnSystem>(
-            nullptr, // No renderer on server
-            1280.0f, // screenWidth
-            720.0f   // screenHeight
+            nullptr,
+            1280.0f,
+            720.0f
         );
-        m_powerUpSpawnSystem->SetSpawnInterval(5.0f); // Spawn every 5 seconds for testing
+        m_powerUpSpawnSystem->SetSpawnInterval(5.0f);
         m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(nullptr);
 
-        // Shooting system for spread shot and laser beam
-        // Note: We use INVALID_SPRITE_ID since we don't need rendering on server
         m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(0);
 
-        // Force pod and shield systems
         m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
         m_shieldSystem = std::make_unique<RType::ECS::ShieldSystem>();
 
@@ -145,7 +141,6 @@ namespace network {
                       << createdEntities.enemies.size() << " enemy entities, boss: "
                       << (createdEntities.boss != RType::ECS::NULL_ENTITY ? "CREATED" : "NOT CREATED") << std::endl;
 
-            // Initialize collider positions based on their visual entities
             for (auto collider : createdEntities.obstacleColliders) {
                 if (!m_registry.IsEntityAlive(collider) ||
                     !m_registry.HasComponent<RType::ECS::ObstacleMetadata>(collider)) {
@@ -153,7 +148,6 @@ namespace network {
                 }
                 const auto& metadata = m_registry.GetComponent<RType::ECS::ObstacleMetadata>(collider);
 
-                // Sync collider to visual entity position on initialization
                 if (metadata.visualEntity != RType::ECS::NULL_ENTITY &&
                     m_registry.IsEntityAlive(metadata.visualEntity) &&
                     m_registry.HasComponent<RType::ECS::Position>(metadata.visualEntity) &&
@@ -162,7 +156,6 @@ namespace network {
                     const auto& visualPos = m_registry.GetComponent<RType::ECS::Position>(metadata.visualEntity);
                     auto& colliderPos = m_registry.GetComponent<RType::ECS::Position>(collider);
 
-                    // Set absolute position = visual position + offset
                     colliderPos.x = visualPos.x + metadata.offsetX;
                     colliderPos.y = visualPos.y + metadata.offsetY;
 
@@ -206,7 +199,6 @@ namespace network {
 
             ProcessIncomingPackets();
 
-            // Check if we need to load next level when all players disconnect after boss defeat
             LoadNextLevelIfNeeded();
 
             if (AllPlayersDisconnected() && !m_levelComplete) {
@@ -296,6 +288,9 @@ namespace network {
             break;
         case GamePacket::DISCONNECT:
             HandleDisconnect(data, from);
+            break;
+        case GamePacket::STATE_ACK:
+            HandleStateAck(data, from);
             break;
         default:
             break;
@@ -421,7 +416,24 @@ namespace network {
         }
     }
 
+    void GameServer::HandleStateAck(const std::vector<uint8_t>& data, const Network::Endpoint& /*from*/) {
+        if (data.size() < sizeof(StateAckPacket))
+            return;
+
+        const StateAckPacket* ack = reinterpret_cast<const StateAckPacket*>(data.data());
+
+        auto it = m_connectedPlayers.find(ack->playerHash);
+        if (it == m_connectedPlayers.end())
+            return;
+
+        if (ack->lastReceivedSeq > it->second.lastAckedStateSeq) {
+            it->second.lastAckedStateSeq = ack->lastReceivedSeq;
+        }
+    }
+
     void GameServer::SendStateSnapshots() {
+        m_stateSequence++;
+
         std::vector<InputAck> inputAcks;
         auto players = m_registry.GetEntitiesWithComponent<RType::ECS::Player>();
         for (const auto& [hash, connPlayer] : m_connectedPlayers) {
@@ -446,25 +458,7 @@ namespace network {
             inputAcks.push_back(ack);
         }
 
-        StatePacketHeader header;
-        header.tick = m_currentTick;
-        header.timestamp = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
-        header.entityCount = static_cast<uint16_t>(m_entities.size());
-        header.scrollOffset = m_scrollOffset;
-        header.inputAckCount = static_cast<uint8_t>(inputAcks.size());
-
-        size_t packetSize = sizeof(StatePacketHeader) +
-                           sizeof(InputAck) * inputAcks.size() +
-                           sizeof(EntityState) * m_entities.size();
-        std::vector<uint8_t> packet(packetSize);
-        std::memcpy(packet.data(), &header, sizeof(StatePacketHeader));
-
-        size_t offset = sizeof(StatePacketHeader);
-        for (const auto& ack : inputAcks) {
-            std::memcpy(packet.data() + offset, &ack, sizeof(InputAck));
-            offset += sizeof(InputAck);
-        }
-
+        std::unordered_map<uint32_t, EntityState> currentStates;
         for (const auto& entity : m_entities) {
             EntityState state;
             state.entityId = entity.id;
@@ -481,18 +475,243 @@ namespace network {
             state.speedMultiplier = entity.speedMultiplier;
             state.weaponType = entity.weaponType;
             state.fireRate = entity.fireRate;
-
-            std::memcpy(packet.data() + offset, &state, sizeof(EntityState));
-            offset += sizeof(EntityState);
+            currentStates[entity.id] = state;
         }
 
-        static int sendCount = 0;
-        if (sendCount++ % 60 == 0) {
-            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-            std::cout << "[SERVER SEND] t=" << ms << " tick=" << m_currentTick << " Broadcasting state to " << m_connectedPlayers.size() << " clients" << std::endl;
+        uint32_t minAckedSeq = m_stateSequence;
+        for (const auto& [hash, connPlayer] : m_connectedPlayers) {
+            if (connPlayer.lastAckedStateSeq < minAckedSeq) {
+                minAckedSeq = connPlayer.lastAckedStateSeq;
+            }
         }
 
-        Broadcast(packet);
+        bool sendFullSnapshot = (m_stateSequence % FULL_SNAPSHOT_INTERVAL == 0) ||
+                                (minAckedSeq == 0) ||
+                                (m_stateSequence - minAckedSeq > FULL_SNAPSHOT_INTERVAL);
+
+        if (sendFullSnapshot) {
+            StatePacketHeader header;
+            header.tick = m_currentTick;
+            header.timestamp = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count());
+            header.entityCount = static_cast<uint16_t>(m_entities.size());
+            header.scrollOffset = m_scrollOffset;
+            header.inputAckCount = static_cast<uint8_t>(inputAcks.size());
+            header.stateSequence = m_stateSequence;
+
+            size_t packetSize = sizeof(StatePacketHeader) +
+                               sizeof(InputAck) * inputAcks.size() +
+                               sizeof(EntityState) * m_entities.size();
+            std::vector<uint8_t> packet(packetSize);
+            std::memcpy(packet.data(), &header, sizeof(StatePacketHeader));
+
+            size_t offset = sizeof(StatePacketHeader);
+            for (const auto& ack : inputAcks) {
+                std::memcpy(packet.data() + offset, &ack, sizeof(InputAck));
+                offset += sizeof(InputAck);
+            }
+
+            for (const auto& [id, state] : currentStates) {
+                std::memcpy(packet.data() + offset, &state, sizeof(EntityState));
+                offset += sizeof(EntityState);
+            }
+
+            Broadcast(packet);
+
+            m_totalBytesSent += packet.size() * m_connectedPlayers.size();
+            m_fullSnapshotBytesSent += packet.size() * m_connectedPlayers.size();
+
+            m_lastSentState = currentStates;
+            m_destroyedEntities.clear();
+
+            static int fullCount = 0;
+            if (fullCount++ % 60 == 0) {
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count();
+                std::cout << "[SERVER FULL] t=" << ms << " seq=" << m_stateSequence
+                          << " size=" << packet.size() << " bytes, entities=" << m_entities.size() << std::endl;
+            }
+        } else {
+            std::vector<EntityState> newEntities;
+            std::vector<std::pair<uint32_t, uint8_t>> deltaUpdates;
+            std::vector<uint8_t> deltaData;
+
+            std::vector<uint32_t> destroyedThisTick;
+            for (const auto& [id, oldState] : m_lastSentState) {
+                if (currentStates.find(id) == currentStates.end()) {
+                    destroyedThisTick.push_back(id);
+                }
+            }
+
+            for (const auto& [id, newState] : currentStates) {
+                auto it = m_lastSentState.find(id);
+                if (it == m_lastSentState.end()) {
+                    newEntities.push_back(newState);
+                } else {
+                    const EntityState& oldState = it->second;
+                    uint8_t deltaFlags = 0;
+
+                    if (std::abs(newState.x - oldState.x) > POSITION_DELTA_THRESHOLD ||
+                        std::abs(newState.y - oldState.y) > POSITION_DELTA_THRESHOLD) {
+                        deltaFlags |= DeltaFlags::DELTA_POSITION;
+                    }
+                    if (std::abs(newState.vx - oldState.vx) > 1.0f ||
+                        std::abs(newState.vy - oldState.vy) > 1.0f) {
+                        deltaFlags |= DeltaFlags::DELTA_VELOCITY;
+                    }
+                    if (newState.health != oldState.health) {
+                        deltaFlags |= DeltaFlags::DELTA_HEALTH;
+                    }
+                    if (newState.flags != oldState.flags) {
+                        deltaFlags |= DeltaFlags::DELTA_FLAGS;
+                    }
+                    if (newState.score != oldState.score) {
+                        deltaFlags |= DeltaFlags::DELTA_SCORE;
+                    }
+                    if (newState.powerUpFlags != oldState.powerUpFlags ||
+                        newState.speedMultiplier != oldState.speedMultiplier) {
+                        deltaFlags |= DeltaFlags::DELTA_POWERUP;
+                    }
+                    if (newState.weaponType != oldState.weaponType ||
+                        newState.fireRate != oldState.fireRate) {
+                        deltaFlags |= DeltaFlags::DELTA_WEAPON;
+                    }
+
+                    if (deltaFlags != 0) {
+                        deltaUpdates.push_back({id, deltaFlags});
+
+                        if (deltaFlags & DeltaFlags::DELTA_POSITION) {
+                            const uint8_t* px = reinterpret_cast<const uint8_t*>(&newState.x);
+                            const uint8_t* py = reinterpret_cast<const uint8_t*>(&newState.y);
+                            deltaData.insert(deltaData.end(), px, px + sizeof(float));
+                            deltaData.insert(deltaData.end(), py, py + sizeof(float));
+                        }
+                        if (deltaFlags & DeltaFlags::DELTA_VELOCITY) {
+                            const uint8_t* pvx = reinterpret_cast<const uint8_t*>(&newState.vx);
+                            const uint8_t* pvy = reinterpret_cast<const uint8_t*>(&newState.vy);
+                            deltaData.insert(deltaData.end(), pvx, pvx + sizeof(float));
+                            deltaData.insert(deltaData.end(), pvy, pvy + sizeof(float));
+                        }
+                        if (deltaFlags & DeltaFlags::DELTA_HEALTH) {
+                            const uint8_t* ph = reinterpret_cast<const uint8_t*>(&newState.health);
+                            deltaData.insert(deltaData.end(), ph, ph + sizeof(uint16_t));
+                        }
+                        if (deltaFlags & DeltaFlags::DELTA_FLAGS) {
+                            deltaData.push_back(newState.flags);
+                        }
+                        if (deltaFlags & DeltaFlags::DELTA_SCORE) {
+                            const uint8_t* ps = reinterpret_cast<const uint8_t*>(&newState.score);
+                            deltaData.insert(deltaData.end(), ps, ps + sizeof(uint32_t));
+                        }
+                        if (deltaFlags & DeltaFlags::DELTA_POWERUP) {
+                            deltaData.push_back(newState.powerUpFlags);
+                            deltaData.push_back(newState.speedMultiplier);
+                        }
+                        if (deltaFlags & DeltaFlags::DELTA_WEAPON) {
+                            deltaData.push_back(newState.weaponType);
+                            deltaData.push_back(newState.fireRate);
+                        }
+                    }
+                }
+            }
+
+            size_t payloadSize = sizeof(InputAck) * inputAcks.size() +
+                                sizeof(uint32_t) * destroyedThisTick.size() +
+                                sizeof(EntityState) * newEntities.size() +
+                                sizeof(DeltaEntityHeader) * deltaUpdates.size() +
+                                deltaData.size();
+
+            std::vector<uint8_t> payload(payloadSize);
+            size_t offset = 0;
+
+            for (const auto& ack : inputAcks) {
+                std::memcpy(payload.data() + offset, &ack, sizeof(InputAck));
+                offset += sizeof(InputAck);
+            }
+
+            for (uint32_t destroyedId : destroyedThisTick) {
+                std::memcpy(payload.data() + offset, &destroyedId, sizeof(uint32_t));
+                offset += sizeof(uint32_t);
+            }
+
+            for (const auto& newEntity : newEntities) {
+                std::memcpy(payload.data() + offset, &newEntity, sizeof(EntityState));
+                offset += sizeof(EntityState);
+            }
+
+            for (const auto& [entityId, deltaFlags] : deltaUpdates) {
+                DeltaEntityHeader deh;
+                deh.entityId = entityId;
+                deh.deltaFlags = deltaFlags;
+                std::memcpy(payload.data() + offset, &deh, sizeof(DeltaEntityHeader));
+                offset += sizeof(DeltaEntityHeader);
+            }
+
+            if (!deltaData.empty()) {
+                std::memcpy(payload.data() + offset, deltaData.data(), deltaData.size());
+                offset += deltaData.size();
+            }
+
+            StateDeltaHeader deltaHeader;
+            deltaHeader.tick = m_currentTick;
+            deltaHeader.timestamp = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count());
+            deltaHeader.stateSequence = m_stateSequence;
+            deltaHeader.baseSequence = minAckedSeq;
+            deltaHeader.deltaEntityCount = static_cast<uint16_t>(deltaUpdates.size());
+            deltaHeader.destroyedCount = static_cast<uint16_t>(destroyedThisTick.size());
+            deltaHeader.newEntityCount = static_cast<uint16_t>(newEntities.size());
+            deltaHeader.scrollOffset = m_scrollOffset;
+            deltaHeader.inputAckCount = static_cast<uint8_t>(inputAcks.size());
+
+            std::vector<uint8_t> finalPayload;
+            bool useCompression = false;
+
+            if (payloadSize >= Compression::MIN_COMPRESSION_SIZE) {
+                auto compressed = Compression::CompressLZ4(payload.data(), payload.size());
+                if (!compressed.empty() && Compression::ShouldCompress(payloadSize, compressed.size())) {
+                    finalPayload = std::move(compressed);
+                    deltaHeader.compressionFlags = CompressionFlags::COMPRESSION_LZ4;
+                    deltaHeader.uncompressedSize = static_cast<uint32_t>(payloadSize);
+                    useCompression = true;
+                }
+            }
+
+            if (!useCompression) {
+                finalPayload = std::move(payload);
+                deltaHeader.compressionFlags = CompressionFlags::COMPRESSION_NONE;
+                deltaHeader.uncompressedSize = 0;
+            }
+
+            std::vector<uint8_t> packet(sizeof(StateDeltaHeader) + finalPayload.size());
+            std::memcpy(packet.data(), &deltaHeader, sizeof(StateDeltaHeader));
+            std::memcpy(packet.data() + sizeof(StateDeltaHeader), finalPayload.data(), finalPayload.size());
+
+            Broadcast(packet);
+
+            m_totalBytesSent += packet.size() * m_connectedPlayers.size();
+            m_deltaBytesSent += packet.size() * m_connectedPlayers.size();
+
+            m_lastSentState = currentStates;
+
+            static int deltaCount = 0;
+            if (deltaCount++ % 120 == 0) {
+                size_t fullSize = sizeof(StatePacketHeader) +
+                                 sizeof(InputAck) * inputAcks.size() +
+                                 sizeof(EntityState) * m_entities.size();
+                float savings = fullSize > 0 ? (1.0f - (float)packet.size() / (float)fullSize) * 100.0f : 0.0f;
+
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count();
+                std::cout << "[SERVER DELTA] t=" << ms << " seq=" << m_stateSequence
+                          << " size=" << packet.size() << "/" << fullSize << " bytes"
+                          << " (saved " << std::fixed << std::setprecision(1) << savings << "%)"
+                          << (useCompression ? " [LZ4]" : "")
+                          << " changed=" << deltaUpdates.size()
+                          << " new=" << newEntities.size()
+                          << " destroyed=" << destroyedThisTick.size() << std::endl;
+            }
+        }
     }
 
     void GameServer::SendTo(const std::vector<uint8_t>& data, const Network::Endpoint& to) {
@@ -523,14 +742,11 @@ namespace network {
         m_thirdBulletSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
 
-        // Powerup systems (server-side only)
         m_powerUpSpawnSystem->Update(m_registry, dt);
         m_powerUpCollisionSystem->Update(m_registry, dt);
 
-        // Shooting system for weapon powerups (spread shot, laser)
         m_shootingSystem->Update(m_registry, dt);
 
-        // Force pod and shield systems
         m_forcePodSystem->Update(m_registry, dt);
         m_shieldSystem->Update(m_registry, dt);
 
@@ -544,7 +760,6 @@ namespace network {
         m_scoreSystem->Update(m_registry, dt);
         m_healthSystem->Update(m_registry, dt);
 
-        // Check if boss is defeated for level progression
         CheckBossDefeated();
 
         UpdateLegacyEntitiesFromRegistry();
@@ -553,7 +768,6 @@ namespace network {
         auto now = std::chrono::steady_clock::now();
         float elapsed = std::chrono::duration<float>(now - m_lastSpawnTime).count();
 
-        // Don't spawn normal enemies when boss is active
         if (elapsed >= m_enemySpawnInterval && !IsBossActive()) {
             SpawnEnemy();
             m_lastSpawnTime = now;
@@ -589,7 +803,6 @@ namespace network {
         using namespace RType::ECS;
         Entity bulletEntity = m_registry.CreateEntity();
 
-        // CRITICAL FIX: Clean up obstacle components from entity ID reuse
         if (m_registry.HasComponent<Obstacle>(bulletEntity)) {
             std::cerr << "[SERVER CLEANUP] Removing Obstacle from bullet entity " << bulletEntity << std::endl;
             m_registry.RemoveComponent<Obstacle>(bulletEntity);
@@ -637,7 +850,6 @@ namespace network {
 
         Entity bulletEntity = m_registry.CreateEntity();
 
-        // CRITICAL FIX: Clean up obstacle components from entity ID reuse
         if (m_registry.HasComponent<Obstacle>(bulletEntity)) {
             std::cerr << "[SERVER CLEANUP] Removing Obstacle from bullet entity " << bulletEntity << std::endl;
             m_registry.RemoveComponent<Obstacle>(bulletEntity);
@@ -738,8 +950,6 @@ namespace network {
     }
 
     void GameServer::CleanupDeadEntities() {
-        // NOTE: `GameEntity::id` is a stable *network* ID (not the ECS entity ID).
-        // Never use it to index ECS-side maps like `m_enemyShootCooldowns`.
         m_entities.erase(
             std::remove_if(
                 m_entities.begin(),
@@ -775,9 +985,8 @@ namespace network {
             entity.y = pos.y;
             entity.vx = vel.dx;
             entity.vy = vel.dy;
-            entity.health = static_cast<uint8_t>(std::min(255, std::max(0, health.current)));
+            entity.health = static_cast<uint16_t>(std::max(0, health.current));
 
-            // Encode player number in flags (lower 4 bits)
             uint8_t flags = player.playerNumber & 0x0F;
             entity.flags = flags;
             entity.ownerHash = player.playerHash;
@@ -788,13 +997,11 @@ namespace network {
                 entity.score = 0;
             }
 
-            // Initialize power-up state defaults
             entity.powerUpFlags = 0;
-            entity.speedMultiplier = 10; // 1.0 scaled by 10
-            entity.weaponType = 0; // STANDARD
-            entity.fireRate = 20; // 0.2 scaled by 10
+            entity.speedMultiplier = 10;
+            entity.weaponType = 0;
+            entity.fireRate = 20;
 
-            // Encode power-up state
             if (m_registry.HasComponent<ActivePowerUps>(playerEntity)) {
                 const auto& powerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
 
@@ -811,12 +1018,10 @@ namespace network {
                     entity.powerUpFlags |= network::PowerUpFlags::POWERUP_SHIELD;
                 }
 
-                // Encode speed multiplier (scaled by 10, clamped to 0-255)
                 float speedMult = powerUps.speedMultiplier;
                 entity.speedMultiplier = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(speedMult * 10.0f))));
             }
 
-            // Check if player has a force pod (separate entity with ForcePod component pointing to this player)
             auto forcePods = m_registry.GetEntitiesWithComponent<ForcePod>();
             for (auto podEntity : forcePods) {
                 if (m_registry.IsEntityAlive(podEntity)) {
@@ -828,17 +1033,15 @@ namespace network {
                 }
             }
 
-            // Encode weapon type and fire rate
             if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
                 const auto& weaponSlot = m_registry.GetComponent<WeaponSlot>(playerEntity);
                 entity.weaponType = static_cast<uint8_t>(weaponSlot.type);
-                // Fire rate scaled by 10, clamped to 0-255
                 entity.fireRate = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(weaponSlot.fireRate * 10.0f))));
             } else if (m_registry.HasComponent<Shooter>(playerEntity)) {
-                // If no WeaponSlot, use Shooter fireRate (may be modified by fire rate boost)
                 const auto& shooter = m_registry.GetComponent<Shooter>(playerEntity);
                 entity.fireRate = static_cast<uint8_t>(std::min(255, std::max(0, static_cast<int>(shooter.fireRate * 10.0f))));
             }
+
             m_entities.push_back(entity);
         }
 
@@ -911,7 +1114,6 @@ namespace network {
         }
 
         auto bullets = m_registry.GetEntitiesWithComponent<Bullet>();
-        // SAFETY NET: Clean up any contaminated bullets that accidentally carry obstacle data.
         for (auto bulletEntity : bullets) {
             if (m_registry.HasComponent<RType::ECS::Obstacle>(bulletEntity) ||
                 m_registry.HasComponent<RType::ECS::ObstacleMetadata>(bulletEntity)) {
@@ -941,13 +1143,10 @@ namespace network {
             uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
             uint8_t flags = 0;
             if (m_registry.HasComponent<RType::ECS::ThirdBullet>(bulletEntity)) {
-                // Third Bullet gets flag 15
                 flags = 15;
             } else if (m_registry.HasComponent<RType::ECS::BlackOrb>(bulletEntity)) {
-                // Black Orb gets flag 14
                 flags = 14;
             } else if (m_registry.HasComponent<RType::ECS::BossBullet>(bulletEntity)) {
-                // Boss bullets get flag 13
                 flags = 13;
             } else if (m_registry.HasComponent<CollisionLayer>(bulletEntity)) {
                 const auto& collLayer = m_registry.GetComponent<CollisionLayer>(bulletEntity);
@@ -977,7 +1176,7 @@ namespace network {
         }
 
         auto obstacles = m_registry.GetEntitiesWithComponent<Obstacle>();
-        const size_t maxObstaclesPerSnapshot = 256;  // Increased from 64 to support larger levels
+        const size_t maxObstaclesPerSnapshot = 256;
 
         static bool loggedObstacleCount = false;
         if (!loggedObstacleCount) {
@@ -993,8 +1192,6 @@ namespace network {
                 continue;
             }
 
-            // Hard scrub: obstacles must be static colliders only.
-            // If they carry Velocity/Bullet/Shooter/WeaponSlot, strip obstacle data and skip broadcast.
             bool contaminated = false;
             if (m_registry.HasComponent<Velocity>(obstacleEntity) ||
                 m_registry.HasComponent<Bullet>(obstacleEntity) ||
@@ -1012,16 +1209,12 @@ namespace network {
                 if (m_registry.HasComponent<ObstacleMetadata>(obstacleEntity)) {
                     m_registry.RemoveComponent<ObstacleMetadata>(obstacleEntity);
                 }
-                // Also remove velocity if present so it stops moving.
                 if (m_registry.HasComponent<Velocity>(obstacleEntity)) {
                     m_registry.RemoveComponent<Velocity>(obstacleEntity);
                 }
                 continue;
             }
 
-            // CRITICAL FIX: If an obstacle somehow has Bullet or Shooter components, strip obstacle data
-            // so it can't be broadcast as an obstacle. This prevents “obstacle bullets” even if
-            // contamination occurs elsewhere.
             if (m_registry.HasComponent<Bullet>(obstacleEntity) ||
                 m_registry.HasComponent<Shooter>(obstacleEntity) ||
                 m_registry.HasComponent<WeaponSlot>(obstacleEntity)) {
@@ -1038,7 +1231,6 @@ namespace network {
 
             const auto& pos = m_registry.GetComponent<Position>(obstacleEntity);
 
-            // DEBUG: Log all obstacles being broadcast to help identify the bug
             static int broadcastLog = 0;
             if (broadcastLog < 10 || (broadcastLog % 100 == 0)) {
                 std::cerr << "[OBSTACLE BROADCAST] Entity " << obstacleEntity
@@ -1048,7 +1240,6 @@ namespace network {
                 broadcastLog++;
             }
 
-            // Debug: Log first few obstacle positions sent to clients
             if (serverObstacleLog < 5) {
                 std::cout << "[SERVER SEND] Obstacle " << obstacleEntity
                           << " sending pos=(" << pos.x << "," << pos.y << ")";
@@ -1092,7 +1283,6 @@ namespace network {
             loggedObstacleSend = true;
         }
 
-        // Sync powerups
         auto powerups = m_registry.GetEntitiesWithComponent<PowerUp>();
         for (auto powerupEntity : powerups) {
             if (!m_registry.IsEntityAlive(powerupEntity) ||
@@ -1113,13 +1303,12 @@ namespace network {
             entity.y = pos.y;
             entity.vx = vel.dx;
             entity.vy = vel.dy;
-            entity.health = 1; // Powerups are "alive" until collected
-            entity.flags = static_cast<uint8_t>(powerup.type); // Powerup type
+            entity.health = 1;
+            entity.flags = static_cast<uint8_t>(powerup.type);
             entity.ownerHash = 0;
             m_entities.push_back(entity);
         }
 
-        // Sync force pods (as separate entities so clients can render them)
         auto forcePods = m_registry.GetEntitiesWithComponent<ForcePod>();
         for (auto podEntity : forcePods) {
             if (!m_registry.IsEntityAlive(podEntity) ||
@@ -1130,7 +1319,6 @@ namespace network {
             const auto& pos = m_registry.GetComponent<Position>(podEntity);
             const auto& pod = m_registry.GetComponent<ForcePod>(podEntity);
 
-            // Find owner to get player hash
             uint64_t ownerHash = 0;
             if (m_registry.IsEntityAlive(pod.owner) &&
                 m_registry.HasComponent<Player>(pod.owner)) {
@@ -1138,7 +1326,6 @@ namespace network {
                 ownerHash = owner.playerHash;
             }
 
-            // Force pods have velocity from movement system
             float vx = 0.0f, vy = 0.0f;
             if (m_registry.HasComponent<Velocity>(podEntity)) {
                 const auto& vel = m_registry.GetComponent<Velocity>(podEntity);
@@ -1148,14 +1335,14 @@ namespace network {
 
             GameEntity entity;
             entity.id = GetOrAssignNetworkId(podEntity);
-            entity.type = EntityType::PLAYER; // Treat as player entity for rendering
+            entity.type = EntityType::PLAYER;
             RegisterNetworkType(entity.id, entity.type);
             entity.x = pos.x;
             entity.y = pos.y;
             entity.vx = vx;
             entity.vy = vy;
             entity.health = 1;
-            entity.flags = 0x80; // Bit 7 set to indicate force pod (will need special handling on client)
+            entity.flags = 0x80;
             entity.ownerHash = ownerHash;
             m_entities.push_back(entity);
         }

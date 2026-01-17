@@ -74,6 +74,7 @@ namespace network {
         std::chrono::steady_clock::time_point lastPingTime;
         uint32_t lastInputSequence = 0;
         bool alive = true;
+        uint32_t lastAckedStateSeq = 0;
     };
 
     struct GameEntity {
@@ -81,7 +82,7 @@ namespace network {
         EntityType type;
         float x, y;
         float vx, vy;
-        uint8_t health;
+        uint16_t health;
         uint8_t flags;
         uint64_t ownerHash = 0;
         uint32_t score = 0;
@@ -107,6 +108,18 @@ namespace network {
         uint64_t GetPacketsSent() const { return m_packetsSent; }
         uint64_t GetPacketsReceived() const { return m_packetsReceived; }
         const std::string& GetLevelPath() const { return m_levelPath; }
+
+        uint64_t GetTotalBytesSent() const { return m_totalBytesSent; }
+        uint64_t GetDeltaBytesSent() const { return m_deltaBytesSent; }
+        uint64_t GetFullSnapshotBytesSent() const { return m_fullSnapshotBytesSent; }
+        uint32_t GetStateSequence() const { return m_stateSequence; }
+
+        float GetBandwidthSavingsPercent() const {
+            if (m_fullSnapshotBytesSent == 0) return 0.0f;
+            uint64_t totalWithoutDelta = m_fullSnapshotBytesSent + m_deltaBytesSent;
+            if (totalWithoutDelta == 0) return 0.0f;
+            return (1.0f - static_cast<float>(m_totalBytesSent) / static_cast<float>(totalWithoutDelta)) * 100.0f;
+        }
     private:
         uint32_t GetOrAssignNetworkId(RType::ECS::Entity entity);
 
@@ -118,6 +131,7 @@ namespace network {
         void HandleInput(const std::vector<uint8_t>& data, const Network::Endpoint& from);
         void HandlePing(const std::vector<uint8_t>& data, const Network::Endpoint& from);
         void HandleDisconnect(const std::vector<uint8_t>& data, const Network::Endpoint& from);
+        void HandleStateAck(const std::vector<uint8_t>& data, const Network::Endpoint& from);
 
         void SendTo(const std::vector<uint8_t>& data, const Network::Endpoint& to);
         void Broadcast(const std::vector<uint8_t>& data);
@@ -170,9 +184,7 @@ namespace network {
         std::vector<GameEntity> m_entities;
         uint32_t m_currentTick = 0;
 
-        // Stable network IDs for entities (stored as ECS component NetworkId).
         uint32_t m_nextNetworkId = 1;
-        // Debug: track last known type per network ID to detect collisions/reuse.
         std::unordered_map<uint32_t, EntityType> m_networkIdTypes;
 
         uint32_t m_nextEntityId = 1;
@@ -194,12 +206,21 @@ namespace network {
 
         std::string m_levelPath;
 
-        // Level progression
         bool m_bossDefeated = false;
         bool m_levelComplete = false;
         int m_currentLevel = 1;
         float m_levelTransitionTimer = 0.0f;
         bool m_waitingForLevelTransition = false;
+
+        uint32_t m_stateSequence = 0;
+        std::unordered_map<uint32_t, EntityState> m_lastSentState;
+        std::vector<uint32_t> m_destroyedEntities;
+        static constexpr uint32_t FULL_SNAPSHOT_INTERVAL = 60;
+        static constexpr float POSITION_DELTA_THRESHOLD = 0.5f;
+
+        std::atomic<uint64_t> m_totalBytesSent{0};
+        std::atomic<uint64_t> m_deltaBytesSent{0};
+        std::atomic<uint64_t> m_fullSnapshotBytesSent{0};
     };
 
 }

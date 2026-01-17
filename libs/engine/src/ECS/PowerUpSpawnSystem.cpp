@@ -7,6 +7,7 @@
 
 #include "ECS/PowerUpSpawnSystem.hpp"
 #include "ECS/PowerUpFactory.hpp"
+#include "ECS/EffectFactory.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include <chrono>
@@ -46,7 +47,6 @@ namespace RType {
             std::uniform_real_distribution<float> yDist(50.0f, m_screenHeight - 50.0f);
             float spawnY = yDist(m_rng);
 
-            // Spawn at right edge of screen
             float spawnX = m_screenWidth + 50.0f;
 
             PowerUpFactory::CreatePowerUp(
@@ -54,7 +54,8 @@ namespace RType {
                 type,
                 spawnX,
                 spawnY,
-                m_renderer
+                m_renderer,
+                m_effectFactory
             );
 
             Core::Logger::Info("[PowerUpSpawnSystem] Spawned {} powerup at ({}, {})",
