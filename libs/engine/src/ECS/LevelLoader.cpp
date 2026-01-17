@@ -447,6 +447,7 @@ namespace RType {
 
             auto& bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{3.0f});
             if (boss.bossId == 2) {
+                bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{1.3f});
                 bossAttack.currentPattern = BossAttackPattern::ANIMATED_ORB;
             } else {
                 bossAttack.currentPattern = static_cast<BossAttackPattern>(boss.attackPattern);
