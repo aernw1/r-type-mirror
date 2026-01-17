@@ -6,7 +6,7 @@
 */
 
 #include "../../include/GameState.hpp"
-
+#include "Core/InputMapping.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
