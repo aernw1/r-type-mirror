@@ -293,6 +293,30 @@ namespace RType {
                                 m_registry.DestroyEntity(newEntity);
                                 continue;
                             }
+                        } else if (entityState.flags == 17) {
+                            auto secondAttackSpriteIt = m_levelAssets.sprites.find("second_attack");
+                            if (secondAttackSpriteIt != m_levelAssets.sprites.end() &&
+                                m_secondAttackClipId != Animation::INVALID_CLIP_ID) {
+
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(secondAttackSpriteIt->second, 12));
+                                d.scale = {2.8f, 2.8f};
+                                d.origin = Math::Vector2(11.0f, 11.0f);
+
+                                if (m_animationModule) {
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity, ECS::SpriteAnimation{m_secondAttackClipId, true, 1.0f});
+                                    auto firstFrame = m_animationModule->GetFrameAtTime(m_secondAttackClipId, 0.0f, true);
+                                    anim.currentRegion = firstFrame.region;
+                                    anim.currentFrameIndex = 0;
+
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                }
+
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing second_attack sprite or animation (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
                         } else if (entityState.flags == 13) {
                             auto bossBulletSpriteIt = m_levelAssets.sprites.find("boss_bullet");
                             if (bossBulletSpriteIt != m_levelAssets.sprites.end()) {

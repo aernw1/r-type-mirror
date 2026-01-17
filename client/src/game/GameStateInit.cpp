@@ -499,7 +499,7 @@ namespace RType {
                 waveLayout.columns = 3;
                 waveLayout.rows = 1;
                 waveLayout.frameCount = 3;
-                waveLayout.frameWidth = 30.0f; 
+                waveLayout.frameWidth = 30.0f;
                 waveLayout.frameHeight = 40.0f;
                 waveLayout.defaultDuration = 0.1f;
 
@@ -509,6 +509,23 @@ namespace RType {
                     waveLayout,
                     true);
                 Core::Logger::Info("[GameState] Created wave attack animation clip with {} frames", 3);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout secondLayout;
+                secondLayout.columns = 3;
+                secondLayout.rows = 1;
+                secondLayout.frameCount = 3;
+                secondLayout.frameWidth = 22.0f;
+                secondLayout.frameHeight = 25.0f;
+                secondLayout.defaultDuration = 0.1f;
+
+                m_secondAttackClipId = m_animationModule->CreateClipFromGrid(
+                    "second_attack",
+                    "assets/boss/attacks/boss_2/second_attack_boss2.png",
+                    secondLayout,
+                    true);
+                Core::Logger::Info("[GameState] Created second attack animation clip with {} frames", 3);
             }
 
             m_animationSystem = std::make_unique<RType::ECS::AnimationSystem>(m_animationModule.get());
