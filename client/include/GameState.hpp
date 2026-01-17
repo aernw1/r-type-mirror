@@ -206,6 +206,8 @@ namespace RType {
             bool m_bossMusicPlaying = false;
             Audio::MusicId m_gameOverMusic = Audio::INVALID_MUSIC_ID;
             bool m_gameOverMusicPlaying = false;
+            Audio::MusicId m_victoryMusic = Audio::INVALID_MUSIC_ID;
+            bool m_victoryMusicPlaying = false;
 
             // Enemy bullet textures and sprites
             Renderer::TextureId m_enemyBulletGreenTexture = Renderer::INVALID_TEXTURE_ID;
@@ -361,6 +363,13 @@ namespace RType {
             RType::ECS::LoadedAssets m_levelAssets;
             RType::ECS::CreatedEntities m_levelEntities;
             std::string m_currentLevelPath = "assets/levels/level1.json";
+
+            bool m_bossWarningActive = false;
+            bool m_bossWarningTriggered = false;
+            float m_bossWarningTimer = 0.0f;
+            static constexpr float BOSS_WARNING_DURATION = 4.0f;
+            bool m_bossWarningFlashState = false;
+            void renderBossWarning();
 
             // Boss health bar
             struct {
