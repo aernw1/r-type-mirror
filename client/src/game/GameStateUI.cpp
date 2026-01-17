@@ -492,10 +492,12 @@ namespace RType {
 
             m_bossHealthBar.titleEntity = m_registry.CreateEntity();
             m_registry.AddComponent<Position>(m_bossHealthBar.titleEntity, Position{640.0f - 80.0f, 10.0f});
-            m_registry.AddComponent<TextLabel>(m_bossHealthBar.titleEntity,
-                TextLabel("BOSS - LEVEL 1", m_hudFontSmall != Renderer::INVALID_FONT_ID ? m_hudFontSmall : m_hudFont, 12));
 
-            Core::Logger::Info("[GameState] Boss health bar initialized");
+            std::string bossTitle = "BOSS - LEVEL " + std::to_string(m_levelProgress.currentLevelNumber);
+            m_registry.AddComponent<TextLabel>(m_bossHealthBar.titleEntity,
+                TextLabel(bossTitle, m_hudFontSmall != Renderer::INVALID_FONT_ID ? m_hudFontSmall : m_hudFont, 12));
+
+            Core::Logger::Info("[GameState] Boss health bar initialized for level {}", m_levelProgress.currentLevelNumber);
         }
 
         void InGameState::destroyBossHealthBar() {
