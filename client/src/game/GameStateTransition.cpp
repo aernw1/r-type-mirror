@@ -61,7 +61,7 @@ namespace RType {
                         m_levelProgress.transitionPhase = TransitionPhase::NONE;
                         m_levelProgress.fadeAlpha = 0.0f;
                         m_levelProgress.levelComplete = false;
-                        m_levelProgress.currentLevelNumber = m_levelProgress.nextLevelNumber;
+                        // currentLevelNumber already updated in LoadNextLevel()
                         Core::Logger::Info("[Transition] FADE_IN complete, transition finished");
                     }
                     break;
@@ -75,7 +75,22 @@ namespace RType {
         void InGameState::LoadNextLevel() {
             Core::Logger::Info("[Transition] Loading level {}...", m_levelProgress.nextLevelNumber);
 
+            m_levelProgress.currentLevelNumber = m_levelProgress.nextLevelNumber;
+
             std::unordered_set<ECS::Entity> hudEntities;
+
+            if (m_hudPlayerEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_hudPlayerEntity);
+            }
+            if (m_hudScoreEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_hudScoreEntity);
+            }
+            if (m_hudLivesEntity != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_hudLivesEntity);
+            }
+            if (m_hudScoreboardTitle != ECS::NULL_ENTITY) {
+                hudEntities.insert(m_hudScoreboardTitle);
+            }
 
             for (size_t i = 0; i < MAX_PLAYERS; i++) {
                 if (m_playersHUD[i].scoreEntity != ECS::NULL_ENTITY) {
@@ -93,16 +108,6 @@ namespace RType {
                 if (m_playersHUD[i].powerupShieldEntity != ECS::NULL_ENTITY) {
                     hudEntities.insert(m_playersHUD[i].powerupShieldEntity);
                 }
-            }
-
-            if (m_bossHealthBar.titleEntity != ECS::NULL_ENTITY) {
-                hudEntities.insert(m_bossHealthBar.titleEntity);
-            }
-            if (m_bossHealthBar.barBackgroundEntity != ECS::NULL_ENTITY) {
-                hudEntities.insert(m_bossHealthBar.barBackgroundEntity);
-            }
-            if (m_bossHealthBar.barForegroundEntity != ECS::NULL_ENTITY) {
-                hudEntities.insert(m_bossHealthBar.barForegroundEntity);
             }
 
             for (const auto& pair : m_playerNameLabels) {
@@ -199,10 +204,23 @@ namespace RType {
             m_serverScrollOffset = 0.0f;
             m_localScrollOffset = 0.0f;
 
+            if (m_bossHealthBar.titleEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(m_bossHealthBar.titleEntity)) {
+                m_registry.DestroyEntity(m_bossHealthBar.titleEntity);
+            }
+            if (m_bossHealthBar.barBackgroundEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(m_bossHealthBar.barBackgroundEntity)) {
+                m_registry.DestroyEntity(m_bossHealthBar.barBackgroundEntity);
+            }
+            if (m_bossHealthBar.barForegroundEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(m_bossHealthBar.barForegroundEntity)) {
+                m_registry.DestroyEntity(m_bossHealthBar.barForegroundEntity);
+            }
+
             m_bossHealthBar.bossNetworkId = 0;
             m_bossHealthBar.currentHealth = 0;
             m_bossHealthBar.maxHealth = 0;
             m_bossHealthBar.active = false;
+            m_bossHealthBar.titleEntity = ECS::NULL_ENTITY;
+            m_bossHealthBar.barBackgroundEntity = ECS::NULL_ENTITY;
+            m_bossHealthBar.barForegroundEntity = ECS::NULL_ENTITY;
 
             std::string levelPath = "assets/levels/level" + std::to_string(m_levelProgress.nextLevelNumber) + ".json";
             m_currentLevelPath = levelPath;
