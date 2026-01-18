@@ -81,6 +81,9 @@ namespace RType {
                                 attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;
                                 break;
                         }
+                    } else if (boss.bossId == 3) {
+                        // Boss 3: Continuous fire - just shoot continuously with high fire rate
+                        CreateContinuousFire(registry, bossEntity, pos.x, pos.y);
                     }
                 }
             }
@@ -270,7 +273,7 @@ namespace RType {
         }
 
         void BossAttackSystem::CreateSecondAttackSpray(Registry& registry, Entity bossEntity, float bossX, float bossY) {
-            const int orbCount = 30;
+            const int orbCount = 32;
             const float baseSpeed = 300.0f;
 
             const float spawnX = bossX + 114.0f;
@@ -311,6 +314,39 @@ namespace RType {
             }
 
             Core::Logger::Info("[BossAttackSystem] Boss 2 created massive 360° spray with {} orbs", orbCount);
+        }
+
+        void BossAttackSystem::CreateContinuousFire(Registry& registry, Entity bossEntity, float bossX, float bossY) {
+            const float baseSpeed = 350.0f;
+
+            const float spawnX = bossX + 20.0f;
+            const float spawnY = bossY + 100.0f;
+
+            Entity bullet = registry.CreateEntity();
+
+            if (registry.HasComponent<Obstacle>(bullet)) {
+                registry.RemoveComponent<Obstacle>(bullet);
+            }
+            if (registry.HasComponent<ObstacleMetadata>(bullet)) {
+                registry.RemoveComponent<ObstacleMetadata>(bullet);
+            }
+
+            registry.AddComponent<Position>(bullet, Position{spawnX, spawnY});
+
+            float vx = -baseSpeed;
+            float vy = 0.0f;
+            registry.AddComponent<Velocity>(bullet, Velocity{vx, vy});
+
+            registry.AddComponent<Bullet>(bullet, Bullet{bossEntity});
+            registry.AddComponent<BossBullet>(bullet, BossBullet{});
+            registry.AddComponent<FireBullet>(bullet, FireBullet{});
+
+            registry.AddComponent<CircleCollider>(bullet, CircleCollider{12.0f});
+            registry.AddComponent<CollisionLayer>(bullet,
+                CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER));
+            registry.AddComponent<Damage>(bullet, Damage{12});
+
+            Core::Logger::Debug("[BossAttackSystem] Boss 3 fired single bullet");
         }
 
     }

@@ -452,6 +452,12 @@ namespace RType {
 
                 registry.AddComponent<BossMovementPattern>(bossEntity,
                     BossMovementPattern{150.0f, 60.0f, 0.3f, 0.2f, boss.y, boss.x});
+            } else if (boss.bossId == 3) {
+                bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{0.30f});
+                bossAttack.currentPattern = BossAttackPattern::FAN_SPRAY;
+
+                registry.AddComponent<BossMovementPattern>(bossEntity,
+                    BossMovementPattern{180.0f, 120.0f, 0.4f, 0.4f, boss.y, boss.x});
             } else {
                 bossAttack.currentPattern = static_cast<BossAttackPattern>(boss.attackPattern);
             }
