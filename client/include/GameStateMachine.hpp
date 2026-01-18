@@ -11,12 +11,14 @@
 #include <optional>
 #include <stack>
 #include <vector>
+#include <iostream>
 #include "Renderer/IRenderer.hpp"
 #include "ECS/Registry.hpp"
 #include "Audio/IAudio.hpp"
 #include "../../libs/network/include/GameClient.hpp"
 #include "../../libs/network/include/Protocol.hpp"
 #include "../../libs/network/include/INetworkModule.hpp"
+#include "Core/Logger.hpp"
 
 namespace RType {
     namespace Client {
@@ -101,6 +103,9 @@ namespace RType {
                     GetCurrentState()->Update(dt);
                     m_isDispatching = false;
                     ApplyPending();
+                    if (m_states.empty()) {
+                        Core::Logger::Warning("[GameStateMachine] State stack is empty after Update!");
+                    }
                 }
             }
 
@@ -110,6 +115,9 @@ namespace RType {
                     GetCurrentState()->Draw();
                     m_isDispatching = false;
                     ApplyPending();
+                    if (m_states.empty()) {
+                        Core::Logger::Warning("[GameStateMachine] State stack is empty after Draw!");
+                    }
                 }
             }
 
@@ -119,10 +127,15 @@ namespace RType {
                     GetCurrentState()->HandleInput();
                     m_isDispatching = false;
                     ApplyPending();
+                    
+                    if (m_states.empty()) {
+                        Core::Logger::Warning("[GameStateMachine] State stack is empty after HandleInput!");
+                    }
                 }
             }
 
             bool IsRunning() const { return !m_states.empty(); }
+            size_t GetStateCount() const { return m_states.size(); }
         private:
             enum class OpType {
                 Push,
@@ -164,6 +177,8 @@ namespace RType {
                 if (!m_states.empty()) {
                     m_states.top()->Cleanup();
                     m_states.pop();
+                } else {
+                    Core::Logger::Warning("[GameStateMachine] Attempted to pop state from empty stack!");
                 }
             }
 

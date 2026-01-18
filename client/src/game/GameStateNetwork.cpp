@@ -6,28 +6,21 @@
 */
 
 #include "../../include/GameState.hpp"
-#include "../../include/LevelTransitionState.hpp"
 
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include "ECS/PowerUpFactory.hpp"
+#include "Animation/AnimationModule.hpp"
 #include <algorithm>
 
 using namespace RType::ECS;
+using namespace Animation;
 
 namespace RType {
     namespace Client {
 
-        void InGameState::OnServerStateUpdate(uint32_t tick, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks) {
-#ifdef DEBUG_NETWORK_VERBOSE
-            static int stateLog = 0;
-            if (stateLog++ % 60 == 0) {
-                auto now = std::chrono::steady_clock::now();
-                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-                std::cout << "[CLIENT RECV STATE] t=" << ms << " tick=" << tick << " entities=" << entities.size() << std::endl;
-            }
-#endif
+        void InGameState::OnServerStateUpdate(uint32_t /*tick*/, const std::vector<network::EntityState>& entities, const std::vector<network::InputAck>& inputAcks) {
 
             if (m_context.networkClient) {
                 m_serverScrollOffset = m_context.networkClient->GetLastScrollOffset();
@@ -54,9 +47,6 @@ namespace RType {
                                         m_registry.HasComponent<ECS::WeaponSlot>(obsEntity) ||
                                         m_registry.HasComponent<ECS::Velocity>(obsEntity);
                     if (contaminated) {
-                        std::cout << "[CLIENT SCRUB] Obstacle entity " << obsEntity
-                                  << " had Bullet/Shooter/WeaponSlot/Velocity; destroying to avoid obstacle bullets."
-                                  << std::endl;
 
                         for (auto itMap = m_networkEntityMap.begin(); itMap != m_networkEntityMap.end();) {
                             if (itMap->second == obsEntity) {
@@ -90,30 +80,8 @@ namespace RType {
 
                 if (auto it = m_networkEntityMap.find(entityState.entityId); it == m_networkEntityMap.end()) {
                     if (type == network::EntityType::PLAYER) {
-                        bool isForcePod = (entityState.flags & 0x80) != 0;
-                        if (isForcePod) {
-                            auto newEntity = m_registry.CreateEntity();
-                            CleanupInvalidComponents(newEntity, network::EntityType::PLAYER);
-                            m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
-                            m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
-
-                            Renderer::SpriteId podSprite = m_powerupForcePodSprite;
-                            if (podSprite != Renderer::INVALID_SPRITE_ID) {
-                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(podSprite, 9));
-                                d.scale = {0.4f, 0.4f};
-                                d.origin = Math::Vector2(128.0f, 128.0f);
-                            }
-
-                            m_networkEntityMap[entityState.entityId] = newEntity;
-                            std::cout << "[GameState] Created FORCE POD entity " << entityState.entityId << std::endl;
+                        if (entityState.ownerHash == m_context.playerHash && m_localPlayerEntity != ECS::NULL_ENTITY) {
                             continue;
-                        }
-
-                        if (entityState.ownerHash == m_context.playerHash) {
-                            auto existing = m_networkEntityMap.find(entityState.entityId);
-                            if (existing != m_networkEntityMap.end()) {
-                                continue;
-                            }
                         }
 
                         Renderer::SpriteId playerSprite = Renderer::INVALID_SPRITE_ID;
@@ -134,7 +102,7 @@ namespace RType {
 
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
-                        m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
+                        m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 300});
 
                         m_registry.AddComponent<Controllable>(newEntity, Controllable{200.0f});
                         m_registry.AddComponent<Shooter>(newEntity, Shooter{0.2f, 50.0f, 20.0f});
@@ -172,6 +140,8 @@ namespace RType {
                                 m_playersHUD[localPlayerIndex].playerEntity = newEntity;
                                 m_playersHUD[localPlayerIndex].active = true;
                                 m_playersHUD[localPlayerIndex].score = entityState.score;
+                                m_playersHUD[localPlayerIndex].health = static_cast<int>(entityState.health);
+                                m_playersHUD[localPlayerIndex].maxHealth = 300;
                                 m_playerScore = entityState.score;
                                 if (entityState.health > 0) {
                                     m_playersHUD[localPlayerIndex].isDead = false;
@@ -183,14 +153,13 @@ namespace RType {
                             m_playersHUD[hudPlayerIndex].active = true;
                             m_playersHUD[hudPlayerIndex].playerEntity = newEntity;
                             m_playersHUD[hudPlayerIndex].score = entityState.score;
+                            m_playersHUD[hudPlayerIndex].health = static_cast<int>(entityState.health);
+                            m_playersHUD[hudPlayerIndex].maxHealth = 300;
 
                             if (entityState.health > 0) {
                                 m_playersHUD[hudPlayerIndex].isDead = false;
                             }
-                            std::cout << "[GameState] Player P" << (int)playerNum << " (" << playerName << ") added to scoreboard" << std::endl;
                         }
-
-                        std::cout << "[GameState] Created PLAYER entity " << entityState.entityId << " with color index " << playerIndex << std::endl;
                     } else if (type == network::EntityType::ENEMY) {
                         uint8_t enemyType = entityState.flags;
                         EnemySpriteConfig config = GetEnemySpriteConfig(enemyType);
@@ -212,6 +181,13 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
                         m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 100});
+                        m_registry.AddComponent<Enemy>(newEntity, Enemy{static_cast<ECS::EnemyType>(enemyType)});
+
+                        // Add collision components for hit effect detection
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(64.0f, 64.0f));
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
+
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(enemySprite, 1));
                         drawable.scale = {0.5f, 0.5f};
                         drawable.origin = Math::Vector2(128.0f, 128.0f);
@@ -219,15 +195,21 @@ namespace RType {
                         drawable.tint = enemyTint;
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
-                        std::cout << "[GameState] Created ENEMY entity " << entityState.entityId << " type " << static_cast<int>(enemyType) << std::endl;
                     } else if (type == network::EntityType::BOSS) {
                         Renderer::SpriteId bossSprite = Renderer::INVALID_SPRITE_ID;
-                        auto spriteIt = m_levelAssets.sprites.find("boss_dragon");
-                        if (spriteIt != m_levelAssets.sprites.end()) {
-                            bossSprite = spriteIt->second;
+
+                        std::vector<std::string> bossNames = {"boss_2", "boss_dragon", "boss", "boss_3"};
+                        for (const auto& bossName : bossNames) {
+                            auto spriteIt = m_levelAssets.sprites.find(bossName);
+                            if (spriteIt != m_levelAssets.sprites.end()) {
+                                bossSprite = spriteIt->second;
+                                Core::Logger::Info("[GameState] Using boss sprite: {}", bossName);
+                                break;
+                            }
                         }
 
                         if (bossSprite == Renderer::INVALID_SPRITE_ID) {
+                            Core::Logger::Warning("[GameState] No boss sprite found in level assets");
                             continue;
                         }
 
@@ -237,6 +219,12 @@ namespace RType {
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
                         m_registry.AddComponent<Health>(newEntity, Health{static_cast<int>(entityState.health), 1000});
+                        m_registry.AddComponent<Boss>(newEntity, Boss{});
+
+                        // Add collision components for hit effect detection
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(200.0f, 200.0f));
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::ENEMY, CollisionLayers::PLAYER | CollisionLayers::PLAYER_BULLET));
 
                         auto& drawable = m_registry.AddComponent<Drawable>(newEntity, Drawable(bossSprite, 5));
                         drawable.scale = {3.0f, 3.0f};
@@ -245,40 +233,18 @@ namespace RType {
                         m_networkEntityMap[entityState.entityId] = newEntity;
 
                         m_bossHealthBar.currentHealth = static_cast<int>(entityState.health);
-                        m_bossHealthBar.maxHealth = 1000;
+                        m_bossHealthBar.maxHealth = 100;
+                        m_bossHealthBar.bossNetworkId = entityState.entityId;
                     } else if (type == network::EntityType::BULLET) {
                         auto newEntity = m_registry.CreateEntity();
-
-                        bool hadObstacle = m_registry.HasComponent<ECS::Obstacle>(newEntity);
-                        bool hadObstacleMeta = m_registry.HasComponent<ECS::ObstacleMetadata>(newEntity);
-                        bool hadDrawable = m_registry.HasComponent<ECS::Drawable>(newEntity);
-
-                        if (hadObstacle || hadObstacleMeta || hadDrawable) {
-                            std::cerr << "[CLIENT BULLET] NEW bullet entity " << newEntity
-                                      << " has contaminated components: Obstacle=" << hadObstacle
-                                      << " ObstacleMeta=" << hadObstacleMeta
-                                      << " Drawable=" << hadDrawable;
-                            if (hadDrawable) {
-                                const auto& drawable = m_registry.GetComponent<ECS::Drawable>(newEntity);
-                                std::cerr << " DrawableSpriteId=" << drawable.spriteId;
-                            }
-                            std::cerr << std::endl;
-                        }
-
                         CleanupInvalidComponents(newEntity, network::EntityType::BULLET);
 
                         m_registry.AddComponent<Position>(newEntity, Position{entityState.x, entityState.y});
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
-                        static uint64_t bulletSpriteLogCount = 0;
-                        const char* chosenSpriteKey = "(none)";
-                        Renderer::SpriteId chosenSpriteId = Renderer::INVALID_SPRITE_ID;
-
                         if (entityState.flags == 15) {
                             auto thirdBulletSpriteIt = m_levelAssets.sprites.find("third_bullet");
                             if (thirdBulletSpriteIt != m_levelAssets.sprites.end()) {
-                                chosenSpriteKey = "third_bullet";
-                                chosenSpriteId = thirdBulletSpriteIt->second;
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(thirdBulletSpriteIt->second, 12));
                                 d.scale = {2.5f, 2.5f};
                                 d.origin = Math::Vector2(16.0f, 16.0f);
@@ -290,8 +256,6 @@ namespace RType {
                         } else if (entityState.flags == 14) {
                             auto blackOrbSpriteIt = m_levelAssets.sprites.find("black_orb");
                             if (blackOrbSpriteIt != m_levelAssets.sprites.end()) {
-                                chosenSpriteKey = "black_orb";
-                                chosenSpriteId = blackOrbSpriteIt->second;
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(blackOrbSpriteIt->second, 12));
                                 d.scale = {2.0f, 2.0f};
                                 d.origin = Math::Vector2(20.0f, 20.0f);
@@ -300,11 +264,147 @@ namespace RType {
                                 m_registry.DestroyEntity(newEntity);
                                 continue;
                             }
+                        } else if (entityState.flags == 16) {
+                            auto waveAttackSpriteIt = m_levelAssets.sprites.find("wave_attack");
+                            if (waveAttackSpriteIt != m_levelAssets.sprites.end() &&
+                                m_waveAttackClipId != Animation::INVALID_CLIP_ID) {
+
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(waveAttackSpriteIt->second, 12));
+                                d.scale = {3.0f, 3.0f};
+                                d.origin = Math::Vector2(15.0f, 20.0f);
+
+                                if (m_animationModule) {
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity, ECS::SpriteAnimation{m_waveAttackClipId, true, 1.0f});
+                                    auto firstFrame = m_animationModule->GetFrameAtTime(m_waveAttackClipId, 0.0f, true);
+                                    anim.currentRegion = firstFrame.region;
+                                    anim.currentFrameIndex = 0;
+
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                }
+
+                                m_registry.AddComponent<Bullet>(newEntity, Bullet(ECS::NULL_ENTITY));
+                                m_registry.AddComponent<CircleCollider>(newEntity, CircleCollider(45.0f)); 
+                                m_registry.AddComponent<Damage>(newEntity, Damage(10));
+                                m_registry.AddComponent<CollisionLayer>(newEntity,
+                                    CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER));
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing wave_attack sprite or animation (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags == 17) {
+                            auto secondAttackSpriteIt = m_levelAssets.sprites.find("second_attack");
+                            if (secondAttackSpriteIt != m_levelAssets.sprites.end() &&
+                                m_secondAttackClipId != Animation::INVALID_CLIP_ID) {
+
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(secondAttackSpriteIt->second, 12));
+                                d.scale = {2.8f, 2.8f};
+                                d.origin = Math::Vector2(11.0f, 11.0f);
+
+                                if (m_animationModule) {
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity, ECS::SpriteAnimation{m_secondAttackClipId, true, 1.0f});
+                                    auto firstFrame = m_animationModule->GetFrameAtTime(m_secondAttackClipId, 0.0f, true);
+                                    anim.currentRegion = firstFrame.region;
+                                    anim.currentFrameIndex = 0;
+
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                }
+
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing second_attack sprite or animation (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags == 18) {
+                            auto fireBulletSpriteIt = m_levelAssets.sprites.find("fire_bullet");
+                            if (fireBulletSpriteIt != m_levelAssets.sprites.end() &&
+                                m_fireBulletClipId != Animation::INVALID_CLIP_ID) {
+
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(fireBulletSpriteIt->second, 12));
+                                d.scale = {2.5f, 2.5f};
+                                d.origin = Math::Vector2(10.5f, 8.5f);
+
+                                if (m_animationModule) {
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity, ECS::SpriteAnimation{m_fireBulletClipId, true, 1.0f});
+                                    auto firstFrame = m_animationModule->GetFrameAtTime(m_fireBulletClipId, 0.0f, true);
+                                    anim.currentRegion = firstFrame.region;
+                                    anim.currentFrameIndex = 0;
+
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                }
+
+                                m_registry.AddComponent<ECS::CircleCollider>(newEntity, ECS::CircleCollider{12.0f});
+                                m_registry.AddComponent<CollisionLayer>(newEntity,
+                                    CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER));
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing fire_bullet sprite or animation (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags == 20) {
+                            Core::Logger::Debug("[GameState] Received exploding mine entity {} at ({}, {})", entityState.entityId, entityState.x, entityState.y);
+                            auto mineExplosionSpriteIt = m_levelAssets.sprites.find("mine_explosion");
+                            Core::Logger::Debug("[GameState] Mine explosion sprite found: {}, clipId valid: {}",
+                                              mineExplosionSpriteIt != m_levelAssets.sprites.end(),
+                                              m_mineExplosionClipId != Animation::INVALID_CLIP_ID);
+                            if (mineExplosionSpriteIt != m_levelAssets.sprites.end() &&
+                                m_mineExplosionClipId != Animation::INVALID_CLIP_ID) {
+
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(mineExplosionSpriteIt->second, 12));
+                                d.scale = {2.0f, 2.0f};
+                                d.origin = Math::Vector2(13.0f, 11.5f);
+
+                                if (m_animationModule) {
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity, ECS::SpriteAnimation{m_mineExplosionClipId, false, 1.0f});
+                                    auto firstFrame = m_animationModule->GetFrameAtTime(m_mineExplosionClipId, 0.0f, false);
+                                    anim.currentRegion = firstFrame.region;
+                                    anim.currentFrameIndex = 0;
+
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                }
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing mine_explosion sprite or animation (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags == 19) {
+                            Core::Logger::Debug("[GameState] Received mine entity {} at ({}, {})", entityState.entityId, entityState.x, entityState.y);
+                            auto mineSpriteIt = m_levelAssets.sprites.find("mine");
+                            Core::Logger::Debug("[GameState] Mine sprite found: {}, clipId valid: {}",
+                                              mineSpriteIt != m_levelAssets.sprites.end(),
+                                              m_mineClipId != Animation::INVALID_CLIP_ID);
+                            if (mineSpriteIt != m_levelAssets.sprites.end() &&
+                                m_mineClipId != Animation::INVALID_CLIP_ID) {
+
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(mineSpriteIt->second, 12));
+                                d.scale = {2.5f, 2.5f};
+                                d.origin = Math::Vector2(9.5f, 22.5f);
+
+                                if (m_animationModule) {
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity, ECS::SpriteAnimation{m_mineClipId, true, 1.0f});
+                                    auto firstFrame = m_animationModule->GetFrameAtTime(m_mineClipId, 0.0f, true);
+                                    anim.currentRegion = firstFrame.region;
+                                    anim.currentFrameIndex = 0;
+
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                }
+
+                                m_registry.AddComponent<ECS::CircleCollider>(newEntity, ECS::CircleCollider{20.0f});
+                                m_registry.AddComponent<CollisionLayer>(newEntity,
+                                    CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::PLAYER));
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing mine sprite or animation (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
                         } else if (entityState.flags == 13) {
                             auto bossBulletSpriteIt = m_levelAssets.sprites.find("boss_bullet");
                             if (bossBulletSpriteIt != m_levelAssets.sprites.end()) {
-                                chosenSpriteKey = "boss_bullet";
-                                chosenSpriteId = bossBulletSpriteIt->second;
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bossBulletSpriteIt->second, 12));
                                 d.scale = {2.0f, 2.0f};
                                 d.origin = Math::Vector2(8.0f, 4.0f);
@@ -333,8 +433,6 @@ namespace RType {
                                 continue;
                             }
 
-                            chosenSpriteKey = "enemy_bullet(config/bullet)";
-                            chosenSpriteId = bulletSprite;
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSprite, 12));
                             d.scale = {scaleValue, scaleValue};
                             d.origin = Math::Vector2(128.0f, 128.0f);
@@ -342,8 +440,6 @@ namespace RType {
                         } else {
                             auto bulletSpriteIt = m_levelAssets.sprites.find("bullet");
                             if (bulletSpriteIt != m_levelAssets.sprites.end()) {
-                                chosenSpriteKey = "bullet";
-                                chosenSpriteId = bulletSpriteIt->second;
                                 auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(bulletSpriteIt->second, 12));
                                 d.scale = {0.1f, 0.1f};
                                 d.origin = Math::Vector2(128.0f, 128.0f);
@@ -351,14 +447,30 @@ namespace RType {
                             }
                         }
 
-                        if (bulletSpriteLogCount < 300 || (bulletSpriteLogCount % 20) == 0) {
-                            std::cout << "[CLIENT BULLET SPRITE] netId=" << entityState.entityId
-                                      << " flags=" << static_cast<int>(entityState.flags)
-                                      << " spriteKey=" << chosenSpriteKey
-                                      << " spriteId=" << chosenSpriteId
-                                      << std::endl;
+                        bool isPlayerBullet = (entityState.flags < 10);
+
+                        m_registry.AddComponent<Bullet>(newEntity, Bullet(m_localPlayerEntity));
+                        m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider(20.0f, 10.0f));
+                        m_registry.AddComponent<Damage>(newEntity, Damage(25));
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::PLAYER_BULLET,
+                                           CollisionLayers::ENEMY | CollisionLayers::OBSTACLE));
+
+                        if (isPlayerBullet && m_localPlayerEntity != ECS::NULL_ENTITY && 
+                            m_registry.IsEntityAlive(m_localPlayerEntity) && m_effectFactory &&
+                            m_registry.HasComponent<Position>(m_localPlayerEntity)) {
+                            const auto& playerPos = m_registry.GetComponent<Position>(m_localPlayerEntity);
+                            float bulletX = entityState.x;
+                            float bulletY = entityState.y;
+                            float dx = bulletX - playerPos.x;
+                            float dy = bulletY - playerPos.y;
+                            float distance = std::sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 80.0f && dx > 0 && std::abs(dy) < 40.0f && entityState.vx > 400.0f) {
+                                m_effectFactory->CreateShootingEffect(m_registry, playerPos.x, playerPos.y, m_localPlayerEntity);
+                            }
                         }
-                        bulletSpriteLogCount++;
+
                         m_networkEntityMap[entityState.entityId] = newEntity;
                         m_bulletFlagsMap[entityState.entityId] = entityState.flags;
                     } else if (type == network::EntityType::POWERUP) {
@@ -372,54 +484,68 @@ namespace RType {
                         m_registry.AddComponent<Velocity>(newEntity, Velocity{entityState.vx, entityState.vy});
 
                         Math::Color powerupColor = ECS::PowerUpFactory::GetPowerUpColor(puType);
-
                         Renderer::SpriteId powerupSprite = Renderer::INVALID_SPRITE_ID;
-                        switch (puType) {
-                            case ECS::PowerUpType::FIRE_RATE_BOOST:
-                                powerupSprite = m_powerupSpreadSprite;
-                                break;
-                            case ECS::PowerUpType::SPREAD_SHOT:
-                                powerupSprite = m_powerupSpreadSprite;
-                                break;
-                            case ECS::PowerUpType::LASER_BEAM:
-                                powerupSprite = m_powerupLaserSprite;
-                                break;
-                            case ECS::PowerUpType::FORCE_POD:
-                                powerupSprite = m_powerupForcePodSprite;
-                                break;
-                            case ECS::PowerUpType::SPEED_BOOST:
-                                powerupSprite = m_powerupSpeedSprite;
-                                break;
-                            case ECS::PowerUpType::SHIELD:
-                                powerupSprite = m_powerupShieldSprite;
-                                break;
-                            default:
-                                powerupSprite = m_powerupSpreadSprite;
-                                break;
+                        
+                        powerupSprite = GetPowerUpSprite(puType);
+                        
+                        if (powerupSprite == Renderer::INVALID_SPRITE_ID && puType == ECS::PowerUpType::FORCE_POD) {
+                            auto textureIt = m_levelAssets.textures.find("powerup-force-pod");
+                            if (textureIt != m_levelAssets.textures.end()) {
+                                powerupSprite = m_renderer->CreateSprite(textureIt->second, {});
+                            } else {
+                                powerupSprite = GetPowerUpSprite(ECS::PowerUpType::LASER_BEAM);
+                            }
                         }
 
                         if (powerupSprite != Renderer::INVALID_SPRITE_ID) {
                             auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(powerupSprite, 5));
-                            d.scale = {0.8f, 0.8f};
+                            float scale = ECS::PowerUpFactory::GetPowerUpScale(puType);
+                            d.scale = {scale, scale};
                             d.tint = powerupColor;
+
+                            if (puType == ECS::PowerUpType::FORCE_POD && m_effectFactory) {
+                                const auto& config = m_effectFactory->GetConfig();
+                                if (config.forcePodAnimation != Animation::INVALID_CLIP_ID) {
+                                    if (config.forcePodSprite != Renderer::INVALID_SPRITE_ID) {
+                                        d.spriteId = config.forcePodSprite;
+                                    }
+
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity,
+                                        ECS::SpriteAnimation(config.forcePodAnimation, true, 1.0f));
+                                    anim.looping = true;
+                                    
+                                    if (config.forcePodFirstFrameRegion.size.x > 0.0f && config.forcePodFirstFrameRegion.size.y > 0.0f) {
+                                        anim.currentRegion = config.forcePodFirstFrameRegion;
+                                        anim.currentFrameIndex = 0;
+                                    } else if (m_animationModule) {
+                                        auto firstFrame = m_animationModule->GetFrameAtTime(config.forcePodAnimation, 0.0f, true);
+                                        anim.currentRegion = firstFrame.region;
+                                        anim.currentFrameIndex = m_animationModule->GetFrameIndexAtTime(config.forcePodAnimation, 0.0f, true);
+                                    }
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                } else {
+                                    auto& glow = m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
+                                    glow.baseScale = scale;
+                                }
+                            } else {
+                                auto& glow = m_registry.AddComponent<ECS::PowerUpGlow>(newEntity);
+                                glow.baseScale = scale;
+                            }
                         }
 
                         m_registry.AddComponent<BoxCollider>(newEntity, BoxCollider{32.0f, 32.0f});
+                        m_registry.AddComponent<CollisionLayer>(newEntity,
+                            CollisionLayer(CollisionLayers::POWERUP,
+                                           CollisionLayers::PLAYER));
+                        m_registry.AddComponent<ECS::PowerUp>(newEntity, ECS::PowerUp(puType, entityState.entityId));
 
                         m_networkEntityMap[entityState.entityId] = newEntity;
-                        std::cout << "[GameState] Created POWERUP entity " << entityState.entityId << " type " << static_cast<int>(powerupType) << std::endl;
                     } else if (type == network::EntityType::OBSTACLE) {
                         uint64_t obstacleId = entityState.ownerHash;
                         auto colliderIt = m_obstacleIdToCollider.find(obstacleId);
 
-                        static int obstacleNotFoundLog = 0;
                         if (colliderIt == m_obstacleIdToCollider.end()) {
-                            if (obstacleNotFoundLog < 5) {
-                                std::cout << "[CLIENT OBSTACLE MISSING] Received NEW obstacle uniqueId=" << obstacleId
-                                          << " but not found in m_obstacleIdToCollider map (size="
-                                          << m_obstacleIdToCollider.size() << ")" << std::endl;
-                                obstacleNotFoundLog++;
-                            }
                             continue;
                         }
 
@@ -431,9 +557,6 @@ namespace RType {
 
                         if (!m_registry.HasComponent<ECS::Obstacle>(colliderEntity) ||
                             !m_registry.HasComponent<ECS::ObstacleMetadata>(colliderEntity)) {
-                            std::cout << "[CLIENT ENTITY REUSE] Obstacle ID " << obstacleId
-                                      << " maps to entity " << colliderEntity
-                                      << " which is NO LONGER an obstacle - skipping mapping" << std::endl;
                             continue;
                         }
 
@@ -458,8 +581,6 @@ namespace RType {
                             }
                             m_networkEntityMap.erase(it);
                             m_bulletFlagsMap.erase(entityState.entityId);
-                            std::cout << "[CLIENT BULLET RECREATE] netId=" << entityState.entityId
-                                      << " had obstacle/invalid mapping; recreating bullet entity." << std::endl;
                             continue;
                         }
                     }
@@ -488,44 +609,19 @@ namespace RType {
                         uint64_t obstacleId = entityState.ownerHash;
                         auto colliderIt = m_obstacleIdToCollider.find(obstacleId);
 
-                        static int obstacleNotFoundLog = 0;
                         if (colliderIt == m_obstacleIdToCollider.end()) {
-                            if (obstacleNotFoundLog < 5) {
-                                std::cout << "[CLIENT OBSTACLE MISSING] Received obstacle uniqueId=" << obstacleId
-                                          << " but not found in m_obstacleIdToCollider map (size="
-                                          << m_obstacleIdToCollider.size() << ")" << std::endl;
-                                obstacleNotFoundLog++;
-                            }
                             continue;
                         }
 
                         ECS::Entity colliderEntity = colliderIt->second;
 
-                        static int entityReuseLog = 0;
                         if (!m_registry.IsEntityAlive(colliderEntity)) {
-                            if (entityReuseLog < 10) {
-                                std::cout << "[CLIENT ENTITY REUSE] Obstacle network ID " << entityState.entityId
-                                          << " maps to DEAD entity " << colliderEntity << std::endl;
-                                entityReuseLog++;
-                            }
                             m_networkEntityMap.erase(it);
                             continue;
                         }
 
                         if (!m_registry.HasComponent<ECS::Obstacle>(colliderEntity)) {
-                            if (entityReuseLog < 10) {
-                                std::cout << "[CLIENT ENTITY REUSE] Obstacle network ID " << entityState.entityId
-                                          << " maps to entity " << colliderEntity << " which is NO LONGER AN OBSTACLE"
-                                          << " (now has: "
-                                          << (m_registry.HasComponent<ECS::Bullet>(colliderEntity) ? "Bullet " : "")
-                                          << (m_registry.HasComponent<ECS::Enemy>(colliderEntity) ? "Enemy " : "")
-                                          << (m_registry.HasComponent<ECS::Player>(colliderEntity) ? "Player " : "")
-                                          << ")" << std::endl;
-
-                                CleanupInvalidComponents(colliderEntity, network::EntityType::OBSTACLE);
-
-                                entityReuseLog++;
-                            }
+                            CleanupInvalidComponents(colliderEntity, network::EntityType::OBSTACLE);
                             m_networkEntityMap.erase(it);
                             continue;
                         }
@@ -535,24 +631,11 @@ namespace RType {
                             continue;
                         }
 
-                        static int clientObstacleLog = 0;
-                        if (clientObstacleLog < 5) {
-                            std::cout << "[CLIENT RECV] Obstacle uniqueId=" << obstacleId
-                                      << " entity=" << colliderEntity
-                                      << " received pos=(" << entityState.x << "," << entityState.y << ")" << std::endl;
-                            clientObstacleLog++;
-                        }
-
                         auto& colliderPos = m_registry.GetComponent<Position>(colliderEntity);
                         colliderPos.x = entityState.x;
                         colliderPos.y = entityState.y;
 
-                        static int scrollableRemovalLog = 0;
                         if (m_registry.HasComponent<Scrollable>(colliderEntity)) {
-                            if (scrollableRemovalLog < 10) {
-                                std::cout << "[CLIENT] Removing Scrollable from obstacle entity " << colliderEntity << std::endl;
-                                scrollableRemovalLog++;
-                            }
                             m_registry.RemoveComponent<Scrollable>(colliderEntity);
                         }
 
@@ -609,6 +692,7 @@ namespace RType {
                         if (type == network::EntityType::PLAYER) {
                             auto& pos = m_registry.GetComponent<Position>(ecsEntity);
                             UpdatePlayerNameLabelPosition(ecsEntity, pos.x, pos.y);
+                            ApplyPowerUpStateToPlayer(ecsEntity, entityState);
                         }
                     }
 
@@ -622,6 +706,7 @@ namespace RType {
                         for (size_t i = 0; i < MAX_PLAYERS; i++) {
                             if (m_playersHUD[i].playerEntity == ecsEntity) {
                                 m_playersHUD[i].score = entityState.score;
+                                m_playersHUD[i].health = static_cast<int>(entityState.health);
                                 if (ecsEntity == m_localPlayerEntity) {
                                     m_playerScore = entityState.score;
                                 }
@@ -643,18 +728,15 @@ namespace RType {
                         int newHealth = static_cast<int>(entityState.health);
                         if (newHealth < 0)
                             newHealth = 0;
-                        if (newHealth > 100)
-                            newHealth = 100;
 
                         bool playerIsDead = false;
                         size_t playerIndex = MAX_PLAYERS;
-                        bool isPlayerEntity = false;
+                        bool isPlayerEntity = (type == network::EntityType::PLAYER);
 
                         for (size_t i = 0; i < MAX_PLAYERS; i++) {
                             if (m_playersHUD[i].playerEntity == ecsEntity) {
                                 playerIsDead = m_playersHUD[i].isDead;
                                 playerIndex = i;
-                                isPlayerEntity = true;
                                 break;
                             }
                         }
@@ -663,7 +745,6 @@ namespace RType {
                             if (localPlayerIndex < MAX_PLAYERS) {
                                 playerIsDead = m_playersHUD[localPlayerIndex].isDead;
                                 playerIndex = localPlayerIndex;
-                                isPlayerEntity = true;
                             }
                         }
 
@@ -674,11 +755,9 @@ namespace RType {
                             }
                         } else {
                             health.current = newHealth;
-                            if (health.max != 100) {
-                                health.max = 100;
-                            }
 
                             if (isPlayerEntity && playerIndex < MAX_PLAYERS) {
+                                // Player dies when health reaches 0 (all 300 HP gone)
                                 if (newHealth <= 0) {
                                     m_playersHUD[playerIndex].isDead = true;
                                     m_playersHUD[playerIndex].health = 0;
@@ -720,7 +799,14 @@ namespace RType {
                             }
                         }
 
-                        if (!m_bossHealthBar.active && entityState.x < 1920.0f) {
+                        if (!m_bossWarningTriggered && entityState.x < 2200.0f && entityState.x > -200.0f) {
+                            Core::Logger::Info("[GameState] Boss warning TRIGGERED at x={}", entityState.x);
+                            m_bossWarningActive = true;
+                            m_bossWarningTriggered = true;
+                            m_bossWarningTimer = 0.0f;
+                        }
+
+                        if (!m_bossHealthBar.active && entityState.x < 1300.0f) {
                             initializeBossHealthBar();
                             m_bossHealthBar.maxHealth = 100;
                             m_bossHealthBar.bossNetworkId = entityState.entityId;
@@ -741,19 +827,6 @@ namespace RType {
                 }
             }
 
-            static bool loggedObstacleMapping = false;
-            if (!loggedObstacleMapping) {
-                int obstaclesInNetworkMap = 0;
-                for (const auto& pair : m_networkEntityMap) {
-                    if (m_registry.IsEntityAlive(pair.second) &&
-                        m_registry.HasComponent<ECS::Obstacle>(pair.second)) {
-                        obstaclesInNetworkMap++;
-                    }
-                }
-                std::cout << "[CLIENT NETWORK MAP] m_networkEntityMap has " << obstaclesInNetworkMap
-                          << " obstacle entities mapped (total map size: " << m_networkEntityMap.size() << ")" << std::endl;
-                loggedObstacleMapping = true;
-            }
 
             for (uint32_t entityId : entitiesToRemove) {
                 auto it = m_networkEntityMap.find(entityId);
@@ -767,6 +840,47 @@ namespace RType {
                 if (receivedIds.find(it->first) == receivedIds.end()) {
                     auto ecsEntity = it->second;
                     uint32_t networkId = it->first;
+
+                    if (m_effectFactory && m_registry.IsEntityAlive(ecsEntity) &&
+                        m_registry.HasComponent<Enemy>(ecsEntity) &&
+                        m_registry.HasComponent<Position>(ecsEntity)) {
+                        const auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                        auto explosionEntity = m_effectFactory->CreateExplosionSmall(m_registry, pos.x, pos.y);
+                        
+                        if (m_explosionSprite != Renderer::INVALID_SPRITE_ID &&
+                            m_registry.HasComponent<Drawable>(explosionEntity)) {
+                            auto& drawable = m_registry.GetComponent<Drawable>(explosionEntity);
+                            if (drawable.spriteId == Renderer::INVALID_SPRITE_ID) {
+                                drawable.spriteId = m_explosionSprite;
+                            }
+                        }
+                        
+                        if (m_effectFactory && m_registry.HasComponent<ECS::SpriteAnimation>(explosionEntity)) {
+                            const auto& config = m_effectFactory->GetConfig();
+                            auto& anim = m_registry.GetComponent<ECS::SpriteAnimation>(explosionEntity);
+                            if (anim.clipId == config.explosionSmall && 
+                                config.explosionFirstFrameRegion.size.x > 0.0f && 
+                                config.explosionFirstFrameRegion.size.y > 0.0f) {
+                                anim.currentRegion = config.explosionFirstFrameRegion;
+                                anim.currentFrameIndex = 0;
+                                if (m_registry.HasComponent<ECS::AnimatedSprite>(explosionEntity)) {
+                                    m_registry.GetComponent<ECS::AnimatedSprite>(explosionEntity).needsUpdate = true;
+                                }
+                            }
+                        }
+                    }
+
+                    // Create hit effect when player bullets are destroyed (server-side collision)
+                    auto bulletFlagsIt = m_bulletFlagsMap.find(networkId);
+                    if (bulletFlagsIt != m_bulletFlagsMap.end() && bulletFlagsIt->second < 10) {
+                        // Player bullet was destroyed - create hit effect at last position
+                        if (m_effectFactory && m_registry.IsEntityAlive(ecsEntity) &&
+                            m_registry.HasComponent<Position>(ecsEntity)) {
+                            const auto& pos = m_registry.GetComponent<Position>(ecsEntity);
+                            m_effectFactory->CreateHitEffect(m_registry, pos.x, pos.y);
+                            Core::Logger::Info("[Network] Created hit effect for destroyed bullet at ({}, {})", pos.x, pos.y);
+                        }
+                    }
 
                     DestroyPlayerNameLabel(ecsEntity);
 
@@ -823,6 +937,18 @@ namespace RType {
 
                     if (m_bossHealthBar.active && networkId == m_bossHealthBar.bossNetworkId) {
                         destroyBossHealthBar();
+                        if (m_context.audio && m_bossMusicPlaying) {
+                            m_context.audio->StopMusic(m_bossMusic);
+                            m_bossMusicPlaying = false;
+                            
+                            if (m_gameMusic != Audio::INVALID_MUSIC_ID && !m_isGameOver) {
+                                Audio::PlaybackOptions opts;
+                                opts.loop = true;
+                                opts.volume = 0.5f;
+                                m_context.audio->PlayMusic(m_gameMusic, opts);
+                                m_gameMusicPlaying = true;
+                            }
+                        }
                     }
 
                     if (m_registry.IsEntityAlive(ecsEntity)) {
@@ -914,31 +1040,19 @@ namespace RType {
         }
 
         void InGameState::OnLevelComplete(uint8_t completedLevel, uint8_t nextLevel) {
-            Core::Logger::Info("[InGameState] Level {} complete! Next level: {}",
+            Core::Logger::Info("[InGameState] Level {} complete! Starting transition to level {}",
                               static_cast<int>(completedLevel),
                               static_cast<int>(nextLevel));
 
+            m_levelProgress.transitionPhase = TransitionPhase::FADE_OUT;
+            m_levelProgress.transitionTimer = 0.0f;
+            m_levelProgress.fadeAlpha = 0.0f;
             m_levelProgress.levelComplete = true;
             m_levelProgress.bossDefeated = true;
+            m_levelProgress.currentLevelNumber = static_cast<int>(completedLevel);
+            m_levelProgress.nextLevelNumber = static_cast<int>(nextLevel);
 
-            if (m_context.networkClient) {
-                Core::Logger::Info("[InGameState] Stopping network client for transition");
-                m_context.networkClient->Stop();
-            }
-
-            std::string nextLevelPath = "";
-            if (nextLevel > 0) {
-                nextLevelPath = "assets/levels/level" + std::to_string(nextLevel) + ".json";
-            }
-
-            Core::Logger::Info("[InGameState] Transitioning to level transition screen");
-            m_machine.ChangeState(std::make_unique<LevelTransitionState>(
-                m_machine,
-                m_context,
-                static_cast<int>(completedLevel),
-                m_playerScore,
-                nextLevelPath
-            ));
+            Core::Logger::Info("[InGameState] Transition started - staying in GameState, network stays active");
         }
 
     }

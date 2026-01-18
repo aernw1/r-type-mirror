@@ -2,6 +2,7 @@
 #include "../../include/ECS/Component.hpp"
 #include "../../include/ECS/ShootingSystem.hpp"
 #include "../../include/ECS/RenderingSystem.hpp"
+#include "../../include/ECS/EffectFactory.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -41,6 +42,11 @@ namespace RType {
                     continue;
                 }
 
+                // Skip entities with WeaponSlot - they use special weapons instead of base Shooter
+                if (registry.HasComponent<WeaponSlot>(shooterEntity)) {
+                    continue;
+                }
+
                 // CRITICAL FIX: Prevent obstacles from shooting due to entity ID reuse
                 // Actively clean up contaminated components
                 if (registry.HasComponent<Obstacle>(shooterEntity) ||
@@ -76,7 +82,15 @@ namespace RType {
                                               positionComp.y + shooterComp.offsetY,
                                               shooterEntity});
 
+                            if (m_effectFactory) {
+                                m_effectFactory->CreateShootingEffect(registry,
+                                    positionComp.x + shooterComp.offsetX,
+                                    positionComp.y + shooterComp.offsetY,
+                                    shooterEntity);
+                            }
+
                             shooterComp.cooldown = shooterComp.fireRate;
+                            shootCmd.wantsToShoot = false;
                         }
                     }
                 }
@@ -165,6 +179,7 @@ namespace RType {
                             }
 
                             weapon.cooldown = weapon.fireRate;
+                            shootCmd.wantsToShoot = false;
                         }
                     }
                 }
@@ -172,6 +187,19 @@ namespace RType {
         }
 
         void ShootingSystem::CreateSpreadShot(Registry& registry, Entity shooter, const Position& pos, int damage) {
+            float offsetX = 50.0f;
+            float offsetY = 20.0f;
+            
+            if (registry.HasComponent<Shooter>(shooter)) {
+                const auto& shooterComp = registry.GetComponent<Shooter>(shooter);
+                offsetX = shooterComp.offsetX;
+                offsetY = shooterComp.offsetY;
+            }
+            
+            if (m_effectFactory) {
+                m_effectFactory->CreateShootingEffect(registry, pos.x + offsetX, pos.y + offsetY, shooter);
+            }
+
             float angles[] = {-15.0f, 0.0f, 15.0f}; // degrees
 
             for (float angle : angles) {
@@ -189,7 +217,7 @@ namespace RType {
                     registry.RemoveComponent<ObstacleMetadata>(bullet);
                 }
 
-                registry.AddComponent<Position>(bullet, Position(pos.x + 50, pos.y + 25));
+                registry.AddComponent<Position>(bullet, Position(pos.x + offsetX, pos.y + offsetY));
                 registry.AddComponent<Velocity>(bullet, Velocity(vx, vy));
                 registry.AddComponent<Bullet>(bullet, Bullet(shooter));
                 registry.AddComponent<Damage>(bullet, Damage(damage));
@@ -207,9 +235,21 @@ namespace RType {
         }
 
         void ShootingSystem::CreateLaserShot(Registry& registry, Entity shooter, const Position& pos, int damage) {
+            float offsetX = 50.0f;
+            float offsetY = 20.0f;
+            
+            if (registry.HasComponent<Shooter>(shooter)) {
+                const auto& shooterComp = registry.GetComponent<Shooter>(shooter);
+                offsetX = shooterComp.offsetX;
+                offsetY = shooterComp.offsetY;
+            }
+            
+            if (m_effectFactory) {
+                m_effectFactory->CreateShootingEffect(registry, pos.x + offsetX, pos.y + offsetY, shooter);
+            }
+
             auto bullet = registry.CreateEntity();
 
-            // CRITICAL FIX: Clean up obstacle components from entity ID reuse
             if (registry.HasComponent<Obstacle>(bullet)) {
                 registry.RemoveComponent<Obstacle>(bullet);
             }
@@ -217,7 +257,7 @@ namespace RType {
                 registry.RemoveComponent<ObstacleMetadata>(bullet);
             }
 
-            registry.AddComponent<Position>(bullet, Position(pos.x + 50, pos.y + 25));
+            registry.AddComponent<Position>(bullet, Position(pos.x + offsetX, pos.y + offsetY));
             registry.AddComponent<Velocity>(bullet, Velocity(800.0f, 0.0f)); // Faster
             registry.AddComponent<Bullet>(bullet, Bullet(shooter));
             registry.AddComponent<Damage>(bullet, Damage(damage));
@@ -228,8 +268,8 @@ namespace RType {
 
             if (m_bulletSprite != 0) {
                 auto& d = registry.AddComponent<Drawable>(bullet, Drawable(m_bulletSprite, 2));
-                d.scale = {0.3f, 0.05f}; // Long and thin
-                d.tint = Math::Color(0.0f, 1.0f, 1.0f, 1.0f); // Cyan for laser
+                d.scale = {0.3f, 0.05f};
+                d.tint = Math::Color(0.0f, 1.0f, 1.0f, 1.0f);
             }
         }
     }

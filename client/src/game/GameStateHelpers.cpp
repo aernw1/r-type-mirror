@@ -45,6 +45,24 @@ namespace RType {
             return result;
         }
 
+        Renderer::SpriteId InGameState::GetPowerUpSprite(ECS::PowerUpType type) const {
+            switch (type) {
+                case ECS::PowerUpType::FIRE_RATE_BOOST:
+                case ECS::PowerUpType::SPREAD_SHOT:
+                    return m_powerupSpreadSprite;
+                case ECS::PowerUpType::LASER_BEAM:
+                    return m_powerupLaserSprite;
+                case ECS::PowerUpType::FORCE_POD:
+                    return m_powerupForcePodSprite;
+                case ECS::PowerUpType::SPEED_BOOST:
+                    return m_powerupSpeedSprite;
+                case ECS::PowerUpType::SHIELD:
+                    return m_powerupShieldSprite;
+                default:
+                    return m_powerupSpreadSprite;
+            }
+        }
+
         InGameState::EnemyBulletSpriteConfig InGameState::GetEnemyBulletSpriteConfig(uint8_t enemyType) const {
             const Renderer::SpriteId* sprites[] = {
                 &m_enemyBulletGreenSprite,
@@ -82,6 +100,22 @@ namespace RType {
             }
             auto& activePowerUps = m_registry.GetComponent<ActivePowerUps>(playerEntity);
 
+            bool gainedPowerUp = false;
+            bool isLocal = (playerEntity == m_localPlayerEntity);
+
+            if (isLocal) {
+                bool newFireRate = (entityState.powerUpFlags & PowerUpFlags::POWERUP_FIRE_RATE_BOOST) != 0;
+                bool newSpread = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SPREAD_SHOT) != 0;
+                bool newLaser = (entityState.powerUpFlags & PowerUpFlags::POWERUP_LASER_BEAM) != 0;
+                bool newShield = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SHIELD) != 0;
+                
+                if (!activePowerUps.hasFireRateBoost && newFireRate) gainedPowerUp = true;
+                if (!activePowerUps.hasSpreadShot && newSpread) gainedPowerUp = true;
+                if (!activePowerUps.hasLaserBeam && newLaser) gainedPowerUp = true;
+                if (!activePowerUps.hasShield && newShield) gainedPowerUp = true;
+                
+            }
+
             activePowerUps.hasFireRateBoost = (entityState.powerUpFlags & PowerUpFlags::POWERUP_FIRE_RATE_BOOST) != 0;
             activePowerUps.hasSpreadShot = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SPREAD_SHOT) != 0;
             activePowerUps.hasLaserBeam = (entityState.powerUpFlags & PowerUpFlags::POWERUP_LASER_BEAM) != 0;
@@ -96,6 +130,51 @@ namespace RType {
             }
 
             WeaponType weaponType = static_cast<WeaponType>(entityState.weaponType);
+            
+            if (isLocal) {
+                bool hadSpecialWeapon = m_registry.HasComponent<WeaponSlot>(playerEntity);
+                bool hasSpecialWeaponNow = (weaponType != WeaponType::STANDARD);
+                
+                
+                if (!hadSpecialWeapon && hasSpecialWeaponNow) {
+                    std::cout << "[DEBUG] PowerUp: Acquired special weapon!" << std::endl;
+                    gainedPowerUp = true;
+                } else if (hadSpecialWeapon && hasSpecialWeaponNow) {
+                    auto& currentWeapon = m_registry.GetComponent<WeaponSlot>(playerEntity);
+                    if (currentWeapon.type != weaponType) {
+                        std::cout << "[DEBUG] PowerUp: Changed special weapon!" << std::endl;
+                        gainedPowerUp = true;
+                    }
+                }
+                
+                bool newFireRate = (entityState.powerUpFlags & PowerUpFlags::POWERUP_FIRE_RATE_BOOST) != 0;
+                bool newSpread = (entityState.powerUpFlags & PowerUpFlags::POWERUP_SPREAD_SHOT) != 0;
+                if (!activePowerUps.hasFireRateBoost && newFireRate) { 
+                    std::cout << "[DEBUG] PowerUp: FireRate Boost!" << std::endl;
+                    gainedPowerUp = true; 
+                }
+                if (!activePowerUps.hasSpreadShot && newSpread) {
+                    std::cout << "[DEBUG] PowerUp: Spread Shot!" << std::endl;
+                    gainedPowerUp = true;
+                }
+            }
+
+            if (gainedPowerUp) {
+                std::cout << "[DEBUG] PowerUp GAINED! Playing sound..." << std::endl;
+                if (m_context.audio) {
+                    if (m_powerUpMusic != Audio::INVALID_MUSIC_ID) {
+                        Audio::PlaybackOptions opts;
+                        opts.volume = 1.0f;
+                        opts.loop = false;
+                        m_context.audio->PlayMusic(m_powerUpMusic, opts);
+                    } else if (m_powerUpSound != Audio::INVALID_SOUND_ID) {
+                        Audio::PlaybackOptions opts;
+                        opts.volume = 1.0f;
+                        m_context.audio->PlaySound(m_powerUpSound, opts);
+                    }
+                }
+            }
+
             float fireRate = static_cast<float>(entityState.fireRate) / 10.0f;
 
             if (weaponType != WeaponType::STANDARD) {
@@ -107,10 +186,14 @@ namespace RType {
                     int damage = (weaponType == WeaponType::LASER) ? 40 : 20;
                     m_registry.AddComponent<WeaponSlot>(playerEntity, WeaponSlot(weaponType, fireRate, damage));
                 }
+                activePowerUps.hasSpreadShot = (weaponType == WeaponType::SPREAD);
+                activePowerUps.hasLaserBeam = (weaponType == WeaponType::LASER);
             } else {
                 if (m_registry.HasComponent<WeaponSlot>(playerEntity)) {
                     m_registry.RemoveComponent<WeaponSlot>(playerEntity);
                 }
+                activePowerUps.hasSpreadShot = false;
+                activePowerUps.hasLaserBeam = false;
             }
 
             if (!m_registry.HasComponent<WeaponSlot>(playerEntity) && m_registry.HasComponent<Shooter>(playerEntity)) {
@@ -118,17 +201,140 @@ namespace RType {
                 shooter.fireRate = fireRate;
             }
 
+            constexpr float SHIELD_DURATION_SECONDS = 5.0f;
             if (activePowerUps.hasShield) {
                 if (!m_registry.HasComponent<Shield>(playerEntity)) {
-                    constexpr float SHIELD_DURATION_SECONDS = 5.0f;
                     m_registry.AddComponent<Shield>(playerEntity, Shield(SHIELD_DURATION_SECONDS));
+                } else {
+                    auto& shield = m_registry.GetComponent<Shield>(playerEntity);
+                    if (shield.timeRemaining <= 0.0f) {
+                        shield.timeRemaining = SHIELD_DURATION_SECONDS;
+                    }
                 }
             } else {
                 if (m_registry.HasComponent<Shield>(playerEntity)) {
                     m_registry.RemoveComponent<Shield>(playerEntity);
+                    if (m_registry.HasComponent<Drawable>(playerEntity)) {
+                        auto& drawable = m_registry.GetComponent<Drawable>(playerEntity);
+                        drawable.tint = Math::Color(1.0f, 1.0f, 1.0f, 1.0f);
+                    }
                 }
             }
 
+        }
+
+        void InGameState::createBeamEntity() {
+            if (m_localPlayerEntity == ECS::NULL_ENTITY || !m_registry.IsEntityAlive(m_localPlayerEntity)) {
+                return;
+            }
+
+            if (!m_registry.HasComponent<ECS::Position>(m_localPlayerEntity) ||
+                !m_registry.HasComponent<ECS::Shooter>(m_localPlayerEntity) ||
+                !m_effectFactory) {
+                return;
+            }
+
+            const auto& playerPos = m_registry.GetComponent<ECS::Position>(m_localPlayerEntity);
+            const auto& shooter = m_registry.GetComponent<ECS::Shooter>(m_localPlayerEntity);
+
+            float beamX = playerPos.x + shooter.offsetX;
+            float beamY = playerPos.y + shooter.offsetY;
+
+            float screenWidth = 1280.0f;
+            if (m_levelData.config.screenWidth > 0.0f) {
+                screenWidth = m_levelData.config.screenWidth;
+            }
+
+            float beamHeight = 40.0f;
+            if (m_registry.HasComponent<ECS::Drawable>(m_localPlayerEntity)) {
+                const auto& playerDrawable = m_registry.GetComponent<ECS::Drawable>(m_localPlayerEntity);
+                beamHeight = 80.0f * playerDrawable.scale.y;
+            }
+
+            float savedChargeTime = m_chargeTime;
+            m_beamEntity = m_effectFactory->CreateBeam(m_registry, beamX, beamY, m_localPlayerEntity, savedChargeTime, screenWidth, beamHeight);
+        }
+
+        void InGameState::updateBeam(float dt) {
+            if (m_beamEntity == ECS::NULL_ENTITY) {
+                return;
+            }
+
+            if (!m_registry.IsEntityAlive(m_beamEntity)) {
+                m_beamEntity = ECS::NULL_ENTITY;
+                return;
+            }
+
+            // Update beam width dynamically as player moves
+            if (m_registry.HasComponent<ECS::Position>(m_beamEntity)) {
+                const auto& beamPos = m_registry.GetComponent<ECS::Position>(m_beamEntity);
+                
+                float screenWidth = 1280.0f;
+                if (m_levelData.config.screenWidth > 0.0f) {
+                    screenWidth = m_levelData.config.screenWidth;
+                }
+
+                // Get frame width from config or use default
+                float frameWidth = 200.0f;
+                if (m_effectFactory) {
+                    const auto& config = m_effectFactory->GetConfig();
+                    if (config.beamFirstFrameRegion.size.x > 0.0f) {
+                        frameWidth = config.beamFirstFrameRegion.size.x;
+                    }
+                }
+
+                // Calculate new beam width (extend from current position to screen edge)
+                float newBeamWidth = screenWidth - beamPos.x;
+                if (newBeamWidth < frameWidth) {
+                    newBeamWidth = frameWidth;
+                }
+
+                // Update Drawable scale if it exists
+                if (m_registry.HasComponent<ECS::Drawable>(m_beamEntity)) {
+                    auto& drawable = m_registry.GetComponent<ECS::Drawable>(m_beamEntity);
+                    float newScaleX = newBeamWidth / frameWidth;
+                    // Preserve the Y scale
+                    drawable.scale.x = newScaleX;
+                }
+
+                // Update BoxCollider width if it exists
+                if (m_registry.HasComponent<ECS::BoxCollider>(m_beamEntity)) {
+                    auto& collider = m_registry.GetComponent<ECS::BoxCollider>(m_beamEntity);
+                    // Get frame height to calculate the scaled height
+                    float frameHeight = 64.0f;
+                    if (m_effectFactory) {
+                        const auto& config = m_effectFactory->GetConfig();
+                        if (config.beamFirstFrameRegion.size.y > 0.0f) {
+                            frameHeight = config.beamFirstFrameRegion.size.y;
+                        }
+                    }
+                    
+                    // Get current scale Y from drawable or use default
+                    float scaleY = 1.0f;
+                    if (m_registry.HasComponent<ECS::Drawable>(m_beamEntity)) {
+                        scaleY = m_registry.GetComponent<ECS::Drawable>(m_beamEntity).scale.y;
+                    }
+                    
+                    collider.width = newBeamWidth;
+                    collider.height = frameHeight * scaleY;
+                }
+            }
+
+            if (m_registry.HasComponent<ECS::SpriteAnimation>(m_beamEntity)) {
+                auto& anim = m_registry.GetComponent<ECS::SpriteAnimation>(m_beamEntity);
+                if (anim.looping && m_animationSystem) {
+                    anim.destroyOnComplete = false;
+                }
+            }
+
+            m_beamDuration -= dt;
+            if (m_beamDuration <= 0.0f) {
+                if (m_registry.IsEntityAlive(m_beamEntity)) {
+                    m_registry.DestroyEntity(m_beamEntity);
+                }
+                m_beamEntity = ECS::NULL_ENTITY;
+                m_beamDuration = 0.0f;
+            }
         }
 
         std::pair<std::string, uint8_t> InGameState::FindPlayerNameAndNumber(uint64_t ownerHash, const std::unordered_set<uint8_t>& assignedNumbers) const {
@@ -222,130 +428,85 @@ namespace RType {
                 return;
             }
 
-            // Remove components that are incompatible with the expected entity type
             if (expectedType == network::EntityType::OBSTACLE) {
-                // Obstacles should NEVER have shooting or enemy/player components
-                if (m_registry.HasComponent<Shooter>(entity)) {
-                    m_registry.RemoveComponent<Shooter>(entity);
-                }
-                if (m_registry.HasComponent<ShootCommand>(entity)) {
-                    m_registry.RemoveComponent<ShootCommand>(entity);
-                }
-                if (m_registry.HasComponent<WeaponSlot>(entity)) {
-                    m_registry.RemoveComponent<WeaponSlot>(entity);
-                }
-                if (m_registry.HasComponent<Bullet>(entity)) {
-                    m_registry.RemoveComponent<Bullet>(entity);
-                }
-                if (m_registry.HasComponent<Enemy>(entity)) {
-                    m_registry.RemoveComponent<Enemy>(entity);
-                }
-                if (m_registry.HasComponent<Player>(entity)) {
-                    m_registry.RemoveComponent<Player>(entity);
-                }
+                if (m_registry.HasComponent<Shooter>(entity)) m_registry.RemoveComponent<Shooter>(entity);
+                if (m_registry.HasComponent<ShootCommand>(entity)) m_registry.RemoveComponent<ShootCommand>(entity);
+                if (m_registry.HasComponent<WeaponSlot>(entity)) m_registry.RemoveComponent<WeaponSlot>(entity);
+                if (m_registry.HasComponent<Bullet>(entity)) m_registry.RemoveComponent<Bullet>(entity);
+                if (m_registry.HasComponent<Enemy>(entity)) m_registry.RemoveComponent<Enemy>(entity);
+                if (m_registry.HasComponent<Player>(entity)) m_registry.RemoveComponent<Player>(entity);
             } else if (expectedType == network::EntityType::BULLET) {
-                // Bullets should not have obstacle or player/enemy components
-                // CRITICAL: Remove old Drawable to prevent obstacle sprites on bullets
-                if (m_registry.HasComponent<Drawable>(entity)) {
-                    std::cerr << "[CLEANUP] Removing Drawable from bullet entity " << entity << std::endl;
-                    m_registry.RemoveComponent<Drawable>(entity);
+                if (m_registry.HasComponent<Drawable>(entity)) m_registry.RemoveComponent<Drawable>(entity);
+                if (m_registry.HasComponent<Obstacle>(entity)) m_registry.RemoveComponent<Obstacle>(entity);
+                if (m_registry.HasComponent<ObstacleMetadata>(entity)) m_registry.RemoveComponent<ObstacleMetadata>(entity);
+                if (m_registry.HasComponent<Player>(entity)) m_registry.RemoveComponent<Player>(entity);
+                if (m_registry.HasComponent<Enemy>(entity)) m_registry.RemoveComponent<Enemy>(entity);
+                if (m_registry.HasComponent<BoxCollider>(entity)) m_registry.RemoveComponent<BoxCollider>(entity);
+                if (m_registry.HasComponent<CircleCollider>(entity)) m_registry.RemoveComponent<CircleCollider>(entity);
+                if (m_registry.HasComponent<CollisionLayer>(entity)) m_registry.RemoveComponent<CollisionLayer>(entity);
+            } else {
+                if (m_registry.HasComponent<Drawable>(entity)) m_registry.RemoveComponent<Drawable>(entity);
+                if (m_registry.HasComponent<Obstacle>(entity)) m_registry.RemoveComponent<Obstacle>(entity);
+                if (m_registry.HasComponent<ObstacleMetadata>(entity)) m_registry.RemoveComponent<ObstacleMetadata>(entity);
+                if (m_registry.HasComponent<Bullet>(entity)) m_registry.RemoveComponent<Bullet>(entity);
+                
+                if (expectedType == network::EntityType::PLAYER || expectedType == network::EntityType::POWERUP) {
+                    if (m_registry.HasComponent<Enemy>(entity)) m_registry.RemoveComponent<Enemy>(entity);
                 }
-                if (m_registry.HasComponent<Obstacle>(entity)) {
-                    std::cerr << "[CLEANUP] Removing Obstacle from bullet entity " << entity << std::endl;
-                    m_registry.RemoveComponent<Obstacle>(entity);
+                if (expectedType == network::EntityType::ENEMY || expectedType == network::EntityType::POWERUP) {
+                    if (m_registry.HasComponent<Player>(entity)) m_registry.RemoveComponent<Player>(entity);
                 }
-                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
-                    std::cerr << "[CLEANUP] Removing ObstacleMetadata from bullet entity " << entity << std::endl;
-                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
-                }
-                if (m_registry.HasComponent<Player>(entity)) {
-                    m_registry.RemoveComponent<Player>(entity);
-                }
-                if (m_registry.HasComponent<Enemy>(entity)) {
-                    m_registry.RemoveComponent<Enemy>(entity);
-                }
-                // Remove collision components from previous life
-                if (m_registry.HasComponent<BoxCollider>(entity)) {
-                    m_registry.RemoveComponent<BoxCollider>(entity);
-                }
-                if (m_registry.HasComponent<CircleCollider>(entity)) {
-                    m_registry.RemoveComponent<CircleCollider>(entity);
-                }
-                if (m_registry.HasComponent<CollisionLayer>(entity)) {
-                    m_registry.RemoveComponent<CollisionLayer>(entity);
-                }
-            } else if (expectedType == network::EntityType::PLAYER) {
-                // Players should not have obstacle or bullet or enemy components
-                if (m_registry.HasComponent<Drawable>(entity)) {
-                    m_registry.RemoveComponent<Drawable>(entity);
-                }
-                if (m_registry.HasComponent<Obstacle>(entity)) {
-                    m_registry.RemoveComponent<Obstacle>(entity);
-                }
-                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
-                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
-                }
-                if (m_registry.HasComponent<Bullet>(entity)) {
-                    m_registry.RemoveComponent<Bullet>(entity);
-                }
-                if (m_registry.HasComponent<Enemy>(entity)) {
-                    m_registry.RemoveComponent<Enemy>(entity);
-                }
-            } else if (expectedType == network::EntityType::ENEMY) {
-                // Enemies should not have obstacle or bullet or player components
-                if (m_registry.HasComponent<Drawable>(entity)) {
-                    m_registry.RemoveComponent<Drawable>(entity);
-                }
-                if (m_registry.HasComponent<Obstacle>(entity)) {
-                    m_registry.RemoveComponent<Obstacle>(entity);
-                }
-                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
-                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
-                }
-                if (m_registry.HasComponent<Bullet>(entity)) {
-                    m_registry.RemoveComponent<Bullet>(entity);
-                }
-                if (m_registry.HasComponent<Player>(entity)) {
-                    m_registry.RemoveComponent<Player>(entity);
-                }
-            } else if (expectedType == network::EntityType::POWERUP) {
-                // Powerups should not have any gameplay components
-                if (m_registry.HasComponent<Drawable>(entity)) {
-                    m_registry.RemoveComponent<Drawable>(entity);
-                }
-                if (m_registry.HasComponent<Obstacle>(entity)) {
-                    m_registry.RemoveComponent<Obstacle>(entity);
-                }
-                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
-                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
-                }
-                if (m_registry.HasComponent<Bullet>(entity)) {
-                    m_registry.RemoveComponent<Bullet>(entity);
-                }
-                if (m_registry.HasComponent<Player>(entity)) {
-                    m_registry.RemoveComponent<Player>(entity);
-                }
-                if (m_registry.HasComponent<Enemy>(entity)) {
-                    m_registry.RemoveComponent<Enemy>(entity);
-                }
-            } else if (expectedType == network::EntityType::BOSS) {
-                // Boss should not have obstacle or bullet or player components
-                if (m_registry.HasComponent<Drawable>(entity)) {
-                    m_registry.RemoveComponent<Drawable>(entity);
-                }
-                if (m_registry.HasComponent<Obstacle>(entity)) {
-                    m_registry.RemoveComponent<Obstacle>(entity);
-                }
-                if (m_registry.HasComponent<ObstacleMetadata>(entity)) {
-                    m_registry.RemoveComponent<ObstacleMetadata>(entity);
-                }
-                if (m_registry.HasComponent<Bullet>(entity)) {
-                    m_registry.RemoveComponent<Bullet>(entity);
-                }
-                if (m_registry.HasComponent<Player>(entity)) {
-                    m_registry.RemoveComponent<Player>(entity);
+                if (expectedType == network::EntityType::BOSS) {
+                    if (m_registry.HasComponent<Player>(entity)) m_registry.RemoveComponent<Player>(entity);
                 }
             }
+        }
+
+        void InGameState::cleanupForLevelTransition() {
+            Core::Logger::Info("[GameState] Cleaning up for level transition...");
+
+            auto positionEntities = m_registry.GetEntitiesWithComponent<Position>();
+            std::vector<Entity> entitiesToDestroy(positionEntities.begin(), positionEntities.end());
+
+            auto drawableEntities = m_registry.GetEntitiesWithComponent<Drawable>();
+            for (auto e : drawableEntities) {
+                if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), e) == entitiesToDestroy.end()) {
+                    entitiesToDestroy.push_back(e);
+                }
+            }
+
+            Core::Logger::Info("[GameState] Destroying {} entities from previous level", entitiesToDestroy.size());
+            for (Entity entity : entitiesToDestroy) {
+                if (m_registry.IsEntityAlive(entity)) {
+                    m_registry.DestroyEntity(entity);
+                }
+            }
+
+            m_networkEntityMap.clear();
+            m_obstacleColliderEntities.clear();
+            m_obstacleIdToCollider.clear();
+            m_playerNameLabels.clear();
+
+            for (auto& hud : m_playersHUD) {
+                hud = PlayerHUDData{};
+            }
+
+            m_bossHealthBar.active = false;
+            m_bossHealthBar.currentHealth = 0;
+            m_bossHealthBar.maxHealth = 1000;
+            m_bossHealthBar.bossNetworkId = 0;
+            m_bossHealthBar.titleEntity = NULL_ENTITY;
+            m_bossHealthBar.barBackgroundEntity = NULL_ENTITY;
+            m_bossHealthBar.barForegroundEntity = NULL_ENTITY;
+
+            m_bossWarningActive = false;
+            m_bossWarningTriggered = false;
+            m_bossWarningTimer = 0.0f;
+
+            m_isGameOver = false;
+            m_localScrollOffset = 0.0f;
+
+            Core::Logger::Info("[GameState] Level transition cleanup complete");
         }
 
     }

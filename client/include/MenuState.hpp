@@ -54,6 +54,7 @@ namespace RType {
 
             Audio::MusicId m_menuMusic = Audio::INVALID_MUSIC_ID;
             bool m_menuMusicPlaying = false;
+            Audio::MusicId m_selectMusic = Audio::INVALID_MUSIC_ID; 
 
             Renderer::FontId m_fontLarge = Renderer::INVALID_FONT_ID;
             Renderer::FontId m_fontMedium = Renderer::INVALID_FONT_ID;
@@ -69,6 +70,8 @@ namespace RType {
             bool m_upKeyPressed = false;
             bool m_downKeyPressed = false;
             bool m_enterKeyPressed = false;
+            bool m_escKeyPressed = false;
+            int m_ignoreInputFrames = 1;
 
             float m_animTime = 0.0f;
             float m_titlePulse = 0.0f;

@@ -26,9 +26,12 @@
 #include "ECS/PowerUpSpawnSystem.hpp"
 #include "ECS/PowerUpCollisionSystem.hpp"
 #include "ECS/AudioSystem.hpp"
+#include "ECS/AnimationSystem.hpp"
+#include "ECS/EffectFactory.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/PowerUpFactory.hpp"
 #include "ECS/LevelLoader.hpp"
+#include "Animation/AnimationModule.hpp"
 #include "Renderer/IRenderer.hpp"
 
 #include <memory>
@@ -53,6 +56,10 @@ namespace RType {
             bool isDead = false;
             RType::ECS::Entity scoreEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity playerEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity powerupSpreadEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity powerupLaserEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity powerupSpeedEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity powerupShieldEntity = RType::ECS::NULL_ENTITY;
         };
 
         struct PredictedInput {
@@ -96,6 +103,9 @@ namespace RType {
 
             void initializeUI();
             void updateHUD();
+            void updatePowerUpIcons();
+            void updatePowerUpText(RType::ECS::Entity& textEntity, const std::string& text,
+                                   bool isActive, float x, float y);
             void renderChargeBar();
             void renderHealthBars();
             void renderBossHealthBar();
@@ -103,9 +113,13 @@ namespace RType {
             void initializeBossHealthBar();
             void destroyBossHealthBar();
             void renderGameOverOverlay();
-            void renderDebugColliders();
+            void renderVictoryOverlay();
+            void renderLevelTransition();
             void triggerGameOverIfNeeded();
+            void triggerVictoryIfNeeded();
             void enterResultsScreen();
+            void createBeamEntity();
+            void updateBeam(float dt);
 
             // Level progression
             void checkBossDefeated();
@@ -122,6 +136,8 @@ namespace RType {
             // Component cleanup helper for entity type validation
             void CleanupInvalidComponents(ECS::Entity entity, network::EntityType expectedType);
 
+            void cleanupForLevelTransition();
+
             struct EnemySpriteConfig {
                 Renderer::SpriteId sprite = Renderer::INVALID_SPRITE_ID;
                 Math::Color tint{1.0f, 1.0f, 1.0f, 1.0f};
@@ -135,11 +151,16 @@ namespace RType {
             };
             EnemySpriteConfig GetEnemySpriteConfig(uint8_t enemyType) const;
             EnemyBulletSpriteConfig GetEnemyBulletSpriteConfig(uint8_t enemyType) const;
+            Renderer::SpriteId GetPowerUpSprite(ECS::PowerUpType type) const;
 
             std::pair<std::string, uint8_t> FindPlayerNameAndNumber(uint64_t ownerHash, const std::unordered_set<uint8_t>& assignedNumbers) const;
             void CreatePlayerNameLabel(RType::ECS::Entity playerEntity, const std::string& playerName, float x, float y);
             void UpdatePlayerNameLabelPosition(RType::ECS::Entity playerEntity, float x, float y);
             void DestroyPlayerNameLabel(RType::ECS::Entity playerEntity);
+
+            // Level transition
+            void UpdateLevelTransition(float dt);
+            void LoadNextLevel();
         private:
             GameStateMachine& m_machine;
             GameContext& m_context;
@@ -166,6 +187,9 @@ namespace RType {
             std::unique_ptr<RType::ECS::ForcePodSystem> m_forcePodSystem;
             std::unique_ptr<RType::ECS::PowerUpSpawnSystem> m_powerUpSpawnSystem;
             std::unique_ptr<RType::ECS::PowerUpCollisionSystem> m_powerUpCollisionSystem;
+            std::unique_ptr<RType::ECS::AnimationSystem> m_animationSystem;
+            std::unique_ptr<Animation::AnimationModule> m_animationModule;
+            std::unique_ptr<RType::ECS::EffectFactory> m_effectFactory;
 
             // Bullet textures and sprites
             Renderer::TextureId m_bulletTexture = Renderer::INVALID_TEXTURE_ID;
@@ -173,11 +197,17 @@ namespace RType {
 
             Audio::SoundId m_playerShootSound = Audio::INVALID_SOUND_ID;
             Audio::MusicId m_shootMusic = Audio::INVALID_MUSIC_ID;
+            Audio::SoundId m_powerUpSound = Audio::INVALID_SOUND_ID;
+            Audio::MusicId m_powerUpMusic = Audio::INVALID_MUSIC_ID;
             float m_shootSfxCooldown = 0.0f;
             Audio::MusicId m_gameMusic = Audio::INVALID_MUSIC_ID;
             bool m_gameMusicPlaying = false;
+            Audio::MusicId m_bossMusic = Audio::INVALID_MUSIC_ID;
+            bool m_bossMusicPlaying = false;
             Audio::MusicId m_gameOverMusic = Audio::INVALID_MUSIC_ID;
             bool m_gameOverMusicPlaying = false;
+            Audio::MusicId m_victoryMusic = Audio::INVALID_MUSIC_ID;
+            bool m_victoryMusicPlaying = false;
 
             // Enemy bullet textures and sprites
             Renderer::TextureId m_enemyBulletGreenTexture = Renderer::INVALID_TEXTURE_ID;
@@ -218,14 +248,25 @@ namespace RType {
             std::unordered_map<uint32_t, uint8_t> m_bulletFlagsMap; // Track bullet flags to detect type changes
             RType::ECS::Entity m_localPlayerEntity = RType::ECS::NULL_ENTITY; // Local player entity mirrored from server
 
-            // Level progression tracking
+            // Level progression tracking with visual transition
+            enum class TransitionPhase {
+                NONE,
+                FADE_OUT,
+                LOADING,
+                FADE_IN
+            };
+
             struct LevelProgressionState {
-                bool bossSpawned = false;
                 bool bossDefeated = false;
                 bool levelComplete = false;
+                bool allLevelsComplete = false;
                 float transitionTimer = 0.0f;
+                float victoryElapsed = 0.0f;
                 int currentLevelNumber = 1;
+                int nextLevelNumber = 2;
                 int totalLevels = 3;
+                TransitionPhase transitionPhase = TransitionPhase::NONE;
+                float fadeAlpha = 0.0f;
             };
             LevelProgressionState m_levelProgress;
 
@@ -251,6 +292,29 @@ namespace RType {
             Renderer::SpriteId m_powerupForcePodSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_powerupSpeedSprite = Renderer::INVALID_SPRITE_ID;
             Renderer::SpriteId m_powerupShieldSprite = Renderer::INVALID_SPRITE_ID;
+
+            // Explosion animation
+            Renderer::TextureId m_explosionTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_explosionSprite = Renderer::INVALID_SPRITE_ID;
+            Animation::AnimationClipId m_explosionClipId = Animation::INVALID_CLIP_ID;
+            Renderer::TextureId m_shootingTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_shootingSprite = Renderer::INVALID_SPRITE_ID;
+            Animation::AnimationClipId m_shootingClipId = Animation::INVALID_CLIP_ID;
+
+            Renderer::TextureId m_forcePodTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_forcePodSprite = Renderer::INVALID_SPRITE_ID;
+            Animation::AnimationClipId m_forcePodClipId = Animation::INVALID_CLIP_ID;
+            Renderer::TextureId m_beamTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_beamSprite = Renderer::INVALID_SPRITE_ID;
+            Animation::AnimationClipId m_beamClipId = Animation::INVALID_CLIP_ID;
+            Renderer::TextureId m_hitTexture = Renderer::INVALID_TEXTURE_ID;
+            Renderer::SpriteId m_hitSprite = Renderer::INVALID_SPRITE_ID;
+            Animation::AnimationClipId m_hitClipId = Animation::INVALID_CLIP_ID;
+            Animation::AnimationClipId m_waveAttackClipId = Animation::INVALID_CLIP_ID;
+            Animation::AnimationClipId m_secondAttackClipId = Animation::INVALID_CLIP_ID;
+            Animation::AnimationClipId m_fireBulletClipId = Animation::INVALID_CLIP_ID;
+            Animation::AnimationClipId m_mineClipId = Animation::INVALID_CLIP_ID;
+            Animation::AnimationClipId m_mineExplosionClipId = Animation::INVALID_CLIP_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;
@@ -281,8 +345,14 @@ namespace RType {
             RType::ECS::Entity m_gameOverScoreEntity = RType::ECS::NULL_ENTITY;
             RType::ECS::Entity m_gameOverHintEntity = RType::ECS::NULL_ENTITY;
 
+            RType::ECS::Entity m_victoryTitleEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_victoryScoreEntity = RType::ECS::NULL_ENTITY;
+            RType::ECS::Entity m_victoryHintEntity = RType::ECS::NULL_ENTITY;
+
             bool m_isCharging = false;
             float m_chargeTime = 0.0f;
+            RType::ECS::Entity m_beamEntity = RType::ECS::NULL_ENTITY;
+            float m_beamDuration = 0.0f;
             static constexpr float MAX_CHARGE_TIME = 2.0f; // 2 seconds for full charge
 
             bool m_isNetworkSession = false;
@@ -298,6 +368,13 @@ namespace RType {
             RType::ECS::LoadedAssets m_levelAssets;
             RType::ECS::CreatedEntities m_levelEntities;
             std::string m_currentLevelPath = "assets/levels/level1.json";
+
+            bool m_bossWarningActive = false;
+            bool m_bossWarningTriggered = false;
+            float m_bossWarningTimer = 0.0f;
+            static constexpr float BOSS_WARNING_DURATION = 4.0f;
+            bool m_bossWarningFlashState = false;
+            void renderBossWarning();
 
             // Boss health bar
             struct {

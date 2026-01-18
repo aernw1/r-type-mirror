@@ -57,6 +57,7 @@ namespace RType {
             int health = 1000;
             float scrollSpeed = -300.0f;
             int attackPattern = 1;
+            uint8_t bossId = 1;
         };
 
         struct PlayerSpawnDef {

@@ -11,8 +11,10 @@
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include "ECS/PlayerFactory.hpp"
+#include "Animation/AnimationTypes.hpp"
 
 using namespace RType::ECS;
+using namespace Animation;
 
 namespace RType {
     namespace Client {
@@ -25,6 +27,11 @@ namespace RType {
         void InGameState::Init() {
             Core::Logger::Info("[GameState] Initializing game");
 
+            if (!m_networkEntityMap.empty() || !m_obstacleColliderEntities.empty()) {
+                Core::Logger::Info("[GameState] Detected level transition, cleaning up previous level...");
+                cleanupForLevelTransition();
+            }
+
             if (m_context.audio) {
                 m_audioSystem = std::make_unique<RType::ECS::AudioSystem>(m_context.audio.get());
                 
@@ -32,22 +39,42 @@ namespace RType {
                 if (m_shootMusic == Audio::INVALID_MUSIC_ID) {
                      m_shootMusic = m_context.audio->LoadMusic("../assets/sounds/players_shoot.flac");
                 }
-                std::cout << "[DEBUG] Shoot Music ID: " << m_shootMusic << std::endl;
-                std::cout << "[DEBUG] Shoot Sound ID: " << m_playerShootSound << std::endl;
 
-                std::cout << "[DEBUG] Loading stage1.flac..." << std::endl;
-                m_gameMusic = m_context.audio->LoadMusic("assets/sounds/stage1.flac");
-                if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
-                    m_gameMusic = m_context.audio->LoadMusic("../assets/sounds/stage1.flac");
+                m_powerUpSound = m_context.audio->LoadSound("assets/sounds/powerup.flac");
+                if (m_powerUpSound == Audio::INVALID_SOUND_ID) {
+                    m_powerUpSound = m_context.audio->LoadSound("../assets/sounds/powerup.flac");
                 }
-                std::cout << "[DEBUG] Game Music ID: " << m_gameMusic << std::endl;
+                m_powerUpMusic = m_context.audio->LoadMusic("assets/sounds/powerup.flac");
+                if (m_powerUpMusic == Audio::INVALID_MUSIC_ID) {
+                    m_powerUpMusic = m_context.audio->LoadMusic("../assets/sounds/powerup.flac");
+                }
 
-                std::cout << "[DEBUG] Loading gameover.flac..." << std::endl;
+                std::string musicPath = "assets/sounds/stage1.flac";
+                if (m_currentLevelPath.find("level2.json") != std::string::npos) {
+                    musicPath = "assets/sounds/stage2.flac";
+                } else if (m_currentLevelPath.find("level3.json") != std::string::npos) {
+                    musicPath = "assets/sounds/stage3.flac";
+                }
+
+                m_gameMusic = m_context.audio->LoadMusic(musicPath);
+                if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
+                    m_gameMusic = m_context.audio->LoadMusic("../" + musicPath);
+                }
+
+                m_bossMusic = m_context.audio->LoadMusic("assets/sounds/BOSS.flac");
+                if (m_bossMusic == Audio::INVALID_MUSIC_ID) {
+                    m_bossMusic = m_context.audio->LoadMusic("../assets/sounds/BOSS.flac");
+                }
+
                 m_gameOverMusic = m_context.audio->LoadMusic("assets/sounds/gameover.flac");
                 if (m_gameOverMusic == Audio::INVALID_MUSIC_ID) {
                     m_gameOverMusic = m_context.audio->LoadMusic("../assets/sounds/gameover.flac");
                 }
-                std::cout << "[DEBUG] GameOver Music ID: " << m_gameOverMusic << std::endl;
+
+                m_victoryMusic = m_context.audio->LoadMusic("assets/sounds/victory.flac");
+                if (m_victoryMusic == Audio::INVALID_MUSIC_ID) {
+                    m_victoryMusic = m_context.audio->LoadMusic("../assets/sounds/victory.flac");
+                }
 
                 if (m_gameMusic != Audio::INVALID_MUSIC_ID) {
                     auto cmd = m_registry.CreateEntity();
@@ -93,6 +120,10 @@ namespace RType {
                 m_shootingSystem->SetShootSound(m_playerShootSound);
             }
 
+            if (m_powerUpCollisionSystem && m_powerUpSound != Audio::INVALID_SOUND_ID) {
+                m_powerUpCollisionSystem->SetPowerUpSound(m_powerUpSound);
+            }
+
             initializeFromLevel();
             if (!m_isNetworkSession) {
                 initializePlayers();
@@ -106,6 +137,51 @@ namespace RType {
             m_levelData = ECS::LevelLoader::LoadFromFile(levelPath);
             m_levelAssets = ECS::LevelLoader::LoadAssets(m_levelData, m_renderer.get());
             Core::Logger::Info("[GameState] Loaded level '{}' with {} textures, {} obstacle definitions", m_levelData.name, m_levelAssets.textures.size(), m_levelData.obstacles.size());
+
+            // Load explosion spritesheet for death animations
+            m_explosionTexture = m_renderer->LoadTexture("assets/SFX/explosion.png");
+            if (m_explosionTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_explosionTexture = m_renderer->LoadTexture("../assets/SFX/explosion.png");
+            }
+            if (m_explosionTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_explosionSprite = m_renderer->CreateSprite(m_explosionTexture, {});
+                Core::Logger::Info("[GameState] Explosion spritesheet loaded");
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load explosion spritesheet");
+            }
+
+            m_shootingTexture = m_renderer->LoadTexture("assets/SFX/shooting.png");
+            if (m_shootingTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_shootingTexture = m_renderer->LoadTexture("../assets/SFX/shooting.png");
+            }
+            if (m_shootingTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_shootingSprite = m_renderer->CreateSprite(m_shootingTexture, {});
+                Core::Logger::Info("[GameState] Shooting animation spritesheet loaded");
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load shooting animation spritesheet");
+            }
+
+            m_forcePodTexture = m_renderer->LoadTexture("assets/SFX/forcepod.png");
+            if (m_forcePodTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_forcePodTexture = m_renderer->LoadTexture("../assets/SFX/forcepod.png");
+            }
+            if (m_forcePodTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_forcePodSprite = m_renderer->CreateSprite(m_forcePodTexture, {});
+                Core::Logger::Info("[GameState] Force pod animation spritesheet loaded");
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load force pod animation spritesheet");
+            }
+
+            m_beamTexture = m_renderer->LoadTexture("assets/SFX/beam.png");
+            if (m_beamTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_beamTexture = m_renderer->LoadTexture("../assets/SFX/beam.png");
+            }
+            if (m_beamTexture != Renderer::INVALID_TEXTURE_ID) {
+                m_beamSprite = m_renderer->CreateSprite(m_beamTexture, {});
+                Core::Logger::Info("[GameState] Beam animation spritesheet loaded");
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load beam animation spritesheet");
+            }
 
             m_enemyBulletGreenTexture = m_renderer->LoadTexture("assets/projectiles/bullet-green.png");
             if (m_enemyBulletGreenTexture == Renderer::INVALID_TEXTURE_ID) {
@@ -271,8 +347,6 @@ namespace RType {
                 }
             }
 
-            std::cout << "[INIT] Built m_obstacleIdToCollider map with " << m_obstacleIdToCollider.size()
-                      << " entries from " << m_obstacleColliderEntities.size() << " collider entities" << std::endl;
         }
 
         void InGameState::createSystems() {
@@ -287,6 +361,284 @@ namespace RType {
             m_renderingSystem = std::make_unique<RType::ECS::RenderingSystem>(m_renderer.get());
             m_textSystem = std::make_unique<RType::ECS::TextRenderingSystem>(m_renderer.get());
 
+            // Initialize animation module and system
+            m_animationModule = std::make_unique<Animation::AnimationModule>();
+
+            if (m_explosionTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
+                Animation::GridLayout layout;
+                layout.columns = 6;
+                layout.rows = 1;
+                layout.frameCount = 6;
+                layout.frameWidth = 45.0f;
+                layout.frameHeight = 40.0f;
+                layout.defaultDuration = 0.005f;
+
+                m_explosionClipId = m_animationModule->CreateClipFromGrid(
+                    "explosion_small",
+                    "assets/SFX/explosion.png",
+                    layout,
+                    false);
+                Core::Logger::Info("[GameState] Created explosion animation clip with {} frames", 6);
+            }
+
+            if (m_shootingTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
+                const int frameCount = 8;
+                
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_shootingTexture);
+                float singleFrameWidth = textureSize.x / static_cast<float>(frameCount);
+                float frameHeight = textureSize.y;
+                
+                Animation::AnimationClipConfig shootingConfig;
+                shootingConfig.name = "shooting_animation";
+                shootingConfig.texturePath = "assets/SFX/shooting.png";
+                shootingConfig.looping = false;
+                shootingConfig.playbackSpeed = 1.0f;
+                
+                for (int i = frameCount - 1; i >= 0; --i) {
+                    Animation::FrameDef frame;
+                    frame.region.position.x = static_cast<float>(i) * singleFrameWidth;
+                    frame.region.position.y = 0.0f;
+                    frame.region.size.x = singleFrameWidth;
+                    frame.region.size.y = frameHeight;
+                    frame.duration = 0.05f;
+                    shootingConfig.frames.push_back(frame);
+                }
+                
+                m_shootingClipId = m_animationModule->CreateClip(shootingConfig);
+                Core::Logger::Info("[GameState] Created shooting animation clip with {} frames (frame size: {}x{}, texture size: {}x{}, reversed for right-to-left)", 
+                    frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
+            }
+
+            if (m_forcePodTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
+                const int totalFramesInSheet = 12;
+                const int frameCount = 6;
+                
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_forcePodTexture);
+                float singleFrameWidth = textureSize.x / static_cast<float>(totalFramesInSheet);
+                float frameHeight = textureSize.y;
+                
+                Animation::AnimationClipConfig forcePodConfig;
+                forcePodConfig.name = "forcepod_rotation";
+                forcePodConfig.texturePath = "assets/SFX/forcepod.png";
+                forcePodConfig.looping = true;
+                forcePodConfig.playbackSpeed = 1.0f;
+                
+                for (int i = 0; i < frameCount; ++i) {
+                    Animation::FrameDef frame;
+                    frame.region.position.x = static_cast<float>(i) * singleFrameWidth;
+                    frame.region.position.y = 0.0f;
+                    frame.region.size.x = singleFrameWidth;
+                    frame.region.size.y = frameHeight;
+                    frame.duration = 0.1f;
+                    forcePodConfig.frames.push_back(frame);
+                }
+                
+                m_forcePodClipId = m_animationModule->CreateClip(forcePodConfig);
+                Core::Logger::Info("[GameState] Created force pod rotation animation clip with {} frames (frame size: {}x{}, texture size: {}x{})", 
+                    frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
+            }
+
+            if (m_beamTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
+                const int frameCount = 5;
+                
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_beamTexture);
+                float singleFrameWidth = textureSize.x / static_cast<float>(frameCount);
+                float frameHeight = textureSize.y;
+                
+                Animation::AnimationClipConfig beamConfig;
+                beamConfig.name = "beam_animation";
+                beamConfig.texturePath = "assets/SFX/beam.png";
+                beamConfig.looping = true;
+                beamConfig.playbackSpeed = 1.0f;
+                
+                for (int i = 0; i < frameCount; ++i) {
+                    Animation::FrameDef frame;
+                    frame.region.position.x = static_cast<float>(i) * singleFrameWidth;
+                    frame.region.position.y = 0.0f;
+                    frame.region.size.x = singleFrameWidth;
+                    frame.region.size.y = frameHeight;
+                    frame.duration = 0.1f;
+                    beamConfig.frames.push_back(frame);
+                }
+                
+                m_beamClipId = m_animationModule->CreateClip(beamConfig);
+                Core::Logger::Info("[GameState] Created beam animation clip with {} frames (frame size: {}x{}, texture size: {}x{})", 
+                    frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
+            }
+
+            m_hitTexture = m_renderer->LoadTexture("assets/SFX/hit.png");
+            if (m_hitTexture == Renderer::INVALID_TEXTURE_ID) {
+                m_hitTexture = m_renderer->LoadTexture("../assets/SFX/hit.png");
+            }
+            if (m_hitTexture != Renderer::INVALID_TEXTURE_ID) {
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_hitTexture);
+                m_hitSprite = m_renderer->CreateSprite(m_hitTexture, Renderer::Rectangle{{0.0f, 0.0f}, {textureSize.x, textureSize.y}});
+                Core::Logger::Info("[GameState] Hit animation spritesheet loaded (texture size: {}x{})", textureSize.x, textureSize.y);
+            } else {
+                Core::Logger::Warning("[GameState] Failed to load hit animation spritesheet");
+            }
+
+            if (m_hitTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
+                const int frameCount = 5;
+                
+                Renderer::Vector2 textureSize = m_renderer->GetTextureSize(m_hitTexture);
+                float singleFrameWidth = textureSize.x / static_cast<float>(frameCount);
+                float frameHeight = textureSize.y;
+                
+                Animation::AnimationClipConfig hitConfig;
+                hitConfig.name = "hit_animation";
+                hitConfig.texturePath = "assets/SFX/hit.png";
+                hitConfig.looping = false;
+                hitConfig.playbackSpeed = 1.0f;
+                
+                for (int i = 0; i < frameCount; ++i) {
+                    Animation::FrameDef frame;
+                    frame.region.position.x = static_cast<float>(i) * singleFrameWidth;
+                    frame.region.position.y = 0.0f;
+                    frame.region.size.x = singleFrameWidth;
+                    frame.region.size.y = frameHeight;
+                    frame.duration = 0.1f;
+                    hitConfig.frames.push_back(frame);
+                }
+                
+                m_hitClipId = m_animationModule->CreateClip(hitConfig);
+                Core::Logger::Info("[GameState] Created hit animation clip with {} frames (frame size: {}x{}, texture size: {}x{})",
+                    frameCount, singleFrameWidth, frameHeight, textureSize.x, textureSize.y);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout waveLayout;
+                waveLayout.columns = 3;
+                waveLayout.rows = 1;
+                waveLayout.frameCount = 3;
+                waveLayout.frameWidth = 30.0f;
+                waveLayout.frameHeight = 40.0f;
+                waveLayout.defaultDuration = 0.3f;
+
+                m_waveAttackClipId = m_animationModule->CreateClipFromGrid(
+                    "wave_attack",
+                    "assets/boss/attacks/boss 2/wave_attack.png",
+                    waveLayout,
+                    true);
+                Core::Logger::Info("[GameState] Created wave attack animation clip with {} frames", 3);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout secondLayout;
+                secondLayout.columns = 3;
+                secondLayout.rows = 1;
+                secondLayout.frameCount = 3;
+                secondLayout.frameWidth = 19.0f;
+                secondLayout.frameHeight = 29.0f;
+                secondLayout.defaultDuration = 0.5f;
+
+                m_secondAttackClipId = m_animationModule->CreateClipFromGrid(
+                    "second_attack",
+                    "assets/boss/attacks/boss_2/second_attack_boss2.png",
+                    secondLayout,
+                    true);
+                Core::Logger::Info("[GameState] Created second attack animation clip with {} frames", 3);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout fireLayout;
+                fireLayout.columns = 2;
+                fireLayout.rows = 1;
+                fireLayout.frameCount = 2;
+                fireLayout.frameWidth = 25.0f;
+                fireLayout.frameHeight = 25.0f;
+                fireLayout.defaultDuration = 0.3f;
+
+                m_fireBulletClipId = m_animationModule->CreateClipFromGrid(
+                    "fire_bullet",
+                    "assets/boss/attacks/boss_3/fire.png",
+                    fireLayout,
+                    true);
+                Core::Logger::Info("[GameState] Created fire bullet animation clip with {} frames", 4);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout mineLayout;
+                mineLayout.columns = 2;
+                mineLayout.rows = 1;
+                mineLayout.frameCount = 2;
+                mineLayout.frameWidth = 36.0f;
+                mineLayout.frameHeight = 42.0f;
+                mineLayout.defaultDuration = 0.3f;
+
+                m_mineClipId = m_animationModule->CreateClipFromGrid(
+                    "mine",
+                    "assets/boss/attacks/boss_3/mine.png",
+                    mineLayout,
+                    true);
+                Core::Logger::Info("[GameState] Created mine animation clip with {} frames", 4);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout explosionLayout;
+                explosionLayout.columns = 5;
+                explosionLayout.rows = 1;
+                explosionLayout.frameCount = 5;
+                explosionLayout.frameWidth = 54.0f;
+                explosionLayout.frameHeight = 65.0f;
+                explosionLayout.defaultDuration = 0.1f;
+
+                m_mineExplosionClipId = m_animationModule->CreateClipFromGrid(
+                    "mine_explosion",
+                    "assets/boss/attacks/boss_3/explosion.png",
+                    explosionLayout,
+                    false);
+                Core::Logger::Info("[GameState] Created mine explosion animation clip with {} frames", 7);
+            }
+
+            m_animationSystem = std::make_unique<RType::ECS::AnimationSystem>(m_animationModule.get());
+
+            ECS::EffectConfig effectConfig;
+            effectConfig.explosionSmall = m_explosionClipId;
+            effectConfig.effectsTexture = m_explosionTexture;
+            effectConfig.effectsSprite = m_explosionSprite;
+            effectConfig.shootingAnimation = m_shootingClipId;
+            effectConfig.shootingTexture = m_shootingTexture;
+            effectConfig.shootingSprite = m_shootingSprite;
+            effectConfig.forcePodAnimation = m_forcePodClipId;
+            effectConfig.forcePodTexture = m_forcePodTexture;
+            effectConfig.forcePodSprite = m_forcePodSprite;
+            effectConfig.beamAnimation = m_beamClipId;
+            effectConfig.beamTexture = m_beamTexture;
+            effectConfig.beamSprite = m_beamSprite;
+            effectConfig.hitAnimation = m_hitClipId;
+            effectConfig.hitTexture = m_hitTexture;
+            effectConfig.hitSprite = m_hitSprite;
+            
+            if (m_animationModule) {
+                if (m_explosionClipId != Animation::INVALID_CLIP_ID) {
+                    auto explosionFirstFrame = m_animationModule->GetFrameAtTime(m_explosionClipId, 0.0f, false);
+                    effectConfig.explosionFirstFrameRegion = explosionFirstFrame.region;
+                }
+                
+                if (m_shootingClipId != Animation::INVALID_CLIP_ID) {
+                    auto shootingFirstFrame = m_animationModule->GetFrameAtTime(m_shootingClipId, 0.0f, false);
+                    effectConfig.shootingFirstFrameRegion = shootingFirstFrame.region;
+                }
+                
+                if (m_forcePodClipId != Animation::INVALID_CLIP_ID) {
+                    auto forcePodFirstFrame = m_animationModule->GetFrameAtTime(m_forcePodClipId, 0.0f, true);
+                    effectConfig.forcePodFirstFrameRegion = forcePodFirstFrame.region;
+                }
+                
+                if (m_beamClipId != Animation::INVALID_CLIP_ID) {
+                    auto beamFirstFrame = m_animationModule->GetFrameAtTime(m_beamClipId, 0.0f, true);
+                    effectConfig.beamFirstFrameRegion = beamFirstFrame.region;
+                }
+                
+                if (m_hitClipId != Animation::INVALID_CLIP_ID) {
+                    auto hitFirstFrame = m_animationModule->GetFrameAtTime(m_hitClipId, 0.0f, false);
+                    effectConfig.hitFirstFrameRegion = hitFirstFrame.region;
+                }
+            }
+            
+            m_effectFactory = std::make_unique<RType::ECS::EffectFactory>(effectConfig);
+
             m_forcePodSystem = std::make_unique<RType::ECS::ForcePodSystem>();
             m_shieldSystem = std::make_unique<RType::ECS::ShieldSystem>();
 
@@ -296,25 +648,30 @@ namespace RType {
                     m_levelData.config.screenWidth,
                     m_levelData.config.screenHeight);
                 m_powerUpSpawnSystem->SetSpawnInterval(m_levelData.config.powerUpSpawnInterval);
+                m_powerUpSpawnSystem->SetEffectFactory(m_effectFactory.get());
                 m_powerUpCollisionSystem = std::make_unique<RType::ECS::PowerUpCollisionSystem>(m_renderer.get());
                 m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
                 m_playerResponseSystem = std::make_unique<RType::ECS::PlayerCollisionResponseSystem>();
                 m_shootingSystem = std::make_unique<RType::ECS::ShootingSystem>(bulletSprite);
+                m_shootingSystem->SetEffectFactory(m_effectFactory.get());
                 m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
                 m_inputSystem = std::make_unique<RType::ECS::InputSystem>(m_renderer.get());
-                m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>();
+                m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>(m_effectFactory.get());
                 m_obstacleResponseSystem = std::make_unique<RType::ECS::ObstacleCollisionResponseSystem>();
                 m_healthSystem = std::make_unique<RType::ECS::HealthSystem>();
                 m_scoreSystem = std::make_unique<RType::ECS::ScoreSystem>();
             } else {
+                // In network sessions, we still need collision systems for visual effects
+                m_collisionDetectionSystem = std::make_unique<RType::ECS::CollisionDetectionSystem>();
+                m_bulletResponseSystem = std::make_unique<RType::ECS::BulletCollisionResponseSystem>(m_effectFactory.get());
+                
+                // These systems are server-authoritative, so we don't need them on client
                 m_powerUpSpawnSystem.reset();
                 m_powerUpCollisionSystem.reset();
-                m_collisionDetectionSystem.reset();
                 m_playerResponseSystem.reset();
                 m_shootingSystem.reset();
                 m_movementSystem.reset();
                 m_inputSystem.reset();
-                m_bulletResponseSystem.reset();
                 m_obstacleResponseSystem.reset();
                 m_healthSystem.reset();
                 m_scoreSystem.reset();
@@ -325,7 +682,6 @@ namespace RType {
             if (m_isNetworkSession) {
                 return;
             }
-            std::cout << "[GameState] Initializing local player (ECS)..." << std::endl;
 
             const uint8_t playerNumber = m_context.playerNumber == 0 ? 1 : m_context.playerNumber;
             const uint64_t playerHash = m_context.playerHash;

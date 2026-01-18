@@ -49,11 +49,13 @@ namespace network {
         HELLO = 0x00,      // Client → Server: Initial connection
         WELCOME = 0x01,    // Server → Client: Connection accepted
         INPUT = 0x02,      // Client → Server: Player inputs
-        STATE = 0x03,      // Server → Client: Game state snapshot
+        STATE = 0x03,      // Server → Client: Game state snapshot (full)
         PING = 0x04,       // Bidirectional: Keepalive
         PONG = 0x05,       // Bidirectional: Keepalive response
         DISCONNECT = 0x06, // Client → Server: Graceful disconnect
         LEVEL_COMPLETE = 0x07, // Server → Client: Level completed (boss defeated)
+        STATE_DELTA = 0x08,    // Server → Client: Delta state snapshot (optimized)
+        STATE_ACK = 0x09,      // Client → Server: Acknowledge received state sequence
     };
 
     // Input flags bitfield
@@ -155,7 +157,7 @@ namespace network {
         float y = 0.0f;
         float vx = 0.0f; // Velocity X
         float vy = 0.0f; // Velocity Y
-        uint8_t health = 0;
+        uint16_t health = 0;    // Changed to uint16_t to support 300 HP
         uint8_t flags = 0;      // Custom flags per entity type
         uint64_t ownerHash = 0; // Player hash for PLAYER entities (for client-side prediction)
         uint32_t score = 0;
@@ -173,7 +175,7 @@ namespace network {
         float serverPosY = 0.0f;
     };
 
-    // STATE packet (Server → Client)
+    // STATE packet (Server → Client) - Full snapshot
     struct StatePacketHeader {
         uint8_t type = static_cast<uint8_t>(GamePacket::STATE);
         uint32_t tick = 0;         // Server tick number
@@ -181,6 +183,54 @@ namespace network {
         uint16_t entityCount = 0;  // Number of entities following
         float scrollOffset = 0.0f; // Background scroll offset
         uint8_t inputAckCount = 0;
+        uint32_t stateSequence = 0; // Sequence number for delta tracking
+    };
+
+    // Delta update flags - which fields changed
+    enum DeltaFlags : uint8_t {
+        DELTA_POSITION = 1 << 0,    // x, y changed
+        DELTA_VELOCITY = 1 << 1,    // vx, vy changed
+        DELTA_HEALTH = 1 << 2,      // health changed
+        DELTA_FLAGS = 1 << 3,       // flags changed
+        DELTA_SCORE = 1 << 4,       // score changed
+        DELTA_POWERUP = 1 << 5,     // powerUpFlags changed
+        DELTA_WEAPON = 1 << 6,      // weaponType/fireRate changed
+        DELTA_DESTROYED = 1 << 7,   // Entity was destroyed
+    };
+
+    // Delta entity state - only sends changed fields
+    struct DeltaEntityHeader {
+        uint32_t entityId = 0;
+        uint8_t deltaFlags = 0;     // Which fields are included
+    };
+
+    // STATE_DELTA packet header (Server → Client) - Delta snapshot
+    struct StateDeltaHeader {
+        uint8_t type = static_cast<uint8_t>(GamePacket::STATE_DELTA);
+        uint32_t tick = 0;              // Server tick number
+        uint32_t timestamp = 0;         // Server timestamp (ms)
+        uint32_t stateSequence = 0;     // Current sequence number
+        uint32_t baseSequence = 0;      // Base sequence this delta is from
+        uint16_t deltaEntityCount = 0;  // Number of changed entities
+        uint16_t destroyedCount = 0;    // Number of destroyed entity IDs
+        uint16_t newEntityCount = 0;    // Number of new full entities
+        float scrollOffset = 0.0f;      // Background scroll offset
+        uint8_t inputAckCount = 0;
+        uint8_t compressionFlags = 0;   // 0 = none, 1 = LZ4
+        uint32_t uncompressedSize = 0;  // Original size before compression (0 if not compressed)
+    };
+
+    // STATE_ACK packet (Client → Server) - Acknowledge received state
+    struct StateAckPacket {
+        uint8_t type = static_cast<uint8_t>(GamePacket::STATE_ACK);
+        uint64_t playerHash = 0;
+        uint32_t lastReceivedSeq = 0;   // Last successfully received state sequence
+    };
+
+    // Compression flags
+    enum CompressionFlags : uint8_t {
+        COMPRESSION_NONE = 0x00,
+        COMPRESSION_LZ4 = 0x01,
     };
 
     // PING packet

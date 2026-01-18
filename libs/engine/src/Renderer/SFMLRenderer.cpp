@@ -250,6 +250,16 @@ namespace Renderer {
         RType::Core::Logger::Debug("Destroyed sprite ID: {}", spriteId);
     }
 
+    void SFMLRenderer::SetSpriteRegion(SpriteId spriteId, const Rectangle& region) {
+        auto it = m_sprites.find(spriteId);
+        if (it == m_sprites.end()) {
+            RType::Core::Logger::Warning("Attempted to set region for non-existent sprite ID: {}", spriteId);
+            return;
+        }
+
+        it->second.sprite.setTextureRect(ToSFMLRect(region));
+    }
+
     void SFMLRenderer::DrawSprite(SpriteId spriteId, const Transform2D& transform, const Color& tint) {
         if (!m_window) {
             return;

@@ -60,12 +60,31 @@ namespace RType {
             }
             m_escapePressed = m_renderer->IsKeyPressed(Renderer::Key::Escape);
 
+            if (m_context.audio) {
+                m_endMusic = m_context.audio->LoadMusic("assets/sounds/end.flac");
+                if (m_endMusic == Audio::INVALID_MUSIC_ID) {
+                    m_endMusic = m_context.audio->LoadMusic("../assets/sounds/end.flac");
+                }
+                if (m_endMusic != Audio::INVALID_MUSIC_ID) {
+                    Audio::PlaybackOptions opts;
+                    opts.loop = true;
+                    opts.volume = 0.5f;
+                    m_context.audio->PlayMusic(m_endMusic, opts);
+                }
+            }
+
             std::sort(m_scores.begin(), m_scores.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
 
             createUI();
         }
 
         void ResultsState::Cleanup() {
+            if (m_context.audio && m_endMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_endMusic);
+                m_context.audio->UnloadMusic(m_endMusic);
+                m_endMusic = Audio::INVALID_MUSIC_ID;
+            }
+
             auto entities = m_registry.GetEntitiesWithComponent<Position>();
             for (auto e : entities) {
                 if (m_registry.IsEntityAlive(e)) {
@@ -77,6 +96,9 @@ namespace RType {
         void ResultsState::HandleInput() {
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapePressed) {
                 m_escapePressed = true;
+                if (m_context.audio && m_endMusic != Audio::INVALID_MUSIC_ID) {
+                    m_context.audio->StopMusic(m_endMusic);
+                }
                 m_machine.ChangeState(std::make_unique<RoomListState>(m_machine, m_context));
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
                 m_escapePressed = false;

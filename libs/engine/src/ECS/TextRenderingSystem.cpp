@@ -1,6 +1,7 @@
 #include "ECS/TextRenderingSystem.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/Components/TextLabel.hpp"
+#include "Core/ColorFilter.hpp"
 
 namespace RType {
     namespace ECS {
@@ -26,7 +27,11 @@ namespace RType {
 
                 Renderer::TextParams params;
                 params.position = {pos.x + label.offsetX, pos.y + label.offsetY};
-                params.color = label.color;
+                Math::Color finalColor = label.color;
+                if (RType::Core::ColorFilter::IsColourBlindModeEnabled()) {
+                    finalColor = RType::Core::ColorFilter::ApplyColourBlindFilter(label.color);
+                }
+                params.color = finalColor;
                 params.scale = 1.0f;
                 params.rotation = 0.0f;
                 params.centered = label.centered;

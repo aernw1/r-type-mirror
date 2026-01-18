@@ -22,7 +22,7 @@ namespace RType {
 
             registry.AddComponent<Controllable>(player, Controllable(200.0f));
 
-            registry.AddComponent<Health>(player, Health(200, 200));
+            registry.AddComponent<Health>(player, Health(300, 300));
             registry.AddComponent<ScoreValue>(player, ScoreValue(0));
             registry.AddComponent<ScoreTimer>(player, ScoreTimer(0.0f));
             registry.AddComponent<Shooter>(player, Shooter(0.2f, 50.0f, 0.0f));

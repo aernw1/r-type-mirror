@@ -43,18 +43,17 @@ target_link_libraries(r-type_server PRIVATE rtype_network rtype_asio_network)
 add_executable(r-type_client
     client/main.cpp
     client/src/MenuState.cpp
+    client/src/SettingsState.cpp
     client/src/room/RoomListState.cpp
     client/src/LobbyState.cpp
     client/src/GameState.cpp
     client/src/ResultsState.cpp
     client/src/EditorState.cpp
-    client/src/level_transition/LevelTransitionState.cpp
     client/src/editor/EditorCanvasManager.cpp
     client/src/editor/EditorAssetLibrary.cpp
     client/src/editor/EditorUIManager.cpp
     client/src/editor/EditorEntityManager.cpp
     client/src/editor/EditorFileManager.cpp
-    # Editor utilities
     client/src/editor/EditorInputHandler.cpp
     client/src/editor/EditorDrawing.cpp
     client/src/editor/EditorPropertyManager.cpp
@@ -114,4 +113,20 @@ if(TARGET rtype_sfml_renderer)
         rtype_sfml_renderer
     )
     message(STATUS "test_background will be built")
+
+    add_executable(breakout
+        breakout/src/main.cpp
+        breakout/src/BreakoutPhysicsSystem.cpp
+        breakout/src/BreakoutRenderSystem.cpp
+        breakout/src/BallAccelerationSystem.cpp
+    )
+    target_include_directories(breakout PRIVATE
+        ${CMAKE_SOURCE_DIR}/breakout/include
+    )
+    target_link_libraries(breakout PRIVATE
+        rtype_core
+        rtype_ecs
+        rtype_sfml_renderer
+    )
+    message(STATUS "breakout will be built (second game demo)")
 endif()

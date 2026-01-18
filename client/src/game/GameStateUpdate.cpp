@@ -6,12 +6,13 @@
 */
 
 #include "../../include/GameState.hpp"
-
+#include "Core/InputMapping.hpp"
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
 #include "ResultsState.hpp"
 #include "RoomListState.hpp"
+#include "MenuState.hpp"
 #include <cmath>
 
 using namespace RType::ECS;
@@ -20,6 +21,27 @@ namespace RType {
     namespace Client {
 
         void InGameState::HandleInput() {
+            if (m_levelProgress.allLevelsComplete) {
+                if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_gameOverEnterPressed) {
+                    m_gameOverEnterPressed = true;
+                    enterResultsScreen();
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Enter)) {
+                    m_gameOverEnterPressed = false;
+                }
+
+                if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_gameOverEscapePressed) {
+                    m_gameOverEscapePressed = true;
+                    if (m_context.networkClient) {
+                        m_context.networkClient->Stop();
+                        m_context.networkClient.reset();
+                    }
+                    m_machine.ChangeState(std::make_unique<MenuState>(m_machine, m_context));
+                } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
+                    m_gameOverEscapePressed = false;
+                }
+                return;
+            }
+
             if (m_isGameOver) {
                 if (m_renderer->IsKeyPressed(Renderer::Key::Enter) && !m_gameOverEnterPressed) {
                     m_gameOverEnterPressed = true;
@@ -43,53 +65,74 @@ namespace RType {
 
             m_currentInputs = 0;
 
-            if (m_renderer->IsKeyPressed(Renderer::Key::Up)) {
+            Renderer::Key moveUpKey = Core::InputMapping::GetKey("MOVE_UP");
+            Renderer::Key moveDownKey = Core::InputMapping::GetKey("MOVE_DOWN");
+            Renderer::Key moveLeftKey = Core::InputMapping::GetKey("MOVE_LEFT");
+            Renderer::Key moveRightKey = Core::InputMapping::GetKey("MOVE_RIGHT");
+            Renderer::Key shootKey = Core::InputMapping::GetKey("SHOOT");
+
+            if (moveUpKey == Renderer::Key::Unknown) moveUpKey = Renderer::Key::Up;
+            if (moveDownKey == Renderer::Key::Unknown) moveDownKey = Renderer::Key::Down;
+            if (moveLeftKey == Renderer::Key::Unknown) moveLeftKey = Renderer::Key::Left;
+            if (moveRightKey == Renderer::Key::Unknown) moveRightKey = Renderer::Key::Right;
+            if (shootKey == Renderer::Key::Unknown) shootKey = Renderer::Key::Space;
+
+            if (m_renderer->IsKeyPressed(moveUpKey)) {
                 m_currentInputs |= network::InputFlags::UP;
             }
-            if (m_renderer->IsKeyPressed(Renderer::Key::Down)) {
+            if (m_renderer->IsKeyPressed(moveDownKey)) {
                 m_currentInputs |= network::InputFlags::DOWN;
             }
-            if (m_renderer->IsKeyPressed(Renderer::Key::Left)) {
+            if (m_renderer->IsKeyPressed(moveLeftKey)) {
                 m_currentInputs |= network::InputFlags::LEFT;
             }
-            if (m_renderer->IsKeyPressed(Renderer::Key::Right)) {
+            if (m_renderer->IsKeyPressed(moveRightKey)) {
                 m_currentInputs |= network::InputFlags::RIGHT;
             }
-            static bool spacePressedLastFrame = false;
-            bool spacePressed = m_renderer->IsKeyPressed(Renderer::Key::Space);
+            static bool shootPressedLastFrame = false;
+            bool shootPressed = m_renderer->IsKeyPressed(shootKey);
 
-            if (spacePressed) {
+            if (shootPressed) {
                 m_isCharging = true;
-                m_chargeTime += 0.016f; 
+                m_chargeTime += 0.016f;
                 if (m_chargeTime > 2.0f) {
                     m_chargeTime = 2.0f;
                 }
-                
             } else {
-                if (spacePressedLastFrame) {
-                    m_currentInputs |= network::InputFlags::SHOOT;
-                    if (m_isNetworkSession) {
-                        if (m_shootMusic != Audio::INVALID_MUSIC_ID) {
-                             std::cout << "[DEBUG] Direct PlayMusic Call (Shoot ID: " << m_shootMusic << ")" << std::endl;
-                             Audio::PlaybackOptions opts;
-                             opts.volume = 1.0f;
-                             opts.loop = false;
-                             m_context.audio->StopMusic(m_shootMusic); 
-                             m_context.audio->PlayMusic(m_shootMusic, opts);
-                        } else if (m_playerShootSound != Audio::INVALID_SOUND_ID) {
-                            std::cout << "[DEBUG] Direct PlaySound Call (ID: " << m_playerShootSound << ")" << std::endl;
-                            Audio::PlaybackOptions opts;
-                            opts.volume = 1.0f;
-                            m_context.audio->PlaySound(m_playerShootSound, opts);
+                if (shootPressedLastFrame) {
+                    float savedChargeTime = m_chargeTime;
+
+                    if (savedChargeTime >= 2.0f) {
+                        if (m_localPlayerEntity != ECS::NULL_ENTITY &&
+                            m_registry.IsEntityAlive(m_localPlayerEntity) &&
+                            m_registry.HasComponent<ECS::Position>(m_localPlayerEntity) &&
+                            m_registry.HasComponent<ECS::Shooter>(m_localPlayerEntity)) {
+                            createBeamEntity();
+                            m_beamDuration = 2.0f;
+                        }
+                    } else {
+                        m_currentInputs |= network::InputFlags::SHOOT;
+                        if (m_isNetworkSession) {
+                            if (m_shootMusic != Audio::INVALID_MUSIC_ID) {
+                                 Audio::PlaybackOptions opts;
+                                 opts.volume = 1.0f;
+                                 opts.loop = false;
+                                 m_context.audio->StopMusic(m_shootMusic);
+                                 m_context.audio->PlayMusic(m_shootMusic, opts);
+                            } else if (m_playerShootSound != Audio::INVALID_SOUND_ID) {
+                                Audio::PlaybackOptions opts;
+                                opts.volume = 1.0f;
+                                m_context.audio->PlaySound(m_playerShootSound, opts);
+                            }
                         }
                     }
                 }
                 m_isCharging = false;
                 m_chargeTime = 0.0f;
             }
-            spacePressedLastFrame = spacePressed;
-            
-            
+            shootPressedLastFrame = shootPressed;
+
+
 
             if (!m_isNetworkSession &&
                 m_localPlayerEntity != ECS::NULL_ENTITY &&
@@ -105,18 +148,12 @@ namespace RType {
                     m_context.networkClient->SendInput(static_cast<uint8_t>(m_currentInputs));
                     m_lastInputTime = now;
 
-                    static int inputLog = 0;
-                    if (inputLog++ % 10 == 0) {
-                        auto epoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-                        std::cout << "[CLIENT SEND INPUT] t=" << epoch << " inputs=" << m_currentInputs << std::endl;
-                    }
                 }
                 m_previousInputs = m_currentInputs;
             }
 
             if (m_renderer->IsKeyPressed(Renderer::Key::Escape) && !m_escapeKeyPressed) {
                 m_escapeKeyPressed = true;
-                std::cout << "[GameState] Returning to lobby..." << std::endl;
                 m_machine.PopState();
             } else if (!m_renderer->IsKeyPressed(Renderer::Key::Escape)) {
                 m_escapeKeyPressed = false;
@@ -124,6 +161,8 @@ namespace RType {
         }
 
         void InGameState::Update(float dt) {
+            UpdateLevelTransition(dt);
+
             if (m_context.networkClient) {
                 m_context.networkClient->ReceivePackets();
             } else {
@@ -139,9 +178,18 @@ namespace RType {
                 m_shootSfxCooldown -= dt;
             }
 
+            updateBeam(dt);
+
             triggerGameOverIfNeeded();
             if (m_isGameOver) {
                 m_gameOverElapsed += dt;
+                updateHUD();
+                return;
+            }
+
+            triggerVictoryIfNeeded();
+            if (m_levelProgress.allLevelsComplete) {
+                m_levelProgress.victoryElapsed += dt;
                 updateHUD();
                 return;
             }
@@ -152,20 +200,8 @@ namespace RType {
                 m_movementSystem->Update(m_registry, dt);
             }
 
-            // IMPORTANT: Sync obstacle colliders BEFORE player prediction
-            // so collision checks use current frame positions
-            static bool loggedMode = false;
-            if (!loggedMode) {
-                std::cout << "[UPDATE MODE] m_isNetworkSession=" << m_isNetworkSession << std::endl;
-                loggedMode = true;
-            }
 
             if (m_isNetworkSession) {
-                static bool loggedNetworkPath = false;
-                if (!loggedNetworkPath) {
-                    std::cout << "[UPDATE] Taking NETWORK session path" << std::endl;
-                    loggedNetworkPath = true;
-                }
                 // Scroll backgrounds
                 for (auto& bg : m_backgroundEntities) {
                     if (!m_registry.IsEntityAlive(bg))
@@ -177,9 +213,6 @@ namespace RType {
                     const auto& scrollable = m_registry.GetComponent<Scrollable>(bg);
                     pos.x += scrollable.speed * dt;
                 }
-                // Scroll obstacle visuals - ARCHITECTURAL FIX
-                // Instead of maintaining static list, query obstacle colliders and scroll their visuals
-                // This fixes entity ID recycling bug where bullets reused obstacle IDs
                 auto obstacleColliders = m_registry.GetEntitiesWithComponent<ECS::ObstacleMetadata>();
                 for (auto collider : obstacleColliders) {
                     if (!m_registry.HasComponent<ECS::ObstacleMetadata>(collider)) {
@@ -188,7 +221,6 @@ namespace RType {
                     const auto& metadata = m_registry.GetComponent<ECS::ObstacleMetadata>(collider);
                     auto visual = metadata.visualEntity;
 
-                    // Only scroll if visual entity exists and has required components
                     if (visual == ECS::NULL_ENTITY ||
                         !m_registry.IsEntityAlive(visual) ||
                         !m_registry.HasComponent<Position>(visual) ||
@@ -200,10 +232,6 @@ namespace RType {
                     const auto& scrollable = m_registry.GetComponent<Scrollable>(visual);
                     pos.x += scrollable.speed * dt;
                 }
-                // Synchronize collider positions to visual entities using ObstacleMetadata
-                // ONLY for obstacles that still have Scrollable (not yet synced via network)
-                // Use component query instead of static list
-                static int syncDebugCounter = 0;
                 auto obstacleCollidersForSync = m_registry.GetEntitiesWithComponent<ECS::ObstacleMetadata>();
                 for (auto collider : obstacleCollidersForSync) {
                     if (!m_registry.IsEntityAlive(collider) ||
@@ -211,66 +239,32 @@ namespace RType {
                         !m_registry.HasComponent<Position>(collider))
                         continue;
 
-                    // Skip obstacles that are synced via network (no Scrollable component)
                     if (!m_registry.HasComponent<Scrollable>(collider))
                         continue;
 
                     const auto& metadata = m_registry.GetComponent<ObstacleMetadata>(collider);
 
-                    // If visual entity exists, sync collider to visual position + offset
                     if (metadata.visualEntity != ECS::NULL_ENTITY &&
                         m_registry.IsEntityAlive(metadata.visualEntity) &&
                         m_registry.HasComponent<Position>(metadata.visualEntity)) {
 
                         const auto& visualPos = m_registry.GetComponent<Position>(metadata.visualEntity);
                         auto& colliderPos = m_registry.GetComponent<Position>(collider);
-
-                        // Debug: Log first few syncs to verify it's running
-                        if (syncDebugCounter < 5) {
-                            std::cout << "[RUNTIME SYNC] Collider " << collider
-                                      << ": visual=(" << visualPos.x << "," << visualPos.y << ")"
-                                      << " offset=(" << metadata.offsetX << "," << metadata.offsetY << ")"
-                                      << " -> collider=(" << visualPos.x + metadata.offsetX << ","
-                                      << visualPos.y + metadata.offsetY << ")" << std::endl;
-                            syncDebugCounter++;
-                        }
-
-                        // Collider position = visual position + stored offset
                         colliderPos.x = visualPos.x + metadata.offsetX;
                         colliderPos.y = visualPos.y + metadata.offsetY;
-                    }
-                    // Fallback: if no visual (missing texture), scroll collider independently
-                    else if (m_registry.HasComponent<Scrollable>(collider)) {
+                    } else if (m_registry.HasComponent<Scrollable>(collider)) {
                         auto& pos = m_registry.GetComponent<Position>(collider);
                         const auto& scrollable = m_registry.GetComponent<Scrollable>(collider);
                         pos.x += scrollable.speed * dt;
-
-                        if (syncDebugCounter < 5) {
-                            std::cout << "[RUNTIME SYNC FALLBACK] Collider " << collider
-                                      << " scrolling independently at (" << pos.x << "," << pos.y << ")" << std::endl;
-                            syncDebugCounter++;
-                        }
                     }
                 }
             } else if (m_scrollingSystem) {
-                static bool loggedScrollingPath = false;
-                if (!loggedScrollingPath) {
-                    std::cout << "[UPDATE] Taking ScrollingSystem path (non-network)" << std::endl;
-                    loggedScrollingPath = true;
-                }
-                // Non-network mode: use ScrollingSystem which also handles sync
                 m_scrollingSystem->Update(m_registry, dt);
             }
 
             if (m_isNetworkSession && m_localPlayerEntity != ECS::NULL_ENTITY &&
                 m_registry.IsEntityAlive(m_localPlayerEntity) &&
                 m_registry.HasComponent<Position>(m_localPlayerEntity)) {
-                static bool loggedPrediction = false;
-                if (!loggedPrediction) {
-                    std::cout << "[UPDATE] Player prediction code is running" << std::endl;
-                    std::cout << "[UPDATE] m_obstacleColliderEntities.size()=" << m_obstacleColliderEntities.size() << std::endl;
-                    loggedPrediction = true;
-                }
                 auto& pos = m_registry.GetComponent<Position>(m_localPlayerEntity);
 
                 float newX = pos.x;
@@ -299,7 +293,6 @@ namespace RType {
                 }
 
                 bool blocked = false;
-                static int collisionDebugCounter = 0;
                 for (auto& collider : m_obstacleColliderEntities) {
                     if (!m_registry.IsEntityAlive(collider) ||
                         !m_registry.HasComponent<Position>(collider) ||
@@ -315,37 +308,6 @@ namespace RType {
                         newY + playerH > obstPos.y;
 
                     if (wouldCollide) {
-                        if (collisionDebugCounter < 3) {
-                            std::cout << "[COLLISION DETECTED] Player at (" << newX << "," << newY
-                                      << ") size=(" << playerW << "," << playerH << ")"
-                                      << " vs Obstacle ENTITY=" << collider
-                                      << " at (" << obstPos.x << "," << obstPos.y << ")"
-                                      << " size=(" << obstBox.width << "," << obstBox.height << ")" << std::endl;
-
-                            // Check if this entity has ObstacleMetadata
-                            if (m_registry.HasComponent<ObstacleMetadata>(collider)) {
-                                const auto& meta = m_registry.GetComponent<ObstacleMetadata>(collider);
-                                std::cout << "  -> Has metadata: visualEntity=" << meta.visualEntity
-                                          << " offset=(" << meta.offsetX << "," << meta.offsetY << ")" << std::endl;
-
-                                // Check if visual entity actually exists and has drawable
-                                if (meta.visualEntity != ECS::NULL_ENTITY) {
-                                    bool alive = m_registry.IsEntityAlive(meta.visualEntity);
-                                    bool hasPos = m_registry.HasComponent<Position>(meta.visualEntity);
-                                    bool hasDrawable = m_registry.HasComponent<Drawable>(meta.visualEntity);
-                                    std::cout << "  -> Visual entity: alive=" << alive
-                                              << " hasPos=" << hasPos
-                                              << " hasDrawable=" << hasDrawable << std::endl;
-                                    if (hasPos) {
-                                        const auto& vPos = m_registry.GetComponent<Position>(meta.visualEntity);
-                                        std::cout << "  -> Visual position: (" << vPos.x << "," << vPos.y << ")" << std::endl;
-                                    }
-                                }
-                            } else {
-                                std::cout << "  -> NO METADATA!" << std::endl;
-                            }
-                            collisionDebugCounter++;
-                        }
                         blocked = true;
                         float overlapLeft = (newX + playerW) - obstPos.x;
                         float overlapRight = (obstPos.x + obstBox.width) - newX;
@@ -411,6 +373,9 @@ namespace RType {
             if (m_collisionDetectionSystem) {
                 m_collisionDetectionSystem->Update(m_registry, dt);
             }
+            if (m_powerUpCollisionSystem) {
+                m_powerUpCollisionSystem->Update(m_registry, dt);
+            }
             if (m_bulletResponseSystem) {
                 m_bulletResponseSystem->Update(m_registry, dt);
             }
@@ -427,8 +392,17 @@ namespace RType {
                 m_healthSystem->Update(m_registry, dt);
             }
 
-            // Scrolling already handled earlier (before player prediction)
             m_localScrollOffset += -150.0f * dt;
+
+            if (m_bossWarningActive) {
+                m_bossWarningTimer += dt;
+                if (m_bossWarningTimer >= BOSS_WARNING_DURATION) {
+                    m_bossWarningActive = false;
+                } else {
+                    int interval = static_cast<int>(m_bossWarningTimer / 0.25f);
+                    m_bossWarningFlashState = (interval % 2 == 0);
+                }
+            }
 
             if (m_shieldSystem) {
                 m_shieldSystem->Update(m_registry, dt);
@@ -441,18 +415,46 @@ namespace RType {
                 m_shootingSystem->Update(m_registry, dt);
             }
 
+            if (m_bossHealthBar.active && !m_bossMusicPlaying && !m_isGameOver) {
+                auto it = m_networkEntityMap.find(m_bossHealthBar.bossNetworkId);
+                if (it != m_networkEntityMap.end()) {
+                    auto bossEntity = it->second;
+                    if (m_registry.IsEntityAlive(bossEntity) && m_registry.HasComponent<Position>(bossEntity)) {
+                        auto& pos = m_registry.GetComponent<Position>(bossEntity);
+                        if (pos.x < 1300.0f) {
+                            if (m_context.audio) {
+                                if (m_gameMusicPlaying) {
+                                    m_context.audio->StopMusic(m_gameMusic);
+                                    m_gameMusicPlaying = false;
+                                }
+                                if (m_bossMusic != Audio::INVALID_MUSIC_ID) {
+                                    Audio::PlaybackOptions opts;
+                                    opts.loop = true;
+                                    opts.volume = 0.6f;
+                                    m_context.audio->PlayMusic(m_bossMusic, opts);
+                                    m_bossMusicPlaying = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (m_audioSystem) {
-                if (!m_isGameOver && m_gameMusic != Audio::INVALID_MUSIC_ID && !m_gameMusicPlaying) {
-                    auto cmd = m_registry.CreateEntity();
-                    auto& me = m_registry.AddComponent<MusicEffect>(cmd, MusicEffect(m_gameMusic));
-                    me.play = true;
-                    me.stop = false;
-                    me.loop = true;
-                    me.volume = 0.35f;
-                    me.pitch = 1.0f;
-                    m_gameMusicPlaying = true;
+                if (!m_isGameOver && !m_bossMusicPlaying && m_gameMusic != Audio::INVALID_MUSIC_ID && !m_gameMusicPlaying) {
+                    if (m_context.audio) {
+                         Audio::PlaybackOptions opts;
+                         opts.loop = true;
+                         opts.volume = 0.35f;
+                         m_context.audio->PlayMusic(m_gameMusic, opts);
+                         m_gameMusicPlaying = true;
+                    }
                 }
                 m_audioSystem->Update(m_registry, dt);
+            }
+
+            if (m_animationSystem) {
+                m_animationSystem->Update(m_registry, dt);
             }
 
             for (auto& bg : m_backgroundEntities) {
@@ -547,12 +549,16 @@ namespace RType {
             m_chargeTime = 0.0f;
 
             if (m_context.audio) {
-                std::cout << "[DEBUG] Game Over " << std::endl;
                 if (m_gameMusic != Audio::INVALID_MUSIC_ID && m_gameMusicPlaying) {
                     m_context.audio->StopMusic(m_gameMusic);
                     m_gameMusicPlaying = false;
                 }
-                
+
+                if (m_bossMusic != Audio::INVALID_MUSIC_ID && m_bossMusicPlaying) {
+                    m_context.audio->StopMusic(m_bossMusic);
+                    m_bossMusicPlaying = false;
+                }
+
                 if (m_gameOverMusic != Audio::INVALID_MUSIC_ID && !m_gameOverMusicPlaying) {
                     Audio::PlaybackOptions opts;
                     opts.loop = true;
@@ -595,12 +601,74 @@ namespace RType {
             }
         }
 
+        void InGameState::triggerVictoryIfNeeded() {
+            if (!m_levelProgress.allLevelsComplete) {
+                return;
+            }
+
+            if (m_context.audio) {
+                if (m_gameMusic != Audio::INVALID_MUSIC_ID && m_gameMusicPlaying) {
+                    m_context.audio->StopMusic(m_gameMusic);
+                    m_gameMusicPlaying = false;
+                }
+
+                if (m_bossMusic != Audio::INVALID_MUSIC_ID && m_bossMusicPlaying) {
+                    m_context.audio->StopMusic(m_bossMusic);
+                    m_bossMusicPlaying = false;
+                }
+
+                if (m_victoryMusic != Audio::INVALID_MUSIC_ID && !m_victoryMusicPlaying) {
+                    Audio::PlaybackOptions opts;
+                    opts.loop = false; // Do not loop victory music
+                    opts.volume = 0.5f;
+                    m_context.audio->PlayMusic(m_victoryMusic, opts);
+                    m_victoryMusicPlaying = true;
+                }
+            }
+
+            if (m_victoryTitleEntity == NULL_ENTITY && m_gameOverFontLarge != Renderer::INVALID_FONT_ID) {
+                m_victoryTitleEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(m_victoryTitleEntity, Position{640.0f, 260.0f});
+                TextLabel title("VICTORY!", m_gameOverFontLarge, 56);
+                title.centered = true;
+                title.color = {0.2f, 1.0f, 0.2f, 1.0f};
+                m_registry.AddComponent<TextLabel>(m_victoryTitleEntity, std::move(title));
+            }
+
+            if (m_victoryScoreEntity == NULL_ENTITY && m_gameOverFontMedium != Renderer::INVALID_FONT_ID) {
+                m_victoryScoreEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(m_victoryScoreEntity, Position{640.0f, 360.0f});
+                TextLabel score("", m_gameOverFontMedium, 22);
+                score.centered = true;
+                score.color = {0.5f, 1.0f, 0.5f, 0.95f};
+                m_registry.AddComponent<TextLabel>(m_victoryScoreEntity, std::move(score));
+            }
+
+            if (m_victoryHintEntity == NULL_ENTITY && m_hudFontSmall != Renderer::INVALID_FONT_ID) {
+                m_victoryHintEntity = m_registry.CreateEntity();
+                m_registry.AddComponent<Position>(m_victoryHintEntity, Position{640.0f, 430.0f});
+                TextLabel hint("Press ENTER to view results  |  ESC to return to menu", m_hudFontSmall, 14);
+                hint.centered = true;
+                hint.color = {0.5f, 1.0f, 0.5f, 0.85f};
+                m_registry.AddComponent<TextLabel>(m_victoryHintEntity, std::move(hint));
+            }
+
+            if (m_victoryScoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(m_victoryScoreEntity)) {
+                auto& label = m_registry.GetComponent<TextLabel>(m_victoryScoreEntity);
+                label.text = "SCORE " + std::to_string(m_playerScore);
+            }
+        }
+
         void InGameState::Cleanup() {
-            std::cout << "[GameState] Cleaning up game state..." << std::endl;
 
             if (m_context.audio && m_shootMusic != Audio::INVALID_MUSIC_ID) {
                 m_context.audio->StopMusic(m_shootMusic);
                 m_context.audio->UnloadMusic(m_shootMusic);
+            }
+
+            if (m_context.audio && m_powerUpMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_powerUpMusic);
+                m_context.audio->UnloadMusic(m_powerUpMusic);
             }
 
             if (m_context.audio && m_gameMusic != Audio::INVALID_MUSIC_ID) {
@@ -610,11 +678,25 @@ namespace RType {
                 m_gameMusicPlaying = false;
             }
 
+            if (m_context.audio && m_bossMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_bossMusic);
+                m_context.audio->UnloadMusic(m_bossMusic);
+                m_bossMusic = Audio::INVALID_MUSIC_ID;
+                m_bossMusicPlaying = false;
+            }
+
             if (m_context.audio && m_gameOverMusic != Audio::INVALID_MUSIC_ID) {
                 m_context.audio->StopMusic(m_gameOverMusic);
                 m_context.audio->UnloadMusic(m_gameOverMusic);
                 m_gameOverMusic = Audio::INVALID_MUSIC_ID;
                 m_gameOverMusicPlaying = false;
+            }
+
+            if (m_context.audio && m_victoryMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_victoryMusic);
+                m_context.audio->UnloadMusic(m_victoryMusic);
+                m_victoryMusic = Audio::INVALID_MUSIC_ID;
+                m_victoryMusicPlaying = false;
             }
 
             for (auto& bg : m_backgroundEntities) {
@@ -655,6 +737,18 @@ namespace RType {
                 if (playerHUD.scoreEntity != NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.scoreEntity)) {
                     m_registry.DestroyEntity(playerHUD.scoreEntity);
                 }
+                if (playerHUD.powerupSpreadEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupSpreadEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupSpreadEntity);
+                }
+                if (playerHUD.powerupLaserEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupLaserEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupLaserEntity);
+                }
+                if (playerHUD.powerupSpeedEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupSpeedEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupSpeedEntity);
+                }
+                if (playerHUD.powerupShieldEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(playerHUD.powerupShieldEntity)) {
+                    m_registry.DestroyEntity(playerHUD.powerupShieldEntity);
+                }
             }
 
             for (auto& [playerEntity, labelEntity] : m_playerNameLabels) {
@@ -663,6 +757,11 @@ namespace RType {
                 }
             }
             m_playerNameLabels.clear();
+
+            if (m_beamEntity != ECS::NULL_ENTITY && m_registry.IsEntityAlive(m_beamEntity)) {
+                m_registry.DestroyEntity(m_beamEntity);
+                m_beamEntity = ECS::NULL_ENTITY;
+            }
         }
 
         void InGameState::enterResultsScreen() {

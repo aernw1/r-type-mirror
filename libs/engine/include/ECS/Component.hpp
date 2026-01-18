@@ -6,10 +6,12 @@
 #include <typeindex>
 #include <type_traits>
 #include <vector>
+#include <array>
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
 #include "Entity.hpp"
 #include "Audio/IAudio.hpp"
+#include "Animation/AnimationTypes.hpp"
 
 namespace RType {
 
@@ -88,10 +90,11 @@ namespace RType {
             uint8_t playerNumber = 0;
             uint64_t playerHash = 0;
             bool isLocalPlayer = false;
+            uint8_t lives = 3;
 
             Player() = default;
-            Player(uint8_t number, uint64_t hash, bool local = false)
-                : playerNumber(number), playerHash(hash), isLocalPlayer(local) {}
+            Player(uint8_t number, uint64_t hash, bool local = false, uint8_t startLives = 3)
+                : playerNumber(number), playerHash(hash), isLocalPlayer(local), lives(startLives) {}
         };
 
         enum class EnemyType : uint8_t {
@@ -112,7 +115,10 @@ namespace RType {
         };
 
         struct Boss : public IComponent {
+            uint8_t bossId = 1;
+
             Boss() = default;
+            Boss(uint8_t id) : bossId(id) {}
         };
 
         struct BossKilled : public IComponent {
@@ -127,11 +133,16 @@ namespace RType {
 
         enum class BossAttackPattern {
             IDLE = 0,
+            // Boss 1 
             FAN_SPRAY = 1,
             DIRECT_SHOT = 2,
             CIRCLE = 3,
             BLACK_ORB = 4,
-            THIRD_BULLET = 5
+            THIRD_BULLET = 5,
+            // Boss 2
+            SPIRAL_WAVE = 6,
+            ANIMATED_ORB = 7,
+            LASER_BEAM = 8
         };
 
         struct BossAttack : public IComponent {
@@ -145,6 +156,45 @@ namespace RType {
 
         struct BossBullet : public IComponent {
             BossBullet() = default;
+        };
+
+        struct WaveAttack : public IComponent {
+            WaveAttack() = default;
+        };
+
+        struct SecondAttack : public IComponent {
+            SecondAttack() = default;
+        };
+
+        struct FireBullet : public IComponent {
+            FireBullet() = default;
+        };
+
+        struct Mine : public IComponent {
+            float proximityRadius = 80.0f;
+            float explosionRadius = 100.0f;
+            float lifeTime = 10.0f;
+            float timer = 0.0f;
+            bool isExploding = false;
+            float explosionTimer = 0.0f;
+
+            Mine() = default;
+            Mine(float proximity, float explosion, float life)
+                : proximityRadius(proximity), explosionRadius(explosion), lifeTime(life) {}
+        };
+
+        struct BossMovementPattern : public IComponent {
+            float timer = 0.0f;
+            float amplitudeY = 200.0f;
+            float amplitudeX = 80.0f;
+            float frequencyY = 0.5f;
+            float frequencyX = 0.3f;
+            float centerY = 0.0f;
+            float centerX = 0.0f;
+
+            BossMovementPattern() = default;
+            BossMovementPattern(float ampY, float ampX, float freqY, float freqX, float centerYPos, float centerXPos)
+                : amplitudeY(ampY), amplitudeX(ampX), frequencyY(freqY), frequencyX(freqX), centerY(centerYPos), centerX(centerXPos) {}
         };
 
         struct BlackOrb : public IComponent {
@@ -415,16 +465,12 @@ namespace RType {
             Shield(float dur = 0.0f) : duration(dur), timeRemaining(dur) {}
         };
 
-        // One-shot sound effect component processed by AudioSystem.
-        // Systems add this component to request that a sound be played.
         struct SoundEffect : public IComponent {
             Audio::SoundId soundId = Audio::INVALID_SOUND_ID;
             float volume = 1.0f;
             float pitch = 1.0f;
-            float pan = 0.0f;   // -1.0 (gauche) à 1.0 (droite)
-            bool loop = false;  // true pour un son en boucle (par ex. moteur)
-
-            // Si true et si l'entité a un Position, AudioSystem peut faire du “positional audio”
+            float pan = 0.0f;
+            bool loop = false;
             bool positional = false;
 
             SoundEffect() = default;
@@ -443,6 +489,155 @@ namespace RType {
             MusicEffect() = default;
             explicit MusicEffect(Audio::MusicId id)
                 : musicId(id) {}
+        };
+
+        struct SpriteAnimation : public IComponent {
+            Animation::AnimationClipId clipId = Animation::INVALID_CLIP_ID;
+            float currentTime = 0.0f;
+            float playbackSpeed = 1.0f;
+            bool playing = true;
+            bool looping = false;
+            bool destroyOnComplete = false;
+
+            std::size_t currentFrameIndex = 0;
+            Math::Rectangle currentRegion{};
+
+            SpriteAnimation() = default;
+            SpriteAnimation(Animation::AnimationClipId clip, bool loop = false, float speed = 1.0f)
+                : clipId(clip), playbackSpeed(speed), looping(loop) {}
+        };
+
+        struct AnimationStateMachine : public IComponent {
+            Animation::AnimationGraphId graphId = Animation::INVALID_GRAPH_ID;
+            Animation::AnimationStateId currentState = Animation::INVALID_STATE_ID;
+            Animation::AnimationStateId previousState = Animation::INVALID_STATE_ID;
+            float stateTime = 0.0f;
+            float blendFactor = 0.0f;
+            float blendDuration = 0.0f;
+            bool isTransitioning = false;
+
+            static constexpr std::size_t MAX_PARAMS = 8;
+            std::array<float, MAX_PARAMS> parameters{};
+            std::array<std::array<char, 32>, MAX_PARAMS> parameterNames{};
+            std::size_t parameterCount = 0;
+
+            AnimationStateMachine() = default;
+            explicit AnimationStateMachine(Animation::AnimationGraphId graph)
+                : graphId(graph) {}
+
+            void SetParameter(const char* name, float value) {
+                for (std::size_t i = 0; i < parameterCount; ++i) {
+                    if (std::strncmp(parameterNames[i].data(), name, 31) == 0) {
+                        parameters[i] = value;
+                        return;
+                    }
+                }
+                if (parameterCount < MAX_PARAMS) {
+                    std::strncpy(parameterNames[parameterCount].data(), name, 31);
+                    parameterNames[parameterCount][31] = '\0';
+                    parameters[parameterCount] = value;
+                    parameterCount++;
+                }
+            }
+
+            float GetParameter(const char* name) const {
+                for (std::size_t i = 0; i < parameterCount; ++i) {
+                    if (std::strncmp(parameterNames[i].data(), name, 31) == 0) {
+                        return parameters[i];
+                    }
+                }
+                return 0.0f;
+            }
+        };
+
+        struct AnimatedSprite : public IComponent {
+            bool needsUpdate = true;
+
+            AnimatedSprite() = default;
+        };
+
+        struct VisualEffect : public IComponent {
+            Animation::EffectType type = Animation::EffectType::EXPLOSION_SMALL;
+            float lifetime = 0.0f;
+            float maxLifetime = 1.0f;
+            Entity owner = NULL_ENTITY;
+            float offsetX = 0.0f;
+            float offsetY = 0.0f;
+
+            VisualEffect() = default;
+            VisualEffect(Animation::EffectType t, float duration)
+                : type(t), maxLifetime(duration) {}
+            VisualEffect(Animation::EffectType t, float duration, Entity ownerEntity, float offX, float offY)
+                : type(t), maxLifetime(duration), owner(ownerEntity), offsetX(offX), offsetY(offY) {}
+        };
+
+        struct FloatingText : public IComponent {
+            char text[32] = {};
+            float lifetime = 0.0f;
+            float maxLifetime = 1.5f;
+            float velocityY = -50.0f;
+            float fadeStartTime = 0.5f;
+            Math::Color color{1.0f, 1.0f, 1.0f, 1.0f};
+
+            FloatingText() = default;
+            FloatingText(const char* txt, float duration, const Math::Color& col)
+                : maxLifetime(duration), color(col) {
+                if (txt) {
+                    std::strncpy(text, txt, 31);
+                    text[31] = '\0';
+                }
+            }
+        };
+
+        struct AnimationEvents : public IComponent {
+            static constexpr std::size_t MAX_EVENTS = 4;
+            std::array<std::array<char, 32>, MAX_EVENTS> eventNames{};
+            std::size_t eventCount = 0;
+
+            AnimationEvents() = default;
+
+            void PushEvent(const char* name) {
+                if (eventCount < MAX_EVENTS && name) {
+                    std::strncpy(eventNames[eventCount].data(), name, 31);
+                    eventNames[eventCount][31] = '\0';
+                    eventCount++;
+                }
+            }
+
+            void Clear() { eventCount = 0; }
+
+            bool HasEvent(const char* name) const {
+                for (std::size_t i = 0; i < eventCount; ++i) {
+                    if (std::strncmp(eventNames[i].data(), name, 31) == 0) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+
+        struct AnimationLayer : public IComponent {
+            Animation::AnimationClipId clipId = Animation::INVALID_CLIP_ID;
+            float currentTime = 0.0f;
+            float weight = 1.0f;
+            float playbackSpeed = 1.0f;
+            bool additive = false;
+            int layerIndex = 0;
+
+            AnimationLayer() = default;
+            AnimationLayer(Animation::AnimationClipId clip, int layer, float w = 1.0f)
+                : clipId(clip), weight(w), layerIndex(layer) {}
+        };
+
+        struct PowerUpGlow : public IComponent {
+            float time = 0.0f;
+            float pulseSpeed = 2.0f;
+            float minAlpha = 0.7f;
+            float maxAlpha = 1.0f;
+            float baseScale = 2.5f;
+            float scalePulse = 0.08f;
+
+            PowerUpGlow() = default;
         };
     }
 
