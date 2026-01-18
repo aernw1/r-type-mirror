@@ -32,6 +32,7 @@ namespace RType {
             void CreateAnimatedOrb(Registry& registry, Entity bossEntity, float bossX, float bossY);
             void CreateSecondAttackSpray(Registry& registry, Entity bossEntity, float bossX, float bossY);
             void CreateContinuousFire(Registry& registry, Entity bossEntity, float bossX, float bossY);
+            void CreateMine(Registry& registry, Entity bossEntity, float bossX, float bossY);
         };
 
     }
