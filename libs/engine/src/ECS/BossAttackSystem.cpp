@@ -384,12 +384,12 @@ namespace RType {
             const float scrollSpeed = -100.0f;
             registry.AddComponent<Velocity>(mine, Velocity{scrollSpeed, 0.0f});
 
-            registry.AddComponent<Mine>(mine, Mine{50.0f, 100.0f, 20.0f});
+            registry.AddComponent<Mine>(mine, Mine{45.0f, 75.0f, 20.0f});
 
-            registry.AddComponent<CircleCollider>(mine, CircleCollider{15.0f});
+            registry.AddComponent<CircleCollider>(mine, CircleCollider{10.0f});
             registry.AddComponent<CollisionLayer>(mine,
                 CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::PLAYER));
-            registry.AddComponent<Damage>(mine, Damage{35});
+            registry.AddComponent<Damage>(mine, Damage{25});
 
             Core::Logger::Debug("[BossAttackSystem] Boss 3 deployed mine at ({}, {})", spawnX, spawnY);
         }

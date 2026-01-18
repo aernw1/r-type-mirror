@@ -445,15 +445,15 @@ namespace RType {
 
             registry.AddComponent<Scrollable>(bossEntity, Scrollable{boss.scrollSpeed});
 
-            auto& bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{0.40f});
+            auto& bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{0.8f});
             if (boss.bossId == 2) {
-                bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{1.3f});
+                bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{1.5f});
                 bossAttack.currentPattern = BossAttackPattern::ANIMATED_ORB;
 
                 registry.AddComponent<BossMovementPattern>(bossEntity,
                     BossMovementPattern{150.0f, 60.0f, 0.3f, 0.2f, boss.y, boss.x});
             } else if (boss.bossId == 3) {
-                bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{3.0f});
+                bossAttack = registry.AddComponent<BossAttack>(bossEntity, BossAttack{2.5f});
                 bossAttack.currentPattern = static_cast<BossAttackPattern>(boss.attackPattern);
             } else {
                 bossAttack.currentPattern = BossAttackPattern::FAN_SPRAY;

@@ -2906,7 +2906,7 @@
         },
         "width": 302.0,
         "height": 234.0,
-        "health": 20000,
+        "health": 7500,
         "scrollSpeed": -70.0,
         "attackPattern": 1
     },
