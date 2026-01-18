@@ -222,6 +222,10 @@ namespace RType {
             m_bossHealthBar.barBackgroundEntity = ECS::NULL_ENTITY;
             m_bossHealthBar.barForegroundEntity = ECS::NULL_ENTITY;
 
+            m_bossWarningActive = false;
+            m_bossWarningTriggered = false;
+            m_bossWarningTimer = 0.0f;
+
             std::string levelPath = "assets/levels/level" + std::to_string(m_levelProgress.nextLevelNumber) + ".json";
             m_currentLevelPath = levelPath;
 
@@ -265,6 +269,33 @@ namespace RType {
 
             } catch (const std::exception& e) {
                 Core::Logger::Error("[Transition] Failed to load level {}: {}", m_levelProgress.nextLevelNumber, e.what());
+            }
+
+            if (m_context.audio) {
+                if (m_gameMusic != Audio::INVALID_MUSIC_ID) {
+                    m_context.audio->StopMusic(m_gameMusic);
+                    m_context.audio->UnloadMusic(m_gameMusic);
+                }
+
+                std::string musicPath = "assets/sounds/stage1.flac";
+                if (m_levelProgress.nextLevelNumber == 2) {
+                    musicPath = "assets/sounds/stage2.flac";
+                } else if (m_levelProgress.nextLevelNumber == 3) {
+                    musicPath = "assets/sounds/stage3.flac";
+                }
+
+                m_gameMusic = m_context.audio->LoadMusic(musicPath);
+                if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
+                    m_gameMusic = m_context.audio->LoadMusic("../" + musicPath);
+                }
+
+                if (m_gameMusic != Audio::INVALID_MUSIC_ID) {
+                    Audio::PlaybackOptions opts;
+                    opts.loop = true;
+                    opts.volume = 0.35f;
+                    m_context.audio->PlayMusic(m_gameMusic, opts);
+                    m_gameMusicPlaying = true;
+                }
             }
         }
 

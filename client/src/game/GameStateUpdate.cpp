@@ -394,6 +394,16 @@ namespace RType {
 
             m_localScrollOffset += -150.0f * dt;
 
+            if (m_bossWarningActive) {
+                m_bossWarningTimer += dt;
+                if (m_bossWarningTimer >= BOSS_WARNING_DURATION) {
+                    m_bossWarningActive = false;
+                } else {
+                    int interval = static_cast<int>(m_bossWarningTimer / 0.25f);
+                    m_bossWarningFlashState = (interval % 2 == 0);
+                }
+            }
+
             if (m_shieldSystem) {
                 m_shieldSystem->Update(m_registry, dt);
             }
@@ -596,6 +606,26 @@ namespace RType {
                 return;
             }
 
+            if (m_context.audio) {
+                if (m_gameMusic != Audio::INVALID_MUSIC_ID && m_gameMusicPlaying) {
+                    m_context.audio->StopMusic(m_gameMusic);
+                    m_gameMusicPlaying = false;
+                }
+
+                if (m_bossMusic != Audio::INVALID_MUSIC_ID && m_bossMusicPlaying) {
+                    m_context.audio->StopMusic(m_bossMusic);
+                    m_bossMusicPlaying = false;
+                }
+
+                if (m_victoryMusic != Audio::INVALID_MUSIC_ID && !m_victoryMusicPlaying) {
+                    Audio::PlaybackOptions opts;
+                    opts.loop = false; // Do not loop victory music
+                    opts.volume = 0.5f;
+                    m_context.audio->PlayMusic(m_victoryMusic, opts);
+                    m_victoryMusicPlaying = true;
+                }
+            }
+
             if (m_victoryTitleEntity == NULL_ENTITY && m_gameOverFontLarge != Renderer::INVALID_FONT_ID) {
                 m_victoryTitleEntity = m_registry.CreateEntity();
                 m_registry.AddComponent<Position>(m_victoryTitleEntity, Position{640.0f, 260.0f});
@@ -660,6 +690,13 @@ namespace RType {
                 m_context.audio->UnloadMusic(m_gameOverMusic);
                 m_gameOverMusic = Audio::INVALID_MUSIC_ID;
                 m_gameOverMusicPlaying = false;
+            }
+
+            if (m_context.audio && m_victoryMusic != Audio::INVALID_MUSIC_ID) {
+                m_context.audio->StopMusic(m_victoryMusic);
+                m_context.audio->UnloadMusic(m_victoryMusic);
+                m_victoryMusic = Audio::INVALID_MUSIC_ID;
+                m_victoryMusicPlaying = false;
             }
 
             for (auto& bg : m_backgroundEntities) {

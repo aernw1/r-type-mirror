@@ -714,6 +714,13 @@ namespace RType {
                             }
                         }
 
+                        if (!m_bossWarningTriggered && entityState.x < 2200.0f && entityState.x > -200.0f) {
+                            Core::Logger::Info("[GameState] Boss warning TRIGGERED at x={}", entityState.x);
+                            m_bossWarningActive = true;
+                            m_bossWarningTriggered = true;
+                            m_bossWarningTimer = 0.0f;
+                        }
+
                         if (!m_bossHealthBar.active && entityState.x < 1300.0f) {
                             initializeBossHealthBar();
                             m_bossHealthBar.maxHealth = 100;

@@ -49,9 +49,16 @@ namespace RType {
                     m_powerUpMusic = m_context.audio->LoadMusic("../assets/sounds/powerup.flac");
                 }
 
-                m_gameMusic = m_context.audio->LoadMusic("assets/sounds/stage1.flac");
+                std::string musicPath = "assets/sounds/stage1.flac";
+                if (m_currentLevelPath.find("level2.json") != std::string::npos) {
+                    musicPath = "assets/sounds/stage2.flac";
+                } else if (m_currentLevelPath.find("level3.json") != std::string::npos) {
+                    musicPath = "assets/sounds/stage3.flac";
+                }
+
+                m_gameMusic = m_context.audio->LoadMusic(musicPath);
                 if (m_gameMusic == Audio::INVALID_MUSIC_ID) {
-                    m_gameMusic = m_context.audio->LoadMusic("../assets/sounds/stage1.flac");
+                    m_gameMusic = m_context.audio->LoadMusic("../" + musicPath);
                 }
 
                 m_bossMusic = m_context.audio->LoadMusic("assets/sounds/BOSS.flac");
@@ -62,6 +69,11 @@ namespace RType {
                 m_gameOverMusic = m_context.audio->LoadMusic("assets/sounds/gameover.flac");
                 if (m_gameOverMusic == Audio::INVALID_MUSIC_ID) {
                     m_gameOverMusic = m_context.audio->LoadMusic("../assets/sounds/gameover.flac");
+                }
+
+                m_victoryMusic = m_context.audio->LoadMusic("assets/sounds/victory.flac");
+                if (m_victoryMusic == Audio::INVALID_MUSIC_ID) {
+                    m_victoryMusic = m_context.audio->LoadMusic("../assets/sounds/victory.flac");
                 }
 
                 if (m_gameMusic != Audio::INVALID_MUSIC_ID) {
