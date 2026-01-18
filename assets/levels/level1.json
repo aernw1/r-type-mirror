@@ -2901,11 +2901,11 @@
     "boss": {
         "texture": "boss_3",
         "position": {
-            "x": 10000.0,
+            "x": 11500.0,
             "y": 200.0
         },
-        "width": 384.0,
-        "height": 564.0,
+        "width": 302.0,
+        "height": 234.0,
         "health": 1000,
         "scrollSpeed": -70.0,
         "attackPattern": 1
