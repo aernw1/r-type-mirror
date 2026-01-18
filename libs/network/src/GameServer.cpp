@@ -1142,7 +1142,9 @@ namespace network {
 
             uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
             uint8_t flags = 0;
-            if (m_registry.HasComponent<RType::ECS::SecondAttack>(bulletEntity)) {
+            if (m_registry.HasComponent<RType::ECS::FireBullet>(bulletEntity)) {
+                flags = 18;
+            } else if (m_registry.HasComponent<RType::ECS::SecondAttack>(bulletEntity)) {
                 flags = 17;
             } else if (m_registry.HasComponent<RType::ECS::WaveAttack>(bulletEntity)) {
                 flags = 16;

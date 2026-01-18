@@ -166,6 +166,10 @@ namespace RType {
             SecondAttack() = default;
         };
 
+        struct FireBullet : public IComponent {
+            FireBullet() = default;
+        };
+
         struct BossMovementPattern : public IComponent {
             float timer = 0.0f;
             float amplitudeY = 200.0f;

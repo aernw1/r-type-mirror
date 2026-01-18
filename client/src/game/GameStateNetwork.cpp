@@ -198,7 +198,7 @@ namespace RType {
                     } else if (type == network::EntityType::BOSS) {
                         Renderer::SpriteId bossSprite = Renderer::INVALID_SPRITE_ID;
 
-                        std::vector<std::string> bossNames = {"boss_2", "boss_dragon", "boss"};
+                        std::vector<std::string> bossNames = {"boss_2", "boss_dragon", "boss", "boss_3"};
                         for (const auto& bossName : bossNames) {
                             auto spriteIt = m_levelAssets.sprites.find(bossName);
                             if (spriteIt != m_levelAssets.sprites.end()) {
@@ -314,6 +314,33 @@ namespace RType {
 
                             } else {
                                 Core::Logger::Warning("[GameState] Missing second_attack sprite or animation (entity {})", entityState.entityId);
+                                m_registry.DestroyEntity(newEntity);
+                                continue;
+                            }
+                        } else if (entityState.flags == 18) {
+                            auto fireBulletSpriteIt = m_levelAssets.sprites.find("fire_bullet");
+                            if (fireBulletSpriteIt != m_levelAssets.sprites.end() &&
+                                m_fireBulletClipId != Animation::INVALID_CLIP_ID) {
+
+                                auto& d = m_registry.AddComponent<Drawable>(newEntity, Drawable(fireBulletSpriteIt->second, 12));
+                                d.scale = {2.5f, 2.5f};
+                                d.origin = Math::Vector2(10.5f, 8.5f);
+
+                                if (m_animationModule) {
+                                    auto& anim = m_registry.AddComponent<ECS::SpriteAnimation>(newEntity, ECS::SpriteAnimation{m_fireBulletClipId, true, 1.0f});
+                                    auto firstFrame = m_animationModule->GetFrameAtTime(m_fireBulletClipId, 0.0f, true);
+                                    anim.currentRegion = firstFrame.region;
+                                    anim.currentFrameIndex = 0;
+
+                                    auto& animatedSprite = m_registry.AddComponent<ECS::AnimatedSprite>(newEntity);
+                                    animatedSprite.needsUpdate = true;
+                                }
+
+                                m_registry.AddComponent<ECS::CircleCollider>(newEntity, ECS::CircleCollider{12.0f});
+                                m_registry.AddComponent<CollisionLayer>(newEntity,
+                                    CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER));
+                            } else {
+                                Core::Logger::Warning("[GameState] Missing fire_bullet sprite or animation (entity {})", entityState.entityId);
                                 m_registry.DestroyEntity(newEntity);
                                 continue;
                             }

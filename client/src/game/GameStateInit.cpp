@@ -513,7 +513,7 @@ namespace RType {
                 waveLayout.frameCount = 3;
                 waveLayout.frameWidth = 30.0f;
                 waveLayout.frameHeight = 40.0f;
-                waveLayout.defaultDuration = 0.1f;
+                waveLayout.defaultDuration = 0.3f;
 
                 m_waveAttackClipId = m_animationModule->CreateClipFromGrid(
                     "wave_attack",
@@ -528,9 +528,9 @@ namespace RType {
                 secondLayout.columns = 3;
                 secondLayout.rows = 1;
                 secondLayout.frameCount = 3;
-                secondLayout.frameWidth = 22.0f;
-                secondLayout.frameHeight = 25.0f;
-                secondLayout.defaultDuration = 0.1f;
+                secondLayout.frameWidth = 19.0f;
+                secondLayout.frameHeight = 29.0f;
+                secondLayout.defaultDuration = 0.5f;
 
                 m_secondAttackClipId = m_animationModule->CreateClipFromGrid(
                     "second_attack",
@@ -538,6 +538,23 @@ namespace RType {
                     secondLayout,
                     true);
                 Core::Logger::Info("[GameState] Created second attack animation clip with {} frames", 3);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout fireLayout;
+                fireLayout.columns = 2;
+                fireLayout.rows = 1;
+                fireLayout.frameCount = 2;
+                fireLayout.frameWidth = 25.0f;
+                fireLayout.frameHeight = 25.0f;
+                fireLayout.defaultDuration = 0.3f;
+
+                m_fireBulletClipId = m_animationModule->CreateClipFromGrid(
+                    "fire_bullet",
+                    "assets/boss/attacks/boss_3/fire.png",
+                    fireLayout,
+                    true);
+                Core::Logger::Info("[GameState] Created fire bullet animation clip with {} frames", 4);
             }
 
             m_animationSystem = std::make_unique<RType::ECS::AnimationSystem>(m_animationModule.get());

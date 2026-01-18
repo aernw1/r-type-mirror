@@ -21,12 +21,13 @@
             "boss_bullet": "assets/boss/attacks/bullet.png",
             "black_orb": "assets/boss/attacks/black_orb_frame3.png",
             "third_bullet": "assets/boss/attacks/third_bullet_boss.png",
+            "fire_bullet": "assets/boss/attacks/boss_3/fire.png",
             "powerup-spread": "assets/powerups/spread.png",
             "powerup-laser": "assets/powerups/laser.png",
             "powerup-force-pod": "assets/powerups/force_pod.png",
             "powerup-speed": "assets/powerups/speed.png",
             "powerup-shield": "assets/powerups/shield.png",
-            "boss_dragon": "assets/boss/boss_dragon.png"
+            "boss_3": "assets/boss/boss_3.png"
         },
         "fonts": {
             "main": {
@@ -965,13 +966,14 @@
         }
     ],
     "boss": {
-        "texture": "boss_dragon",
-        "position": { "x": 5000.0, "y": 200.0 },
-        "width": 384.0,
-        "height": 564.0,
-        "health": 1000,
+        "texture": "boss_3",
+        "position": { "x": 5000.0, "y": 300.0 },
+        "width": 302.0,
+        "height": 234.0,
+        "health": 1500,
         "scrollSpeed": -75.0,
-        "attackPattern": 1
+        "attackPattern": 1,
+        "bossId": 3
     },
     "enemies": [],
     "playerSpawns": [
