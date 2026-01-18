@@ -51,19 +51,17 @@ namespace RType {
 
                     if (boss.bossId == 1) {
                         switch (attack.currentPattern) {
-                            case BossAttackPattern::FAN_SPRAY:
-                                CreateFanSpray(registry, bossEntity, pos.x, pos.y);
-                                attack.currentPattern = BossAttackPattern::THIRD_BULLET;
+                                case BossAttackPattern::FAN_SPRAY:
+                                CreateContinuousFire(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;
                                 break;
-                            case BossAttackPattern::THIRD_BULLET:
-                                CreateThirdBullet(registry, bossEntity, pos.x, pos.y);
-                                attack.currentPattern = BossAttackPattern::BLACK_ORB;
-                                break;
-                            case BossAttackPattern::BLACK_ORB:
-                                CreateBlackOrb(registry, bossEntity, pos.x, pos.y);
+                            case BossAttackPattern::SPIRAL_WAVE:
+                                CreateMine(registry, bossEntity, pos.x, pos.y);
                                 attack.currentPattern = BossAttackPattern::FAN_SPRAY;
                                 break;
                             default:
+                                CreateContinuousFire(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;
                                 break;
                         }
                     } else if (boss.bossId == 2) {
@@ -84,16 +82,18 @@ namespace RType {
                     } else if (boss.bossId == 3) {
                         switch (attack.currentPattern) {
                             case BossAttackPattern::FAN_SPRAY:
-                                CreateContinuousFire(registry, bossEntity, pos.x, pos.y);
-                                attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;
+                                CreateFanSpray(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::THIRD_BULLET;
                                 break;
-                            case BossAttackPattern::SPIRAL_WAVE:
-                                CreateMine(registry, bossEntity, pos.x, pos.y);
+                            case BossAttackPattern::THIRD_BULLET:
+                                CreateThirdBullet(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::BLACK_ORB;
+                                break;
+                            case BossAttackPattern::BLACK_ORB:
+                                CreateBlackOrb(registry, bossEntity, pos.x, pos.y);
                                 attack.currentPattern = BossAttackPattern::FAN_SPRAY;
                                 break;
                             default:
-                                CreateContinuousFire(registry, bossEntity, pos.x, pos.y);
-                                attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;
                                 break;
                         }
                     }
@@ -384,12 +384,12 @@ namespace RType {
             const float scrollSpeed = -100.0f;
             registry.AddComponent<Velocity>(mine, Velocity{scrollSpeed, 0.0f});
 
-            registry.AddComponent<Mine>(mine, Mine{70.0f, 100.0f, 20.0f});
+            registry.AddComponent<Mine>(mine, Mine{50.0f, 100.0f, 20.0f});
 
-            registry.AddComponent<CircleCollider>(mine, CircleCollider{20.0f});
+            registry.AddComponent<CircleCollider>(mine, CircleCollider{15.0f});
             registry.AddComponent<CollisionLayer>(mine,
                 CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::PLAYER));
-            registry.AddComponent<Damage>(mine, Damage{40});
+            registry.AddComponent<Damage>(mine, Damage{35});
 
             Core::Logger::Debug("[BossAttackSystem] Boss 3 deployed mine at ({}, {})", spawnX, spawnY);
         }
