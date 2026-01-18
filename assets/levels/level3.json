@@ -1664,7 +1664,7 @@
         },
         "width": 384.0,
         "height": 564.0,
-        "health": 1500,
+        "health": 40000,
         "scrollSpeed": -75.0,
         "attackPattern": 1,
         "bossId": 3
