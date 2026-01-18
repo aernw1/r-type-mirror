@@ -18,7 +18,7 @@
             "fire_bullet": "assets/boss/attacks/boss_3/fire.png",
             "powerup-spread": "assets/powerups/spread.png",
             "powerup-laser": "assets/powerups/laser.png",
-            "powerup-force-pod": "assets/powerups/force_pod.png",
+            "powerup-force-pod": "assets/SFX/force_pod.png",
             "powerup-speed": "assets/powerups/speed.png",
             "powerup-shield": "assets/powerups/shield.png",
             "boss_dragon": "assets/boss/boss_dragon.png"
@@ -1654,69 +1654,12 @@
                     "height": 30.0
                 }
             ]
-        },
-        {
-            "texture": "obstacle8",
-            "position": {
-                "x": 9500.0,
-                "y": 360.0
-            },
-            "scaleWidth": 1600.0,
-            "scaleHeight": 40.0,
-            "scrollSpeed": -75.0,
-            "layer": 1,
-            "colliders": [
-                {
-                    "x": 9500.0,
-                    "y": 360.0,
-                    "width": 1600.0,
-                    "height": 40.0
-                }
-            ]
-        },
-        {
-            "texture": "obstacle6",
-            "position": {
-                "x": 9728.0,
-                "y": 620.0
-            },
-            "scaleWidth": 441.0,
-            "scaleHeight": 100.0,
-            "scrollSpeed": -75.0,
-            "layer": 1,
-            "colliders": [
-                {
-                    "x": 9728.0,
-                    "y": 0.0,
-                    "width": 441.0,
-                    "height": 100.0
-                }
-            ]
-        },
-        {
-            "texture": "obstacle8",
-            "position": {
-                "x": 10169.0,
-                "y": 0.0
-            },
-            "scaleWidth": 650.0,
-            "scaleHeight": 20.0,
-            "scrollSpeed": -75.0,
-            "layer": 1,
-            "colliders": [
-                {
-                    "x": 10169.0,
-                    "y": 0.0,
-                    "width": 650.0,
-                    "height": 20.0
-                }
-            ]
         }
     ],
     "boss": {
         "texture": "boss_3",
         "position": {
-            "x": 11000.0,
+            "x": 10600.0,
             "y": 300.0
         },
         "width": 302.0,

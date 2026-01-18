@@ -284,9 +284,9 @@ namespace RType {
                 hasShield = powerUps.hasShield;
             }
 
-            const float textSpacing = 18.0f;
-            const float columnSpacing = 80.0f;
-            const float startX = 710.0f;
+            const float textSpacing = 25.0f;
+            const float columnSpacing = 85.0f;
+            const float startX = 800.0f;
             const float startY = 675.0f;
             float currentY = startY;
 
