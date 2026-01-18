@@ -312,6 +312,9 @@ namespace RType {
             Animation::AnimationClipId m_hitClipId = Animation::INVALID_CLIP_ID;
             Animation::AnimationClipId m_waveAttackClipId = Animation::INVALID_CLIP_ID;
             Animation::AnimationClipId m_secondAttackClipId = Animation::INVALID_CLIP_ID;
+            Animation::AnimationClipId m_fireBulletClipId = Animation::INVALID_CLIP_ID;
+            Animation::AnimationClipId m_mineClipId = Animation::INVALID_CLIP_ID;
+            Animation::AnimationClipId m_mineExplosionClipId = Animation::INVALID_CLIP_ID;
 
             // HUD fonts
             Renderer::FontId m_hudFont = Renderer::INVALID_FONT_ID;

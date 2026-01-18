@@ -51,19 +51,17 @@ namespace RType {
 
                     if (boss.bossId == 1) {
                         switch (attack.currentPattern) {
-                            case BossAttackPattern::FAN_SPRAY:
-                                CreateFanSpray(registry, bossEntity, pos.x, pos.y);
-                                attack.currentPattern = BossAttackPattern::THIRD_BULLET;
+                                case BossAttackPattern::FAN_SPRAY:
+                                CreateContinuousFire(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;
                                 break;
-                            case BossAttackPattern::THIRD_BULLET:
-                                CreateThirdBullet(registry, bossEntity, pos.x, pos.y);
-                                attack.currentPattern = BossAttackPattern::BLACK_ORB;
-                                break;
-                            case BossAttackPattern::BLACK_ORB:
-                                CreateBlackOrb(registry, bossEntity, pos.x, pos.y);
+                            case BossAttackPattern::SPIRAL_WAVE:
+                                CreateMine(registry, bossEntity, pos.x, pos.y);
                                 attack.currentPattern = BossAttackPattern::FAN_SPRAY;
                                 break;
                             default:
+                                CreateContinuousFire(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;
                                 break;
                         }
                     } else if (boss.bossId == 2) {
@@ -79,6 +77,23 @@ namespace RType {
                             default:
                                 CreateAnimatedOrb(registry, bossEntity, pos.x, pos.y);
                                 attack.currentPattern = BossAttackPattern::SPIRAL_WAVE;
+                                break;
+                        }
+                    } else if (boss.bossId == 3) {
+                        switch (attack.currentPattern) {
+                            case BossAttackPattern::FAN_SPRAY:
+                                CreateFanSpray(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::THIRD_BULLET;
+                                break;
+                            case BossAttackPattern::THIRD_BULLET:
+                                CreateThirdBullet(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::BLACK_ORB;
+                                break;
+                            case BossAttackPattern::BLACK_ORB:
+                                CreateBlackOrb(registry, bossEntity, pos.x, pos.y);
+                                attack.currentPattern = BossAttackPattern::FAN_SPRAY;
+                                break;
+                            default:
                                 break;
                         }
                     }
@@ -270,7 +285,7 @@ namespace RType {
         }
 
         void BossAttackSystem::CreateSecondAttackSpray(Registry& registry, Entity bossEntity, float bossX, float bossY) {
-            const int orbCount = 30;
+            const int orbCount = 32;
             const float baseSpeed = 300.0f;
 
             const float spawnX = bossX + 114.0f;
@@ -311,6 +326,72 @@ namespace RType {
             }
 
             Core::Logger::Info("[BossAttackSystem] Boss 2 created massive 360° spray with {} orbs", orbCount);
+        }
+
+        void BossAttackSystem::CreateContinuousFire(Registry& registry, Entity bossEntity, float bossX, float bossY) {
+            const float baseSpeed = 350.0f;
+
+            const float spawnX = bossX + 20.0f;
+            const float spawnY = bossY + 100.0f;
+
+            Entity bullet = registry.CreateEntity();
+
+            if (registry.HasComponent<Obstacle>(bullet)) {
+                registry.RemoveComponent<Obstacle>(bullet);
+            }
+            if (registry.HasComponent<ObstacleMetadata>(bullet)) {
+                registry.RemoveComponent<ObstacleMetadata>(bullet);
+            }
+
+            registry.AddComponent<Position>(bullet, Position{spawnX, spawnY});
+
+            float vx = -baseSpeed;
+            float vy = 0.0f;
+            registry.AddComponent<Velocity>(bullet, Velocity{vx, vy});
+
+            registry.AddComponent<Bullet>(bullet, Bullet{bossEntity});
+            registry.AddComponent<BossBullet>(bullet, BossBullet{});
+            registry.AddComponent<FireBullet>(bullet, FireBullet{});
+
+            registry.AddComponent<CircleCollider>(bullet, CircleCollider{12.0f});
+            registry.AddComponent<CollisionLayer>(bullet,
+                CollisionLayer(CollisionLayers::ENEMY_BULLET, CollisionLayers::PLAYER));
+            registry.AddComponent<Damage>(bullet, Damage{12});
+
+            Core::Logger::Debug("[BossAttackSystem] Boss 3 fired single bullet");
+        }
+
+        void BossAttackSystem::CreateMine(Registry& registry, Entity bossEntity, float bossX, float bossY) {
+            const float minX = bossX + 200.0f;
+            const float maxX = bossX + 600.0f;
+            float spawnX = minX + (static_cast<float>(rand()) / RAND_MAX) * (maxX - minX);
+
+            const float minY = 100.0f;
+            const float maxY = 650.0f;
+            float spawnY = minY + (static_cast<float>(rand()) / RAND_MAX) * (maxY - minY);
+
+            Entity mine = registry.CreateEntity();
+
+            if (registry.HasComponent<Obstacle>(mine)) {
+                registry.RemoveComponent<Obstacle>(mine);
+            }
+            if (registry.HasComponent<ObstacleMetadata>(mine)) {
+                registry.RemoveComponent<ObstacleMetadata>(mine);
+            }
+
+            registry.AddComponent<Position>(mine, Position{spawnX, spawnY});
+
+            const float scrollSpeed = -100.0f;
+            registry.AddComponent<Velocity>(mine, Velocity{scrollSpeed, 0.0f});
+
+            registry.AddComponent<Mine>(mine, Mine{50.0f, 100.0f, 20.0f});
+
+            registry.AddComponent<CircleCollider>(mine, CircleCollider{15.0f});
+            registry.AddComponent<CollisionLayer>(mine,
+                CollisionLayer(CollisionLayers::OBSTACLE, CollisionLayers::PLAYER));
+            registry.AddComponent<Damage>(mine, Damage{35});
+
+            Core::Logger::Debug("[BossAttackSystem] Boss 3 deployed mine at ({}, {})", spawnX, spawnY);
         }
 
     }

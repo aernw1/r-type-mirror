@@ -366,19 +366,19 @@ namespace RType {
 
             if (m_explosionTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
                 Animation::GridLayout layout;
-                layout.columns = 11;
+                layout.columns = 6;
                 layout.rows = 1;
-                layout.frameCount = 11;
-                layout.frameWidth = 32.0f;
-                layout.frameHeight = 32.0f;
-                layout.defaultDuration = 0.05f;
+                layout.frameCount = 6;
+                layout.frameWidth = 45.0f;
+                layout.frameHeight = 40.0f;
+                layout.defaultDuration = 0.005f;
 
                 m_explosionClipId = m_animationModule->CreateClipFromGrid(
                     "explosion_small",
                     "assets/SFX/explosion.png",
                     layout,
                     false);
-                Core::Logger::Info("[GameState] Created explosion animation clip with {} frames", 11);
+                Core::Logger::Info("[GameState] Created explosion animation clip with {} frames", 6);
             }
 
             if (m_shootingTexture != Renderer::INVALID_TEXTURE_ID && m_animationModule) {
@@ -513,7 +513,7 @@ namespace RType {
                 waveLayout.frameCount = 3;
                 waveLayout.frameWidth = 30.0f;
                 waveLayout.frameHeight = 40.0f;
-                waveLayout.defaultDuration = 0.1f;
+                waveLayout.defaultDuration = 0.3f;
 
                 m_waveAttackClipId = m_animationModule->CreateClipFromGrid(
                     "wave_attack",
@@ -528,9 +528,9 @@ namespace RType {
                 secondLayout.columns = 3;
                 secondLayout.rows = 1;
                 secondLayout.frameCount = 3;
-                secondLayout.frameWidth = 22.0f;
-                secondLayout.frameHeight = 25.0f;
-                secondLayout.defaultDuration = 0.1f;
+                secondLayout.frameWidth = 19.0f;
+                secondLayout.frameHeight = 29.0f;
+                secondLayout.defaultDuration = 0.5f;
 
                 m_secondAttackClipId = m_animationModule->CreateClipFromGrid(
                     "second_attack",
@@ -538,6 +538,57 @@ namespace RType {
                     secondLayout,
                     true);
                 Core::Logger::Info("[GameState] Created second attack animation clip with {} frames", 3);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout fireLayout;
+                fireLayout.columns = 2;
+                fireLayout.rows = 1;
+                fireLayout.frameCount = 2;
+                fireLayout.frameWidth = 25.0f;
+                fireLayout.frameHeight = 25.0f;
+                fireLayout.defaultDuration = 0.3f;
+
+                m_fireBulletClipId = m_animationModule->CreateClipFromGrid(
+                    "fire_bullet",
+                    "assets/boss/attacks/boss_3/fire.png",
+                    fireLayout,
+                    true);
+                Core::Logger::Info("[GameState] Created fire bullet animation clip with {} frames", 4);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout mineLayout;
+                mineLayout.columns = 2;
+                mineLayout.rows = 1;
+                mineLayout.frameCount = 2;
+                mineLayout.frameWidth = 36.0f;
+                mineLayout.frameHeight = 42.0f;
+                mineLayout.defaultDuration = 0.3f;
+
+                m_mineClipId = m_animationModule->CreateClipFromGrid(
+                    "mine",
+                    "assets/boss/attacks/boss_3/mine.png",
+                    mineLayout,
+                    true);
+                Core::Logger::Info("[GameState] Created mine animation clip with {} frames", 4);
+            }
+
+            if (m_animationModule) {
+                Animation::GridLayout explosionLayout;
+                explosionLayout.columns = 5;
+                explosionLayout.rows = 1;
+                explosionLayout.frameCount = 5;
+                explosionLayout.frameWidth = 54.0f;
+                explosionLayout.frameHeight = 65.0f;
+                explosionLayout.defaultDuration = 0.1f;
+
+                m_mineExplosionClipId = m_animationModule->CreateClipFromGrid(
+                    "mine_explosion",
+                    "assets/boss/attacks/boss_3/explosion.png",
+                    explosionLayout,
+                    false);
+                Core::Logger::Info("[GameState] Created mine explosion animation clip with {} frames", 7);
             }
 
             m_animationSystem = std::make_unique<RType::ECS::AnimationSystem>(m_animationModule.get());

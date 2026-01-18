@@ -8,6 +8,7 @@
 #include "GameServer.hpp"
 #include "Compression.hpp"
 #include "ECS/BossSystem.hpp"
+#include "ECS/MineSystem.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <iomanip>
@@ -87,6 +88,7 @@ namespace network {
         m_scrollingSystem = std::make_unique<RType::ECS::ScrollingSystem>();
         m_bossSystem = std::make_unique<RType::ECS::BossSystem>();
         m_bossAttackSystem = std::make_unique<RType::ECS::BossAttackSystem>();
+        m_mineSystem = std::make_unique<RType::ECS::MineSystem>();
         m_blackOrbSystem = std::make_unique<RType::ECS::BlackOrbSystem>();
         m_thirdBulletSystem = std::make_unique<RType::ECS::ThirdBulletSystem>();
         m_movementSystem = std::make_unique<RType::ECS::MovementSystem>();
@@ -738,6 +740,7 @@ namespace network {
         m_scrollingSystem->Update(m_registry, dt);
         m_bossSystem->Update(m_registry, dt);
         m_bossAttackSystem->Update(m_registry, dt);
+        m_mineSystem->Update(m_registry, dt);
         m_blackOrbSystem->Update(m_registry, dt);
         m_thirdBulletSystem->Update(m_registry, dt);
         m_movementSystem->Update(m_registry, dt);
@@ -1142,7 +1145,9 @@ namespace network {
 
             uint32_t bulletId = static_cast<uint32_t>(bulletEntity);
             uint8_t flags = 0;
-            if (m_registry.HasComponent<RType::ECS::SecondAttack>(bulletEntity)) {
+            if (m_registry.HasComponent<RType::ECS::FireBullet>(bulletEntity)) {
+                flags = 18;
+            } else if (m_registry.HasComponent<RType::ECS::SecondAttack>(bulletEntity)) {
                 flags = 17;
             } else if (m_registry.HasComponent<RType::ECS::WaveAttack>(bulletEntity)) {
                 flags = 16;
@@ -1174,6 +1179,31 @@ namespace network {
             entity.vy = vel.dy;
             entity.health = 1;
             entity.flags = flags;
+            entity.ownerHash = 0;
+            entity.score = 0;
+            m_entities.push_back(entity);
+        }
+
+        auto mines = m_registry.GetEntitiesWithComponent<RType::ECS::Mine>();
+        for (auto mineEntity : mines) {
+            if (!m_registry.IsEntityAlive(mineEntity) ||
+                !m_registry.HasComponent<Position>(mineEntity)) {
+                continue;
+            }
+
+            const auto& pos = m_registry.GetComponent<Position>(mineEntity);
+            const auto& mine = m_registry.GetComponent<RType::ECS::Mine>(mineEntity);
+
+            GameEntity entity;
+            entity.id = GetOrAssignNetworkId(mineEntity);
+            entity.type = EntityType::BULLET;
+            RegisterNetworkType(entity.id, entity.type);
+            entity.x = pos.x;
+            entity.y = pos.y;
+            entity.vx = 0.0f;
+            entity.vy = 0.0f;
+            entity.health = 1;
+            entity.flags = mine.isExploding ? 20 : 19;
             entity.ownerHash = 0;
             entity.score = 0;
             m_entities.push_back(entity);

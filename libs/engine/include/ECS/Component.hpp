@@ -166,6 +166,23 @@ namespace RType {
             SecondAttack() = default;
         };
 
+        struct FireBullet : public IComponent {
+            FireBullet() = default;
+        };
+
+        struct Mine : public IComponent {
+            float proximityRadius = 80.0f;
+            float explosionRadius = 100.0f;
+            float lifeTime = 10.0f;
+            float timer = 0.0f;
+            bool isExploding = false;
+            float explosionTimer = 0.0f;
+
+            Mine() = default;
+            Mine(float proximity, float explosion, float life)
+                : proximityRadius(proximity), explosionRadius(explosion), lifeTime(life) {}
+        };
+
         struct BossMovementPattern : public IComponent {
             float timer = 0.0f;
             float amplitudeY = 200.0f;

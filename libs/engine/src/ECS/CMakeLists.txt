@@ -26,6 +26,7 @@ set(ECS_SOURCES
     ShieldSystem.cpp
     BossSystem.cpp
     BossAttackSystem.cpp
+    MineSystem.cpp
     BlackOrbSystem.cpp
     ThirdBulletSystem.cpp
     AnimationSystem.cpp
@@ -66,6 +67,7 @@ set(ECS_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ShieldSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BossAttackSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MineSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/BlackOrbSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ThirdBulletSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/AnimationSystem.hpp
