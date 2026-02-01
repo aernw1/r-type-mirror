@@ -9,7 +9,7 @@
 
 #include "Math/Types.hpp"
 #include "Renderer/IRenderer.hpp"
-#include "ECS/LevelLoader.hpp"
+#include "LevelLoader.hpp"
 
 namespace RType {
     namespace Client {

@@ -8,7 +8,7 @@
 #pragma once
 
 #include "editor/EditorTypes.hpp"
-#include "ECS/LevelLoader.hpp"
+#include "LevelLoader.hpp"
 #include "Renderer/IRenderer.hpp"
 #include "Math/Types.hpp"
 #include <vector>

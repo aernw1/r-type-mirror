@@ -8,7 +8,7 @@
 #pragma once
 
 #include "ECS/Entity.hpp"
-#include "ECS/LevelLoader.hpp"
+#include "LevelLoader.hpp"
 #include "Math/Types.hpp"
 #include <string>
 #include <vector>

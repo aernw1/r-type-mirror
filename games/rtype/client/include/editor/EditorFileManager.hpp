@@ -9,7 +9,7 @@
 
 #include "editor/EditorTypes.hpp"
 #include "editor/EditorAssetLibrary.hpp"
-#include "ECS/LevelLoader.hpp"
+#include "LevelLoader.hpp"
 #include "ECS/Registry.hpp"
 #include "Renderer/IRenderer.hpp"
 #include <string>

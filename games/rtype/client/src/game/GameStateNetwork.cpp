@@ -10,7 +10,7 @@
 #include "ECS/Components/TextLabel.hpp"
 #include "ECS/Component.hpp"
 #include "Core/Logger.hpp"
-#include "ECS/PowerUpFactory.hpp"
+#include "PowerUpFactory.hpp"
 #include "Animation/AnimationModule.hpp"
 #include <algorithm>
 

@@ -44,15 +44,18 @@ find_package(Threads REQUIRED)
 add_subdirectory(engine)
 
 # =============================================================================
-# Network Libraries (also generic)
+# Games (R-Type game library must be built before network due to dependencies)
+# =============================================================================
+
+# R-Type Game (systems library - used by network library)
+add_subdirectory(games/rtype)
+
+# =============================================================================
+# Network Libraries (depends on rtype_game for GameServer/GameClient)
 # =============================================================================
 add_subdirectory(libs/network)
 
-# =============================================================================
-# Games
-# =============================================================================
-
-# R-Type Game
+# R-Type Server
 add_executable(r-type_server games/rtype/server/main.cpp)
 target_link_libraries(r-type_server PRIVATE rtype_network rtype_asio_network)
 
@@ -77,11 +80,13 @@ add_executable(r-type_client
 )
 target_include_directories(r-type_client PRIVATE
     ${CMAKE_SOURCE_DIR}/games/rtype/client/include
+    ${CMAKE_SOURCE_DIR}/games/rtype/include
 )
 target_link_libraries(r-type_client PRIVATE
     rtype_network
     rtype_asio_network
-    rtype_ecs
+    rtype_game
+    rtype_ecs_core
     rtype_core
     rtype_sfml_renderer
     rtype_sfml_audio
@@ -129,28 +134,34 @@ if(TARGET rtype_sfml_renderer)
     add_executable(test_renderer tests/test_renderer.cpp)
     target_link_libraries(test_renderer PRIVATE
         rtype_core
-        rtype_ecs
+        rtype_ecs_core
     )
     message(STATUS "test_renderer will be built (loads renderer plugin dynamically)")
 
     add_executable(test_player_system tests/test_player_system.cpp)
+    target_include_directories(test_player_system PRIVATE
+        ${CMAKE_SOURCE_DIR}/games/rtype/include
+    )
     target_link_libraries(test_player_system PRIVATE
         rtype_core
-        rtype_ecs
+        rtype_game
     )
     message(STATUS "test_player_system will be built (loads renderer plugin dynamically)")
 
     add_executable(test_health_system tests/test_health_system.cpp)
+    target_include_directories(test_health_system PRIVATE
+        ${CMAKE_SOURCE_DIR}/games/rtype/include
+    )
     target_link_libraries(test_health_system PRIVATE
         rtype_core
-        rtype_ecs
+        rtype_game
     )
     message(STATUS "test_health_system will be built (loads renderer plugin dynamically)")
 
     add_executable(test_background tests/test_background.cpp)
     target_link_libraries(test_background PRIVATE
         rtype_core
-        rtype_ecs
+        rtype_ecs_core
         rtype_sfml_renderer
     )
     message(STATUS "test_background will be built")
