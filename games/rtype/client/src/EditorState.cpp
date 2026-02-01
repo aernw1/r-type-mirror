@@ -173,7 +173,7 @@ namespace RType {
                 m_canvasManager->HandleCameraInput();
             }
 
-            bool isLeftPressed = m_renderer->IsMouseButtonPressed(Renderer::IRenderer::MouseButton::Left);
+            bool isLeftPressed = m_renderer->IsMouseButtonPressed(Renderer::MouseButton::Left);
             if (isLeftPressed && !m_leftMousePressed) {
                 bool consumedByUI = false;
 

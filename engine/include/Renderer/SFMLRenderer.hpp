@@ -22,6 +22,7 @@ namespace Renderer {
         bool CreateWindow(const WindowConfig& config) override;
         void Destroy() override;
         bool IsWindowOpen() const override;
+        Vector2 GetWindowSize() const override;
         void Resize(std::uint32_t width, std::uint32_t height) override;
         void SetWindowTitle(const std::string& title) override;
 

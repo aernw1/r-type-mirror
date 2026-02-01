@@ -3,6 +3,10 @@
 #include "Module.hpp"
 #include "ModuleLoader.hpp"
 #include "Logger.hpp"
+#include "SceneManager.hpp"
+#include "ResourceManager.hpp"
+#include "InputManager.hpp"
+#include "EventBus.hpp"
 #include "../ECS/Registry.hpp"
 #include "../ECS/ISystem.hpp"
 #include <string>
@@ -48,6 +52,11 @@ namespace RType {
             template <typename T>
             void RegisterSystem(std::unique_ptr<T> system);
             void UpdateSystems(float deltaTime);
+            SceneManager& GetSceneManager() { return m_sceneManager; }
+            ResourceManager& GetResourceManager() { return m_resourceManager; }
+            InputManager& GetInputManager() { return m_inputManager; }
+            EventBus& GetEventBus() { return m_eventBus; }
+
         private:
             void SortModulesByPriority();
             bool InitializeModules();
@@ -61,6 +70,12 @@ namespace RType {
             std::vector<IModule*> m_sortedModules;
             ECS::Registry m_registry;
             std::vector<std::unique_ptr<ECS::ISystem>> m_systems;
+            
+            SceneManager m_sceneManager;
+            ResourceManager m_resourceManager;
+            InputManager m_inputManager;
+            EventBus m_eventBus;
+            
             bool m_initialized{false};
         };
 

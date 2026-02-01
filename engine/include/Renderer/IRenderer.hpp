@@ -118,6 +118,12 @@ namespace Renderer {
         RAlt
     };
 
+    enum class MouseButton {
+        Left,
+        Right,
+        Middle
+    };
+
     class IRenderer : public RType::Core::IModule {
     public:
         ~IRenderer() override = default;
@@ -131,6 +137,7 @@ namespace Renderer {
         virtual bool CreateWindow(const WindowConfig& config) = 0;
         virtual void Destroy() = 0;
         virtual bool IsWindowOpen() const = 0;
+        virtual Vector2 GetWindowSize() const = 0;
         virtual void Resize(std::uint32_t width, std::uint32_t height) = 0;
         virtual void SetWindowTitle(const std::string& title) = 0;
 
@@ -166,11 +173,6 @@ namespace Renderer {
 
         virtual bool IsKeyPressed(Key key) const = 0;
 
-        enum class MouseButton {
-            Left,
-            Right,
-            Middle
-        };
         virtual bool IsMouseButtonPressed(MouseButton button) const = 0;
         virtual Vector2 GetMousePosition() const = 0;
     };

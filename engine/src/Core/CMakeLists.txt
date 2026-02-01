@@ -3,6 +3,8 @@ set(CORE_SOURCES
     ModuleLoader.cpp
     ColorFilter.cpp
     InputMapping.cpp
+    InputManager.cpp
+    SceneManager.cpp
 )
 
 set(CORE_HEADERS

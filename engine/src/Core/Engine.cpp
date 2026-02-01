@@ -1,4 +1,5 @@
 #include "../../include/Core/Engine.hpp"
+#include "../../include/Renderer/IRenderer.hpp"
 #include <algorithm>
 
 namespace RType {
@@ -6,8 +7,9 @@ namespace RType {
     namespace Core {
 
         Engine::Engine(const EngineConfig& config)
-            : m_config(config) {
+            : m_config(config), m_sceneManager(&m_registry) {
             Logger::Info("Creating R-Type Engine");
+            m_inputManager.loadDefaults();
         }
 
         Engine::~Engine() {
@@ -140,6 +142,12 @@ namespace RType {
         }
 
         void Engine::UpdateSystems(float deltaTime) {
+            // Update input manager first
+            auto renderer = GetModule<Renderer::IRenderer>();
+            if (renderer) {
+                m_inputManager.update(renderer);
+            }
+
             for (auto& system : m_systems) {
                 system->Update(m_registry, deltaTime);
             }

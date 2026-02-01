@@ -22,6 +22,7 @@ namespace RType {
             virtual ~IComponentPool() = default;
             virtual bool Has(Entity entity) const = 0;
             virtual void Remove(Entity entity) = 0;
+            virtual void Clear() = 0;
         };
 
         template <typename T>
@@ -32,6 +33,7 @@ namespace RType {
             const T& Get(Entity entity) const;
             bool Has(Entity entity) const override;
             void Remove(Entity entity) override;
+            void Clear() override;
             std::vector<Entity> GetEntities() const;
         private:
             SparseArray<T> m_components;
@@ -64,6 +66,7 @@ namespace RType {
             template <typename T>
             std::vector<Entity> GetEntitiesWithComponent() const;
             size_t GetEntityCount() const { return m_entityCount; }
+            void Clear();
         private:
             template <typename T>
             ComponentPool<T>* GetOrCreatePool();
@@ -117,6 +120,11 @@ namespace RType {
                 throw std::runtime_error(oss.str());
             }
             m_components.erase(entity);
+        }
+
+        template <typename T>
+        void ComponentPool<T>::Clear() {
+            m_components.clear();
         }
 
         template <typename T>

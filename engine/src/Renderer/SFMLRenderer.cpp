@@ -103,6 +103,14 @@ namespace Renderer {
         return m_window && m_window->isOpen();
     }
 
+    Vector2 SFMLRenderer::GetWindowSize() const {
+        if (!m_window) {
+            return {0.0f, 0.0f};
+        }
+        sf::Vector2u size = m_window->getSize();
+        return {static_cast<float>(size.x), static_cast<float>(size.y)};
+    }
+
     void SFMLRenderer::Resize(std::uint32_t width, std::uint32_t height) {
         if (!m_window) {
             RType::Core::Logger::Warning("Cannot resize: window not created");

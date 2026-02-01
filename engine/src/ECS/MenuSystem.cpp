@@ -14,7 +14,7 @@ namespace RType {
                 return;
 
             Renderer::Vector2 mousePos = m_renderer->GetMousePosition();
-            bool isMouseDown = m_renderer->IsMouseButtonPressed(Renderer::IRenderer::MouseButton::Left);
+            bool isMouseDown = m_renderer->IsMouseButtonPressed(Renderer::MouseButton::Left);
 
             auto entities = registry.GetEntitiesWithComponent<Clickable>();
 

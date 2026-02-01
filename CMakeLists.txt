@@ -117,6 +117,8 @@ endif()
 # =============================================================================
 # Tests
 # =============================================================================
+enable_testing()
+
 add_executable(test_lobby tests/test_lobby.cpp)
 target_link_libraries(test_lobby PRIVATE rtype_network rtype_asio_network)
 
@@ -129,6 +131,15 @@ message(STATUS "test_udp_protocol will be built (UDP game protocol test)")
 
 add_executable(test_tcp_framing tests/test_tcp_framing.cpp)
 target_link_libraries(test_tcp_framing PRIVATE rtype_asio_network)
+
+add_executable(test_event_bus tests/test_event_bus.cpp)
+target_link_libraries(test_event_bus PRIVATE rtype_core)
+
+add_executable(test_scene_manager tests/test_scene_manager.cpp)
+target_link_libraries(test_scene_manager PRIVATE rtype_core rtype_ecs_core)
+
+add_executable(test_camera_system tests/test_camera_system.cpp)
+target_link_libraries(test_camera_system PRIVATE rtype_core rtype_ecs_core)
 
 if(TARGET rtype_sfml_renderer)
     add_executable(test_renderer tests/test_renderer.cpp)

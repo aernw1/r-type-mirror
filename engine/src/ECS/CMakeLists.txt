@@ -19,6 +19,7 @@ set(ECS_CORE_SOURCES
     MenuSystem.cpp
     HealthSystem.cpp
     ScoreSystem.cpp
+    Camera2DSystem.cpp
 )
 
 set(ECS_CORE_HEADERS
@@ -47,6 +48,8 @@ set(ECS_CORE_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/MenuSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/HealthSystem.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/ScoreSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Camera2DSystem.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/ECS/Components/Camera2D.hpp
 )
 
 add_library(rtype_ecs_core STATIC

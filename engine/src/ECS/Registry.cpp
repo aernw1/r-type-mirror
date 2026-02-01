@@ -75,6 +75,16 @@ namespace RType {
             return m_aliveEntities.find(entity) != m_aliveEntities.end();
         }
 
+        void Registry::Clear() {
+            for (auto& [id, pool] : m_componentPools) {
+                pool->Clear();
+            }
+            m_aliveEntities.clear();
+            m_freeEntityIds.clear();
+            m_nextEntityID = 1;
+            m_entityCount = 0;
+        }
+
     }
 
 }
