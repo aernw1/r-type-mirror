@@ -7,6 +7,7 @@
 #include <cstdint>
 #include "ECS/Entity.hpp"
 #include "ECS/Components/IComponent.hpp"
+#include "Math/Types.hpp"
 
 namespace RType {
 namespace ECS {
@@ -115,6 +116,16 @@ namespace ECS {
 
         PhysicsMaterial() = default;
         PhysicsMaterial(float f, float b) : friction(f), bounciness(b) {}
+    };
+
+    /**
+     * @brief Result of a raycast operation.
+     */
+    struct RaycastHit {
+        Entity entity = NULL_ENTITY;
+        Math::Vector2 point{0.0f, 0.0f};
+        Math::Vector2 normal{0.0f, 0.0f};
+        float distance = 0.0f;
     };
 
 } // namespace ECS

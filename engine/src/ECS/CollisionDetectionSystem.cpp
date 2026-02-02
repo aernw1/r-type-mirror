@@ -151,5 +151,122 @@ namespace RType {
             return distanceSquared <= (radius * radius);
         }
 
+        std::optional<RaycastHit> CollisionDetectionSystem::Raycast(Registry& registry, 
+                                                                  const Math::Vector2& origin, 
+                                                                  const Math::Vector2& direction, 
+                                                                  float maxDistance, 
+                                                                  uint16_t layerMask) {
+            std::optional<RaycastHit> closestHit;
+            auto entities = GetCollidableEntities(registry); // reusing existing helper
+
+            for (Entity entity : entities) {
+                // Layer Check
+                if (registry.HasComponent<CollisionLayer>(entity)) {
+                    auto& layer = registry.GetComponent<CollisionLayer>(entity);
+                    if ((layer.layer & layerMask) == 0) {
+                        continue;
+                    }
+                }
+
+                if (!registry.HasComponent<Position>(entity)) continue;
+                const auto& pos = registry.GetComponent<Position>(entity);
+
+                // Check Circle Collider
+                if (registry.HasComponent<CircleCollider>(entity)) {
+                    const auto& circle = registry.GetComponent<CircleCollider>(entity);
+                    
+                    // Simple Ray vs Circle intersection
+                    float cx = pos.x;
+                    float cy = pos.y;
+                    float radius = circle.radius;
+
+                    float dx = cx - origin.x;
+                    float dy = cy - origin.y;
+                    float t = dx * direction.x + dy * direction.y;
+
+                    // Closest point on ray line
+                    float closestX = origin.x + t * direction.x;
+                    float closestY = origin.y + t * direction.y;
+
+                    float distSq = (cx - closestX) * (cx - closestX) + (cy - closestY) * (cy - closestY);
+                    
+                    if (distSq <= radius * radius) {
+                        // Intersection
+                        float distToCenter = std::sqrt((dx * dx) + (dy * dy));
+                        // Approximation: hit point is on the surface
+                        // Exact calculation requires resolving the quadratic equation
+                        float range = std::sqrt(radius * radius - distSq);
+                        float t0 = t - range; // First intersection point
+                        
+                        if (t0 >= 0 && t0 <= maxDistance) {
+                            if (!closestHit || t0 < closestHit->distance) {
+                                RaycastHit hit;
+                                hit.entity = entity;
+                                hit.distance = t0;
+                                hit.point = {origin.x + t0 * direction.x, origin.y + t0 * direction.y};
+                                // Normal calculation (point - center) normalized
+                                float nx = hit.point.x - cx;
+                                float ny = hit.point.y - cy;
+                                float len = std::sqrt(nx * nx + ny * ny);
+                                if (len > 0) {
+                                    hit.normal = {nx / len, ny / len};
+                                }
+                                closestHit = hit;
+                            }
+                        }
+                    }
+                }
+                
+                // Check Box Collider
+                else if (registry.HasComponent<BoxCollider>(entity)) {
+                    const auto& box = registry.GetComponent<BoxCollider>(entity);
+                    
+                    // Ray vs AABB (Slab method)
+                    float tmin = 0.0f;
+                    float tmax = maxDistance;
+
+                    // X Axis
+                    float tx1 = (pos.x - origin.x) / direction.x;
+                    float tx2 = (pos.x + box.width - origin.x) / direction.x;
+
+                    float tminX = std::min(tx1, tx2);
+                    float tmaxX = std::max(tx1, tx2);
+
+                    tmin = std::max(tmin, tminX);
+                    tmax = std::min(tmax, tmaxX);
+
+                    // Y Axis
+                    float ty1 = (pos.y - origin.y) / direction.y;
+                    float ty2 = (pos.y + box.height - origin.y) / direction.y;
+
+                    float tminY = std::min(ty1, ty2);
+                    float tmaxY = std::max(ty1, ty2);
+
+                    tmin = std::max(tmin, tminY);
+                    tmax = std::min(tmax, tmaxY);
+
+                    if (tmax >= tmin && tmin >= 0 && tmin <= maxDistance) {
+                        if (!closestHit || tmin < closestHit->distance) {
+                            RaycastHit hit;
+                            hit.entity = entity;
+                            hit.distance = tmin;
+                            hit.point = {origin.x + tmin * direction.x, origin.y + tmin * direction.y};
+                            
+                            // Determine normal based on hit face
+                            // Simple heuristic for AABB normal
+                            if (std::abs(hit.point.x - pos.x) < 0.001f) hit.normal = {-1, 0};
+                            else if (std::abs(hit.point.x - (pos.x + box.width)) < 0.001f) hit.normal = {1, 0};
+                            else if (std::abs(hit.point.y - pos.y) < 0.001f) hit.normal = {0, -1};
+                            else if (std::abs(hit.point.y - (pos.y + box.height)) < 0.001f) hit.normal = {0, 1};
+                            
+                            closestHit = hit;
+                        }
+                    }
+                }
+            }
+
+            return closestHit;
+        }
+
     }
 }

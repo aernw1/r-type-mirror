@@ -10,6 +10,8 @@
 #include "ISystem.hpp"
 #include "Registry.hpp"
 #include "Component.hpp"
+#include "Components/Physics.hpp"
+#include <optional>
 
 namespace RType {
     namespace ECS {
@@ -23,6 +25,15 @@ namespace RType {
             void Update(Registry& registry, float deltaTime) override;
 
             static bool CheckCollision(Registry& registry, Entity a, Entity b);
+
+            /**
+             * @brief Perform a raycast against colliders in the registry
+             */
+            std::optional<RaycastHit> Raycast(Registry& registry, 
+                                            const Math::Vector2& origin, 
+                                            const Math::Vector2& direction, 
+                                            float maxDistance, 
+                                            uint16_t layerMask = 0xFFFF);
         private:
             void ClearCollisionEvents(Registry& registry);
             std::vector<Entity> GetCollidableEntities(Registry& registry);
