@@ -7,8 +7,8 @@
 
 #include "GameServer.hpp"
 #include "Compression.hpp"
-#include "ECS/BossSystem.hpp"
-#include "ECS/MineSystem.hpp"
+#include "BossSystem.hpp"
+#include "MineSystem.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <iomanip>

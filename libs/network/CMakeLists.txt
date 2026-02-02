@@ -39,7 +39,8 @@ add_library(rtype_network
 
 target_include_directories(rtype_network PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libs/engine/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/engine/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/games/rtype/include>
 )
 
 find_package(lz4 CONFIG REQUIRED)
@@ -48,7 +49,7 @@ target_link_libraries(rtype_network PUBLIC
     asio
     Threads::Threads
     nlohmann_json::nlohmann_json
-    rtype_ecs
+    rtype_game
     lz4::lz4
 )
 

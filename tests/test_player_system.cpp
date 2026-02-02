@@ -11,8 +11,8 @@
 #include "Renderer/IRenderer.hpp"
 #include "ECS/Component.hpp"
 #include "ECS/InputSystem.hpp"
-#include "ECS/PlayerSystem.hpp"
-#include "ECS/PlayerFactory.hpp"
+#include "PlayerSystem.hpp"
+#include "PlayerFactory.hpp"
 #include "ECS/MovementSystem.hpp"
 #include "ECS/RenderingSystem.hpp"
 #include <memory>
